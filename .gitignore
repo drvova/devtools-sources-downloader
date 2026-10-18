@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+
+# tool caches
+.fallow/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
