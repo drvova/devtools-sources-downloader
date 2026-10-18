@@ -875,8 +875,28 @@ function jscBlockChildren(bytes, block) {
     return children;
 }
 
+// CachedTypes GenericCacheEntry (the first 16 bytes of every payload):
+// stamp, tag (the format word), reserved callee-locals, payload size
+// (== blob length). The CacheEntry tail follows; its m_codeBlock slot
+// at +0x2C is field-relative and names the root code block record.
+// Tag 0 = Program (bun --bytecode's cjs default), 1 = Module (esm).
+function parseJscCacheEntry(bytes) {
+    if (!bytes || bytes.length < 0x30) return null;
+    var tag = u32(bytes, 4);
+    if (tag !== 0 && tag !== 1) return null;
+    if (u32(bytes, 12) !== bytes.length) return null;
+    var slot = u32(bytes, 0x2c) | 0;
+    if (slot <= 0 || slot === -1) return null;
+    var record = 0x2c + slot;
+    if (record < 0x30 || record + 0x38 >= bytes.length) return null;
+    return { tag: tag, codeBlockRecord: record };
+}
+
 // Decode a module's whole cached-function tree. One bad slot is
 // counted, not raised: a corrupt slot must not discard the rest.
+// Program payloads (tag 0) root at the CacheEntry's code block; module
+// payloads keep the classic root-executable walk, byte-identical with
+// the pinned fixtures.
 export function analyzeJscModule(bytes, shared) {
     var stats = {
         valid: false,
@@ -888,24 +908,39 @@ export function analyzeJscModule(bytes, shared) {
         bindFailed: 0,
         functions: []
     };
-    var root = instantiateJscExec(bytes, 0x20, shared);
-    if (!root) return stats;
-    stats.rootName = root.name;
-    stats.rootParseMode = root.parseMode;
-    stats.nodes = 1;
-    stats.functions.push({ name: root.name === undefined ? null : root.name, kind: "root", record: root.record, callBlock: null, constructBlock: null });
-    var rootEntry = stats.functions[0];
     var pending = [];
     var seenBlocks = {};
     var seenExec = {};
-    seenExec[root.record] = 1;
-    for (var kind = 0; kind < 2; kind++) {
-        var key = kind === 0 ? "call" : "construct";
-        var blocks = root[key + "Blocks"];
-        if (!blocks) { if (root.present[key] && !root[key + "Empty"]) stats.bindFailed++; continue; }
-        pending = pending.concat(blocks);
-        var best = blocks[0];
-        if (best) rootEntry[key === "call" ? "callBlock" : "constructBlock"] = { region: best.region, instrAt: best.instrAt, instrLength: best.instrLength, opCount: best.opCount, gap: best.gap };
+    var entry = parseJscCacheEntry(bytes);
+    if (entry && entry.tag === 0) {
+        var program = null;
+        var candidates = bindJscBlock(bytes, entry.codeBlockRecord, jscOpcodeTable());
+        for (var ci = 0; ci < candidates.length; ci++) {
+            if (candidates[ci].gap === 0x38) { program = candidates[ci]; break; }
+        }
+        if (!program) return stats;
+        stats.rootName = decodeJscSlot(bytes, 0x1c, u32(bytes, 0x1c), shared) || null;
+        stats.rootParseMode = 0;
+        stats.nodes = 1;
+        stats.functions.push({ name: stats.rootName, kind: "root", record: program.record, callBlock: { region: program.region, instrAt: program.instrAt, instrLength: program.instrLength, opCount: program.opCount, gap: program.gap }, constructBlock: null });
+        pending.push(program);
+    } else {
+        var root = instantiateJscExec(bytes, 0x20, shared);
+        if (!root) return stats;
+        stats.rootName = root.name;
+        stats.rootParseMode = root.parseMode;
+        stats.nodes = 1;
+        stats.functions.push({ name: root.name === undefined ? null : root.name, kind: "root", record: root.record, callBlock: null, constructBlock: null });
+        var rootEntry = stats.functions[0];
+        seenExec[root.record] = 1;
+        for (var kind = 0; kind < 2; kind++) {
+            var key = kind === 0 ? "call" : "construct";
+            var blocks = root[key + "Blocks"];
+            if (!blocks) { if (root.present[key] && !root[key + "Empty"]) stats.bindFailed++; continue; }
+            pending = pending.concat(blocks);
+            var best = blocks[0];
+            if (best) rootEntry[key === "call" ? "callBlock" : "constructBlock"] = { region: best.region, instrAt: best.instrAt, instrLength: best.instrLength, opCount: best.opCount, gap: best.gap };
+        }
     }
     while (pending.length) {
         var block = pending.pop();

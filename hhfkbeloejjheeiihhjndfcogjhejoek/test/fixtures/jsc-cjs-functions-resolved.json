@@ -1,0 +1,232 @@
+{
+  "valid": true,
+  "rootName": null,
+  "rootParseMode": 0,
+  "nodes": 17,
+  "blocks": 17,
+  "ops": 293,
+  "bindFailed": 0,
+  "functions": [
+    {
+      "name": null,
+      "kind": "root",
+      "record": 112,
+      "callBlock": {
+        "region": 92,
+        "instrAt": 92,
+        "instrLength": 7,
+        "opCount": 3,
+        "gap": 56
+      },
+      "constructBlock": null
+    },
+    {
+      "name": null,
+      "kind": "fexprs",
+      "record": 192,
+      "callBlock": {
+        "region": 211,
+        "instrAt": 252,
+        "instrLength": 483,
+        "opCount": 84,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "__accessProp",
+      "kind": "fdecls",
+      "record": 1228,
+      "callBlock": {
+        "region": 1691,
+        "instrAt": 1700,
+        "instrLength": 14,
+        "opCount": 4,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "__exportSetter",
+      "kind": "fdecls",
+      "record": 1280,
+      "callBlock": {
+        "region": 1745,
+        "instrAt": 1772,
+        "instrLength": 49,
+        "opCount": 10,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "calculateInvoiceTotal",
+      "kind": "fdecls",
+      "record": 1308,
+      "callBlock": {
+        "region": 1879,
+        "instrAt": 1892,
+        "instrLength": 50,
+        "opCount": 14,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "validateCustomerRecord",
+      "kind": "fdecls",
+      "record": 1336,
+      "callBlock": {
+        "region": 1990,
+        "instrAt": 2000,
+        "instrLength": 27,
+        "opCount": 7,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "internalAuditLogger",
+      "kind": "fdecls",
+      "record": 1364,
+      "callBlock": {
+        "region": 2072,
+        "instrAt": 2072,
+        "instrLength": 9,
+        "opCount": 3,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "__toCommonJS",
+      "kind": "fexprs",
+      "record": 1392,
+      "callBlock": {
+        "region": 2122,
+        "instrAt": 2180,
+        "instrLength": 458,
+        "opCount": 98,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "__returnValue",
+      "kind": "fexprs",
+      "record": 1420,
+      "callBlock": {
+        "region": 2923,
+        "instrAt": 2923,
+        "instrLength": 3,
+        "opCount": 2,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "__export",
+      "kind": "fexprs",
+      "record": 1448,
+      "callBlock": {
+        "region": 2955,
+        "instrAt": 2988,
+        "instrLength": 139,
+        "opCount": 29,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "InvoiceWorkflow",
+      "kind": "fexprs",
+      "record": 1476,
+      "callBlock": {
+        "region": 3225,
+        "instrAt": 3232,
+        "instrLength": 15,
+        "opCount": 4,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "calculateInvoiceTotal",
+      "kind": "fexprs",
+      "record": 1504,
+      "callBlock": {
+        "region": 3293,
+        "instrAt": 3304,
+        "instrLength": 19,
+        "opCount": 4,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "resolvePreferredGateway",
+      "kind": "fexprs",
+      "record": 1532,
+      "callBlock": {
+        "region": 3358,
+        "instrAt": 3358,
+        "instrLength": 19,
+        "opCount": 4,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "validateCustomerRecord",
+      "kind": "fexprs",
+      "record": 1560,
+      "callBlock": {
+        "region": 3414,
+        "instrAt": 3414,
+        "instrLength": 19,
+        "opCount": 4,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "resolvePreferredGateway",
+      "kind": "fexprs",
+      "record": 1588,
+      "callBlock": {
+        "region": 3471,
+        "instrAt": 3480,
+        "instrLength": 24,
+        "opCount": 6,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "InvoiceWorkflow",
+      "kind": "fexprs",
+      "record": 1616,
+      "callBlock": null,
+      "constructBlock": {
+        "region": 3549,
+        "instrAt": 3560,
+        "instrLength": 14,
+        "opCount": 4,
+        "gap": 4
+      }
+    },
+    {
+      "name": "computeTotal",
+      "kind": "fexprs",
+      "record": 1664,
+      "callBlock": {
+        "region": 3610,
+        "instrAt": 3632,
+        "instrLength": 68,
+        "opCount": 13,
+        "gap": 4
+      },
+      "constructBlock": null
+    }
+  ]
+}

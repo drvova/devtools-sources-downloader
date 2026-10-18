@@ -687,6 +687,71 @@ const sharedCases = [
     }],
 ];
 
+// Program payloads (formatWord 0): bun --bytecode's cjs default. The
+// tree roots at the CacheEntry's m_codeBlock record, and the shared
+// table ships in the same .rdata window the scanner walks.
+const programCases = [
+    ['jsc: program (tag 0) chunk binds the real function tree', async () => {
+        const chunk = loadFixture('jsc-cjs-chunk.bin');
+        const section = loadFixture('jsc-cjs-sec.bin');
+        const table = findJscSharedTable(section);
+        assert.ok(table, 'scanner must find the 53-string table inside the cjs section');
+        const resolved = analyzeJscModule(chunk, table.strings);
+        const truth = JSON.parse(fs.readFileSync(new URL('./fixtures/jsc-cjs-functions-resolved.json', import.meta.url), 'utf8'));
+        assert.deepEqual(resolved, truth, 'resolved tree must stay stable against the pinned walk');
+        assert.equal(resolved.valid, true);
+        assert.equal(resolved.blocks, 17);
+        assert.equal(resolved.bindFailed, 0);
+        const names = resolved.functions.map((f) => f.name);
+        for (const real of ['calculateInvoiceTotal', 'validateCustomerRecord', 'internalAuditLogger', 'resolvePreferredGateway', 'InvoiceWorkflow', 'computeTotal', '__export']) {
+            assert.ok(names.includes(real), 'missing real function name: ' + real);
+        }
+        // every named slot resolved through the shared table, no placeholders
+        assert.ok(names.every((n) => n === null || String(n).indexOf('<ordinal ') !== 0), 'names must resolve, got: ' + names.filter((n) => String(n).indexOf('<ordinal ') === 0).join(','));
+    }],
+    ['jsc: program chunk without a table degrades to ordinals but still binds', async () => {
+        const chunk = loadFixture('jsc-cjs-chunk.bin');
+        const plain = analyzeJscModule(chunk);
+        assert.equal(plain.valid, true);
+        assert.equal(plain.blocks, 17);
+        assert.equal(plain.rootName, null, 'the entry name slot is the empty sentinel in this payload');
+        const placeholder = plain.functions.filter((f) => f.name && String(f.name).indexOf('<ordinal ') === 0).length;
+        assert.ok(placeholder >= 6, 'expected ordinal placeholders without a table, got ' + placeholder);
+    }],
+    ['jsc: program-shaped noise must not bind', async () => {
+        const noise = new Uint8Array(4528).fill(0);
+        const put32 = (v, at) => { for (let i = 0; i < 4; i++) noise[at + i] = (v >>> (8 * i)) & 0xff; };
+        put32(0x64ed8b42, 0);   // stamp
+        put32(0, 4);            // tag 0 (Program)
+        put32(4, 8);            // reserved callee locals
+        put32(4528, 12);        // payload size == blob length
+        put32(0x100, 0x2c);     // in-bounds code block slot
+        assert.equal(analyzeJscModule(noise, null).valid, false);
+        assert.equal(analyzeJscModule(noise, null).blocks, 0);
+    }],
+    ['binary pass: cjs asset lands functions.json with real names', async () => {
+        const chunkBytes = loadFixture('jsc-cjs-chunk.bin');
+        const sectionBytes = loadFixture('jsc-cjs-sec.bin');
+        const result = await unpackAssets([
+            { url: 'https://x/assets/pair-cjs.jsc', bytes: chunkBytes },
+            { url: 'https://x/assets/pair-cjs.sec', bytes: sectionBytes }
+        ], { pathPrefix: '_unpack' });
+        const chunkEntry = result.report.assets[0];
+        assert.ok(chunkEntry.stages.some((s) => s.tool === 'jsc-bytecode'));
+        assert.ok(chunkEntry.stages[0].detail.includes('17 functions'), 'stage detail must name the count, got: ' + chunkEntry.stages[0].detail);
+        assert.ok(chunkEntry.stages.some((s) => s.detail.includes('names via shared table')), 'detail must name the shared-table resolution');
+        const artifact = result.files.find((f) => f.path.endsWith('pair-cjs.jsc.js/functions.json'));
+        assert.ok(artifact, 'functions.json missing: ' + result.files.map((f) => f.path).join(', '));
+        const tree = JSON.parse(artifact.content);
+        assert.equal(tree.rootName, null);
+        assert.equal(tree.valid, true);
+        const names = tree.functions.map((f) => f.name);
+        assert.ok(names.includes('InvoiceWorkflow') && names.includes('computeTotal'), 'real names must land in the artifact');
+    }],
+];
+
+for (const [name, fn] of programCases) cases.push({ name, fn });
+
 for (const [name, fn] of sharedCases) cases.push({ name, fn });
 
 for (const [name, fn] of structureCases) cases.push({ name, fn });
