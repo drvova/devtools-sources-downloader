@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { unpackAssetsIntoZip, beautifyJs, looksMinified } from './unpack.js';
 
 var reloadDebugBtn = document.getElementById('reloadDebugBtn');
 var downloadBtn = document.getElementById('downloadBtn');
@@ -497,6 +498,7 @@ function doDownload() {
                     if (/\.(?:js|mjs)(?:\?|$)/.test(urlLo) || /\.js$/.test(urlLo)) {
                         jsAssets.push({
                             url: resource.url,
+                            zipPath: sanitizeFilename(resource.url),
                             content: encoding === 'base64' ? atob(content) : content
                         });
                     }
@@ -561,7 +563,6 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
     downloadBtn.textContent = 'Building zip...';
     setActivity('info', 'Building a site-aware export package...');
     var runtimeEntries = [];
-    for (var i = 0; i < jsAssets.length; i++) extractSourcesFromJS(zip, jsAssets[i].content);
 
     if (reconData) {
         if (reconData.ls && Object.keys(reconData.ls).length) zip.file('_recon/localStorage.json', JSON.stringify(reconData.ls, null, 2));
@@ -599,15 +600,72 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
 
     collectRuntimePayloads(runtimeEntries, function (runtimePayloads) {
         var runtimeManifest = exportRuntimeArtifacts(zip, runtimePayloads);
-    setActivity('info', 'Reconstructing modules, flows, workspaces, and journeys...');
+        setActivity('info', 'Reconstructing modules, flows, workspaces, and journeys...');
         exportSemanticAnalysis(zip, jsAssets, reconData, runtimePayloads, runtimeManifest);
-        zip.generateAsync({ type: 'blob' }).then(function (zipContent) {
-            saveAs(zipContent, 'sources.zip');
+        setActivity('info', 'Unpacking JavaScript: source maps, bundles, and obfuscation layers...');
+        var runtimeJsAssets = buildRuntimeUnpackAssets(runtimePayloads, runtimeManifest);
+        unpackAssetsIntoZip(zip, jsAssets, {
+            fetchText: fetchSourceMapText,
+            onProgress: function (done, total) {
+                setActivity('info', 'Unpacking JavaScript ' + done + '/' + total + '...');
+            }
+        }).then(function (scriptReport) {
+            return unpackAssetsIntoZip(zip, runtimeJsAssets, {
+                pathPrefix: '_unpack-runtime',
+                fetchText: fetchSourceMapText,
+                onProgress: function (done, total) {
+                    setActivity('info', 'Unpacking runtime payloads ' + done + '/' + total + '...');
+                }
+            }).then(function (runtimeReport) {
+                return mergeUnpackReports(scriptReport, runtimeReport);
+            });
+        }).then(function (unpackReport) {
+            zip.generateAsync({ type: 'blob' }).then(function (zipContent) {
+                saveAs(zipContent, 'sources.zip');
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = 'Download All';
+                var totals = unpackReport.totals;
+                setActivity('success', 'Export ready. Unpacked ' + totals.unpacked + ' of ' + totals.assets + ' scripts (' + totals.beautified + ' beautified, ' + totals.sources + ' original sources, ' + totals.modules + ' bundle modules).');
+            });
+        }).catch(function (err) {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download All';
-            setActivity('success', 'Export ready. The capture package was built for the current site context.');
+            setActivity('danger', 'Unpacking failed: ' + (err && err.message ? err.message : String(err)));
         });
     });
+}
+
+// Runtime payloads (eval, Function, injected scripts, JS workers) are exactly where
+// obfuscation hides, so they take the same peel/beautify/module pass as page scripts.
+function buildRuntimeUnpackAssets(runtimePayloads, runtimeManifest) {
+    var assets = [];
+    var manifest = runtimeManifest || [];
+    for (var i = 0; i < runtimePayloads.length; i++) {
+        var entry = runtimePayloads[i];
+        if (typeof entry.text !== 'string' || !entry.text.length) continue;
+        if (runtimeExtension(entry) !== 'js') continue;
+        var rawFile = '';
+        for (var m = 0; m < manifest.length; m++) {
+            if (manifest[m].id === entry.id) { rawFile = manifest[m].file || ''; break; }
+        }
+        assets.push({
+            url: entry.url || entry.label || entry.id,
+            content: entry.text,
+            zipPath: rawFile
+        });
+    }
+    return assets;
+}
+
+function mergeUnpackReports(scriptReport, runtimeReport) {
+    var totals = scriptReport.totals;
+    var runtimeTotals = runtimeReport.totals;
+    totals.assets += runtimeTotals.assets;
+    totals.unpacked += runtimeTotals.unpacked;
+    totals.modules += runtimeTotals.modules;
+    totals.sources += runtimeTotals.sources;
+    totals.beautified += runtimeTotals.beautified;
+    return scriptReport;
 }
 
 function parseCookies(cookieStr) {
@@ -2161,14 +2219,26 @@ function exportReadableArtifacts(zip, analysis) {
         if (entry.kind === 'runtime' && typeof record.text !== 'string') continue;
         written++;
         var label = sanitizePathPart(entry.label || entry.id, entry.kind);
-        entry.readableFile = '_analysis/deobfuscated/' + ('0000' + written).slice(-4) + '-' + label + '.txt';
+        entry.readableFile = '_analysis/readable/' + ('0000' + written).slice(-4) + '-' + label + '.js';
         zip.file(entry.readableFile, buildReadableArtifact(entry, record));
     }
 }
 
 function buildReadableArtifact(entry, record) {
-    var body = entry.kind === 'chunk' ? record.content : record.text;
-    return ['Semantic reconstruction preview', 'Kind: ' + entry.kind, 'Label: ' + (entry.label || entry.id), 'URL: ' + (entry.url || ''), 'File: ' + (entry.file || ''), 'Boundaries: ' + ((entry.boundaryLabels || []).join(', ') || 'none'), 'Why: ' + (entry.why || ''), 'Score: ' + (entry.score || 0), '', body || ''].join('\n');
+    var body = (entry.kind === 'chunk' ? record.content : record.text) || '';
+    var readable = looksMinified(body) ? beautifyJs(body) : body;
+    var facts = [
+        'Kind: ' + entry.kind,
+        'Label: ' + (entry.label || entry.id),
+        'URL: ' + (entry.url || ''),
+        'File: ' + (entry.file || ''),
+        'Boundaries: ' + ((entry.boundaryLabels || []).join(', ') || 'none'),
+        'Why: ' + (entry.why || ''),
+        'Score: ' + (entry.score || 0),
+        'Beautified: ' + (readable === body ? 'no' : 'yes')
+    ];
+    var header = ['/*', ' * Semantic reconstruction'].concat(facts.map(function (line) { return ' * ' + line; })).concat([' */', '']).join('\n');
+    return header + readable;
 }
 
 function collectGraphQLOperations(recon) {
@@ -2222,34 +2292,32 @@ function normalizeGraphQLPayload(body) {
     };
 }
 
-function extractSourcesFromJS(zip, content) {
-    var m = content.match(/\/\/[#@]\s*sourceMappingURL\s*=\s*(\S+)/);
-    if (m && m[1].indexOf('data:') === 0) extractInlineSourceMap(zip, m[1]);
+// External source maps are fetched as text for the unpack stage. The panel
+// origin cannot read every page asset, so the page context is the fallback and
+// both paths fail soft: a missing map is never an export error.
+function fetchSourceMapText(url) {
+    return fetch(url, { credentials: 'omit' })
+        .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.text();
+        })
+        .catch(function () { return fetchSourceMapTextInPage(url); })
+        .catch(function () { return null; });
 }
 
-function extractInlineSourceMap(zip, dataUri) {
-    try {
-        var b64m = dataUri.match(/^data:[^;]*;base64,(.+)/);
-        var json = b64m ? atob(b64m[1]) : null;
-        if (!json) {
-            var pm = dataUri.match(/^data:[^,]*,/);
-            json = pm ? decodeURIComponent(dataUri.slice(pm[0].length)) : null;
-        }
-        if (!json) return;
-        var sm = JSON.parse(json);
-        var sources = sm.sources || [];
-        var contents = sm.sourcesContent || [];
-        for (var i = 0; i < sources.length; i++) {
-            if (!contents[i]) continue;
-            var path = ('_sources/' + sources[i])
-                .replace(/^_sources\/webpack:\/\//, '_sources/')
-                .replace(/^_sources\/webpack\/\//, '_sources/')
-                .replace(/\\/g, '/')
-                .replace(/[\\:*?"<>|]/g, '_');
-            if (path.charAt(path.length - 1) === '/') path += 'index.js';
-            zip.file(path, contents[i]);
-        }
-    } catch (_) {}
+function fetchSourceMapTextInPage(url) {
+    return new Promise(function (resolve) {
+        var expression = '(function(){return fetch(' + JSON.stringify(url) + ',{credentials:"include"})' +
+            '.then(function(r){return r.ok?r.text():""})' +
+            '.catch(function(){return ""})})()';
+        chrome.devtools.inspectedWindow.eval(
+            expression,
+            { awaitPromise: true },
+            function (result, error) {
+                resolve(!error && typeof result === 'string' && result.length ? result : null);
+            }
+        );
+    });
 }
 
 function generateWaterfallHTML(timings) {

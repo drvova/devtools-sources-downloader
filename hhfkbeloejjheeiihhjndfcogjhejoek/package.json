@@ -4,8 +4,11 @@
   "private": true,
   "description": "DevTools extension - download inspected page sources with debug mode",
   "scripts": {
-    "build": "webpack --mode production",
-    "dev": "webpack --mode development --devtool source-map"
+    "build": "webpack --mode production && node scripts/sync.js",
+    "dev": "webpack --mode development --devtool source-map && node scripts/sync.js",
+    "test": "node test/unpack.test.mjs",
+    "test:e2e": "node test/browser-e2e.mjs",
+    "verify": "npm test && npm run build && npm run test:e2e"
   },
   "dependencies": {
     "file-saver": "^2.0.5",
@@ -13,6 +16,7 @@
   },
   "devDependencies": {
     "copy-webpack-plugin": "^12.0.2",
+    "js-beautify": "^2.0.3",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1"
   }
