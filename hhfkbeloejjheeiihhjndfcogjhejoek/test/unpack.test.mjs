@@ -38,8 +38,9 @@ import {
     detectV8CodeCache, parseV8CodeCache, parseSealedV8, extractV8Strings
 } from '../src/js/v8codecache.js';
 import {
-    parseJscHeader, detectJscBytecode, recoverJscStrings, wtfStringHash
+    parseJscHeader, detectJscBytecode, recoverJscStrings, wtfStringHash, analyzeJscModule
 } from '../src/js/jscbytecode.js';
+import { detectWasmModule, parseWasmModule } from '../src/js/wasm.js';
 import fs from 'node:fs';
 import { brotliDecompressSync } from 'node:zlib';
 
@@ -460,7 +461,7 @@ const binaryCases = [
         const res = await unpackAsset({ url: 'https://x/unknown.bin', bytes: noise }, { index: 0 });
         assert.equal(res.entry.kind, 'binary');
         assert.equal(res.entry.stages.length, 0);
-        assert.ok(res.entry.notes.some(n => n.indexOf('no V8 code-cache, JSC bytecode, or brotli-sealed shape') >= 0));
+        assert.ok(res.entry.notes.some(n => n.indexOf('no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape') >= 0));
     }],
     ['binary pass: zip artifacts are scoped to their own asset root', async () => {
         class StubZip { constructor() { this.files = {}; } file(p, c) { this.files[p] = c; } }
@@ -493,6 +494,91 @@ const binaryCases = [
         assert.equal(await sha256HexBytes(new Uint8Array(0)), null);
     }],
 ];
+
+// ------------------------------------------- cached-function tree + wasm layer
+
+const structureCases = [
+    ['jsc: cached-function tree matches the unbuned oracle', async () => {
+        const bytes = loadFixture('jsc-chunk.jsc');
+        const stats = analyzeJscModule(bytes);
+        assert.equal(stats.valid, true);
+        assert.equal(stats.nodes, 7);
+        assert.equal(stats.blocks, 7);
+        assert.equal(stats.ops, 103);
+        assert.equal(stats.bindFailed, 0);
+        assert.equal(stats.rootName, '<ordinal 204781>');
+        assert.equal(stats.rootParseMode, 0);
+        assert.equal(stats.functions.length, 7);
+        const truth = JSON.parse(fs.readFileSync(new URL('./fixtures/jsc-chunk-functions.json', import.meta.url), 'utf8'));
+        assert.deepEqual(stats, truth, 'full tree must stay stable against the oracle-captured ground truth');
+    }],
+    ['jsc: structural walk fails closed on non-bytecode bytes', async () => {
+        const noise = new Uint8Array(4096).fill(0x41);
+        const stats = analyzeJscModule(noise);
+        assert.equal(stats.blocks, 0);
+        assert.equal(stats.valid, false);
+        assert.equal(stats.functions.length, 1, 'root record alone, no blocks bound');
+    }],
+    ['wasm: exports match the platform oracle on the crafted fixture', async () => {
+        const bytes = loadFixture('wasm-data.wasm');
+        assert.ok(detectWasmModule(bytes));
+        assert.ok(WebAssembly.validate(bytes));
+        const info = parseWasmModule(bytes);
+        const module = new WebAssembly.Module(bytes);
+        const oracle = WebAssembly.Module.exports(module).map((e) => ({ name: e.name, kind: e.kind === 'function' ? 'func' : e.kind })).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+        const mine = info.exports.map((e) => ({ name: e.name, kind: e.kind })).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+        assert.deepEqual(mine, oracle);
+        assert.equal(info.exports.find((e) => e.name === 'compute').index, 0);
+        assert.equal(info.moduleName, 'handcrafted_module');
+        assert.deepEqual(Object.values(info.functionNames), ['compute']);
+        assert.deepEqual(info.dataStrings, ['hello from wasm data', 'second string here']);
+        assert.equal(info.notes.length, 0);
+    }],
+    ['wasm: name section recovered from the real corpus fixture', async () => {
+        const bytes = loadFixture('wasm-named.wasm');
+        assert.ok(detectWasmModule(bytes));
+        const info = parseWasmModule(bytes);
+        const names = Object.keys(info.functionNames).sort((a, b) => a - b).map((k) => info.functionNames[k]);
+        assert.deepEqual(names, ['eval0', 'eval1', 'mix', 'hash']);
+        const module = new WebAssembly.Module(bytes);
+        const oracleCount = WebAssembly.Module.exports(module).length;
+        assert.equal(info.exports.length, oracleCount);
+        assert.equal(info.notes.length, 0, 'the section walk must consume the module exactly');
+    }],
+    ['wasm: detector rejects noise and truncated bytes', async () => {
+        assert.equal(detectWasmModule(new Uint8Array(4096).fill(0x41)), false);
+        assert.equal(detectWasmModule(new Uint8Array(4)), false);
+        assert.equal(detectWasmModule(null), false);
+    }],
+    ['routing: .wasm extension and wasm magic reach the binary pass', async () => {
+        assert.equal(looksBinaryScript('https://x/mod.wasm', null), true);
+        assert.equal(looksBinaryScript('https://x/blob?v=1', loadFixture('wasm-named.wasm')), true);
+        assert.equal(looksBinaryScript('https://x/app.js', new TextEncoder().encode('console.log(1)')), false);
+    }],
+    ['binary pass: wasm asset lands the wasm-module stage and artifact', async () => {
+        const res = await unpackAsset({ url: 'https://x/mod.wasm', bytes: loadFixture('wasm-data.wasm') }, { index: 0 });
+        assert.equal(res.entry.kind, 'binary');
+        assert.ok(res.entry.stages.some((s) => s.tool === 'wasm-module'));
+        const artifact = res.files.find((f) => f.path.endsWith('/wasm-info.json'));
+        assert.ok(artifact, 'wasm-info.json missing');
+        const info = JSON.parse(artifact.content);
+        assert.equal(info.moduleName, 'handcrafted_module');
+        assert.deepEqual(info.dataStrings, ['hello from wasm data', 'second string here']);
+    }],
+    ['binary pass: JSC asset lands functions.json with the oracle tree', async () => {
+        const res = await unpackAsset({ url: 'https://x/chunk.jsc', bytes: loadFixture('jsc-chunk.jsc') }, { index: 0 });
+        assert.ok(res.entry.stages.some((s) => s.tool === 'jsc-bytecode'));
+        assert.ok(res.entry.stages[0].detail.includes('7 functions'), 'stage detail must name the function count, got: ' + res.entry.stages[0].detail);
+        assert.equal(res.entry.functions, 7);
+        const artifact = res.files.find((f) => f.path.endsWith('/functions.json'));
+        assert.ok(artifact, 'functions.json missing');
+        const tree = JSON.parse(artifact.content);
+        assert.equal(tree.valid, true);
+        assert.equal(tree.functions.length, 7);
+    }],
+];
+
+for (const [name, fn] of structureCases) cases.push({ name, fn });
 
 for (const [name, fn] of binaryCases) cases.push({ name, fn });
 

@@ -11,7 +11,8 @@
 import * as beautifyNamespace from 'js-beautify';
 import { decodeJsfuck, detectJsfuck } from './jsfuck.js';
 import { detectV8CodeCache, parseV8CodeCache, parseSealedV8 } from './v8codecache.js';
-import { parseJscHeader, detectJscBytecode, recoverJscStrings } from './jscbytecode.js';
+import { parseJscHeader, detectJscBytecode, recoverJscStrings, analyzeJscModule } from './jscbytecode.js';
+import { detectWasmModule, parseWasmModule } from './wasm.js';
 import {
     detectAaencode, detectJjencode, detectJsfiretruck, detectObfuscatorIo,
     detectPacker, detectStringArray, transformStringArray, unpackPacker
@@ -67,8 +68,9 @@ export async function sha256HexBytes(bytes) {
 // stays text. Brotli-sealed blobs without an extension are not routed here —
 // they reach unpackBinaryAsset only when named like a script cache.
 export function looksBinaryScript(url, bytes) {
-    if (/\.(jsc|bc)(\?|$)/i.test(String(url || ''))) return true;
-    return !!(bytes && bytes.length >= 32 && (detectV8CodeCache(bytes) || detectJscBytecode(bytes)));
+    if (/\.(jsc|bc|wasm)(\?|$)/i.test(String(url || ''))) return true;
+    return !!(bytes && bytes.length >= 8 && detectWasmModule(bytes))
+        || !!(bytes && bytes.length >= 32 && (detectV8CodeCache(bytes) || detectJscBytecode(bytes)));
 }
 
 // ------------------------------------------------------- scanner primitives
@@ -717,6 +719,17 @@ async function unpackBinaryAsset(asset, options) {
         if (list && list.length) files.push({ path: base + '/strings.json', content: JSON.stringify(list, null, 2) });
     }
 
+    if (detectWasmModule(bytes)) {
+        var wasm = parseWasmModule(bytes);
+        entry.stages.push({ depth: 0, tool: 'wasm-module', detail: 'wasm module, ' + wasm.sections.length + ' sections, ' + wasm.imports.length + ' imports, ' + wasm.exports.length + ' exports, ' + Object.keys(wasm.functionNames).length + ' named functions' });
+        files.push({ path: base + '/wasm-info.json', content: JSON.stringify({
+            version: wasm.version, moduleName: wasm.moduleName,
+            sections: wasm.sections, imports: wasm.imports, exports: wasm.exports,
+            functionNames: wasm.functionNames, typeNames: wasm.typeNames,
+            dataStrings: wasm.dataStrings, notes: wasm.notes
+        }, null, 2) });
+    }
+
     if (detectV8CodeCache(bytes)) {
         var cache = parseV8CodeCache(bytes);
         if (cache) {
@@ -730,6 +743,14 @@ async function unpackBinaryAsset(asset, options) {
         entry.stages.push({ depth: 0, tool: 'jsc-bytecode', detail: 'JSC bytecode v' + header.version + ', ' + header.declaredLength + 'B' });
         strings = recoverJscStrings(bytes);
         cacheHeaderFile({ shape: 'jsc-bytecode', stamp: header.stamp, format: header.format, version: header.version, declaredLength: header.declaredLength, bodyOffset: header.bodyOffset });
+        var structure = analyzeJscModule(bytes);
+        if (structure.blocks > 0) {
+            entry.stages[entry.stages.length - 1].detail += ', ' + structure.functions.length + ' functions, ' + structure.blocks + ' blocks, ' + structure.ops + ' ops';
+            entry.functions = structure.functions.length;
+            files.push({ path: base + '/functions.json', content: JSON.stringify(structure, null, 2) });
+        } else {
+            entry.notes.push('JSC function tree did not bind (build opcode drift)');
+        }
     }
     if (!entry.stages.length) {
         var sealed = await parseSealedV8(bytes, { inflate: opts.inflate });
@@ -742,7 +763,7 @@ async function unpackBinaryAsset(asset, options) {
     }
     stringsFile(strings);
     if (!entry.stages.length) {
-        entry.notes.push('binary asset: no V8 code-cache, JSC bytecode, or brotli-sealed shape recognized');
+        entry.notes.push('binary asset: no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape recognized');
     }
     return { entry: entry, files: files };
 }
