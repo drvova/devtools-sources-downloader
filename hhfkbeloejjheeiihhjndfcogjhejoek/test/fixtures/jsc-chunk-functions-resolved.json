@@ -1,0 +1,102 @@
+{
+  "valid": true,
+  "rootName": "file:///B:/%7EBUN/root/chunk-nqhgex2p.js",
+  "rootParseMode": 0,
+  "nodes": 7,
+  "blocks": 7,
+  "ops": 103,
+  "bindFailed": 0,
+  "functions": [
+    {
+      "name": "file:///B:/%7EBUN/root/chunk-nqhgex2p.js",
+      "kind": "root",
+      "record": 32,
+      "callBlock": null,
+      "constructBlock": {
+        "region": 92,
+        "instrAt": 104,
+        "instrLength": 55,
+        "opCount": 11,
+        "gap": 56
+      }
+    },
+    {
+      "name": "o",
+      "kind": "fdecls",
+      "record": 504,
+      "callBlock": {
+        "region": 694,
+        "instrAt": 694,
+        "instrLength": 3,
+        "opCount": 2,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "njo",
+      "kind": "fdecls",
+      "record": 560,
+      "callBlock": {
+        "region": 727,
+        "instrAt": 748,
+        "instrLength": 193,
+        "opCount": 38,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "S_t",
+      "kind": "fdecls",
+      "record": 588,
+      "callBlock": {
+        "region": 1155,
+        "instrAt": 1172,
+        "instrLength": 104,
+        "opCount": 19,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "W",
+      "kind": "fdecls",
+      "record": 616,
+      "callBlock": {
+        "region": 1360,
+        "instrAt": 1364,
+        "instrLength": 16,
+        "opCount": 4,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": "SGs",
+      "kind": "fdecls",
+      "record": 644,
+      "callBlock": {
+        "region": 1428,
+        "instrAt": 1436,
+        "instrLength": 48,
+        "opCount": 11,
+        "gap": 4
+      },
+      "constructBlock": null
+    },
+    {
+      "name": null,
+      "kind": "fexprs",
+      "record": 672,
+      "callBlock": {
+        "region": 1554,
+        "instrAt": 1576,
+        "instrLength": 90,
+        "opCount": 18,
+        "gap": 4
+      },
+      "constructBlock": null
+    }
+  ]
+}

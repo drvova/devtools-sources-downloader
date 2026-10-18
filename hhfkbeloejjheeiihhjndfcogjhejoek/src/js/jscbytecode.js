@@ -695,7 +695,94 @@ function readJscInlineString(bytes, at) {
     return text;
 }
 
-export function decodeJscSlot(bytes, fieldAt, slot, depth) {
+
+// ---------------------------------------------------------------
+// Shared bytecode string table (EncoderStringTable). A
+// `--compile --bytecode` build serializes one table for the whole
+// binary and every chunk refers to a string of four or more
+// characters by ordinal. Layout: a count, one offset per ordinal
+// (from the table start, 4-aligned), then per string a length and
+// flag word (length bits 0-30, the eight-bit flag at bit 31),
+// StringImpl::hash() over the characters, then the characters.
+// Every record is hash checked, so an edited payload yields fewer
+// strings, never wrong ones.
+//
+// Divergence from the unbuned oracle, deliberate: the oracle
+// appends valid records to a dense list, so one corrupt record
+// shifts every later ordinal and can mis-name a function; this
+// reader keeps one slot per ordinal (holes stay undefined), so a
+// broken record leaves an unresolvable placeholder, never a wrong
+// name.
+export function readJscSharedTable(bytes, offset, length) {
+    var empty = { strings: [], count: 0, resolved: 0, offset: offset, length: length };
+    if (!bytes || offset < 0 || length < 8 || offset + length > bytes.length) return empty;
+    var count = u32(bytes, offset);
+    if (count < 1 || count > 0x400000 || 4 + count * 4 > length) return empty;
+    var end = offset + length;
+    var strings = [];
+    var resolved = 0;
+    for (var ordinal = 0; ordinal < count; ordinal++) {
+        var recordAt = u32(bytes, offset + 4 + ordinal * 4);
+        var at = offset + recordAt;
+        if (recordAt % 4 || recordAt < 8 || at + 8 > end) continue;
+        var flags = u32(bytes, at);
+        var stored = u32(bytes, at + 4);
+        var textLength = flags & 0x7FFFFFFF;
+        var width = (flags >>> 31) & 1 ? 1 : 2;
+        var byteLength = textLength * width;
+        if (!textLength || at + 8 + byteLength > end) continue;
+        var chars = bytes.subarray(at + 8, at + 8 + byteLength);
+        if (wtfStringHash(chars) !== stored) continue;
+        var text = "";
+        if (width === 1) {
+            for (var c = 0; c < textLength; c++) text += String.fromCharCode(chars[c]);
+        } else {
+            for (var u = 0; u < textLength; u++) text += String.fromCharCode(chars[u * 2] | (chars[u * 2 + 1] << 8));
+        }
+        strings[ordinal] = text;
+        resolved++;
+    }
+    return { strings: strings, count: count, resolved: resolved, offset: offset, length: length };
+}
+
+// Content-addressed table discovery: a zip of loose assets carries
+// no module graph, so the table is located by validating its own
+// structure. A candidate is a real table when its window fits, the
+// first/middle/last ordinals resolve in-window, their offsets
+// ascend (records are laid out in ordinal order), and every probed
+// record hash-checks. Returns the sparse read, or null.
+export function findJscSharedTable(bytes) {
+    if (!bytes || bytes.length < 24) return null;
+    for (var at = 0; at + 16 <= bytes.length; at += 4) {
+        var count = u32(bytes, at);
+        if (count < 8 || count > 0x200000) continue;
+        if (at + 4 + count * 4 + 8 > bytes.length) continue;
+        var probes = [0, count >> 1, count - 1];
+        var lastOffset = -1;
+        var ok = true;
+        for (var p = 0; p < probes.length; p++) {
+            var recordAt = u32(bytes, at + 4 + probes[p] * 4);
+            var rec = at + recordAt;
+            if (recordAt % 4 || recordAt < 8 || rec + 8 > bytes.length || recordAt <= lastOffset) { ok = false; break; }
+            lastOffset = recordAt;
+            var flags = u32(bytes, rec);
+            var stored = u32(bytes, rec + 4);
+            var textLength = flags & 0x7FFFFFFF;
+            var width = (flags >>> 31) & 1 ? 1 : 2;
+            var byteLength = textLength * width;
+            if (!textLength || rec + 8 + byteLength > bytes.length) { ok = false; break; }
+            if (wtfStringHash(bytes.subarray(rec + 8, rec + 8 + byteLength)) !== stored) { ok = false; break; }
+        }
+        if (!ok) continue;
+        var read = readJscSharedTable(bytes, at, bytes.length - at);
+        if (read.resolved >= probes.length) {
+            return { strings: read.strings, count: read.count, resolved: read.resolved, offset: at, length: read.length };
+        }
+    }
+    return null;
+}
+
+export function decodeJscSlot(bytes, fieldAt, slot, shared, depth) {
     if (slot === 0x7FFFFFFF || slot === 0xFFFFFFFF) return "";
     if (depth === undefined) depth = 0;
     var tag = slot & 3;
@@ -705,7 +792,11 @@ export function decodeJscSlot(bytes, fieldAt, slot, depth) {
         for (var i = 0; i < length; i++) text += String.fromCharCode((slot >>> (8 * (i + 1))) & 0xFF);
         return text;
     }
-    if (tag === 2) return "<ordinal " + (slot >>> 2) + ">";
+    if (tag === 2) {
+        var ordinal = slot >>> 2;
+        if (shared && ordinal < shared.length && shared[ordinal] !== undefined) return shared[ordinal];
+        return "<ordinal " + ordinal + ">";
+    }
     if (tag === 0 && depth < 3) {
         // field-relative pointer (signed 32-bit): the target is either
         // another slot (recursed) or an inline string record (fallback)
@@ -714,7 +805,7 @@ export function decodeJscSlot(bytes, fieldAt, slot, depth) {
         if (target > 0 && target + 4 <= bytes.length) {
             var inner = u32(bytes, target);
             if ((inner & 3) <= 2) {
-                var decoded = decodeJscSlot(bytes, target, inner, depth + 1);
+                var decoded = decodeJscSlot(bytes, target, inner, shared, depth + 1);
                 if (decoded.indexOf("<offset") !== 0) return decoded;
             }
             var record = readJscInlineString(bytes, target);
@@ -726,7 +817,7 @@ export function decodeJscSlot(bytes, fieldAt, slot, depth) {
     return "";
 }
 
-export function instantiateJscExec(bytes, record) {
+export function instantiateJscExec(bytes, record, shared) {
     if (record < 0x20 || record + 32 > bytes.length) return null;
     var header = u32(bytes, record);
     var present = {
@@ -757,7 +848,7 @@ export function instantiateJscExec(bytes, record) {
     if (present.name) {
         if (cursor + 4 > bytes.length) return null;
         var nameSlot = u32(bytes, cursor);
-        parsed.name = decodeJscSlot(bytes, cursor, nameSlot);
+        parsed.name = decodeJscSlot(bytes, cursor, nameSlot, shared);
         cursor += 4;
     }
     if (present.tdz) cursor += 4;
@@ -786,7 +877,7 @@ function jscBlockChildren(bytes, block) {
 
 // Decode a module's whole cached-function tree. One bad slot is
 // counted, not raised: a corrupt slot must not discard the rest.
-export function analyzeJscModule(bytes) {
+export function analyzeJscModule(bytes, shared) {
     var stats = {
         valid: false,
         rootName: null,
@@ -797,7 +888,7 @@ export function analyzeJscModule(bytes) {
         bindFailed: 0,
         functions: []
     };
-    var root = instantiateJscExec(bytes, 0x20);
+    var root = instantiateJscExec(bytes, 0x20, shared);
     if (!root) return stats;
     stats.rootName = root.name;
     stats.rootParseMode = root.parseMode;
@@ -827,7 +918,7 @@ export function analyzeJscModule(bytes) {
         for (var c = 0; c < children.length; c++) {
             var target = children[c][1];
             if (target < 0x20 || target >= bytes.length - 32) { stats.bindFailed++; continue; }
-            var child = instantiateJscExec(bytes, target);
+            var child = instantiateJscExec(bytes, target, shared);
             if (!child) { stats.bindFailed++; continue; }
             var fn = { name: child.name === undefined ? null : child.name, kind: children[c][0], record: child.record, callBlock: null, constructBlock: null };
             if (child.record in seenExec) {

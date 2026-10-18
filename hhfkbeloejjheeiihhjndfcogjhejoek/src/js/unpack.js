@@ -11,7 +11,7 @@
 import * as beautifyNamespace from 'js-beautify';
 import { decodeJsfuck, detectJsfuck } from './jsfuck.js';
 import { detectV8CodeCache, parseV8CodeCache, parseSealedV8 } from './v8codecache.js';
-import { parseJscHeader, detectJscBytecode, recoverJscStrings, analyzeJscModule } from './jscbytecode.js';
+import { parseJscHeader, detectJscBytecode, recoverJscStrings, analyzeJscModule, findJscSharedTable } from './jscbytecode.js';
 import { detectWasmModule, parseWasmModule } from './wasm.js';
 import {
     detectAaencode, detectJjencode, detectJsfiretruck, detectObfuscatorIo,
@@ -743,10 +743,19 @@ async function unpackBinaryAsset(asset, options) {
         entry.stages.push({ depth: 0, tool: 'jsc-bytecode', detail: 'JSC bytecode v' + header.version + ', ' + header.declaredLength + 'B' });
         strings = recoverJscStrings(bytes);
         cacheHeaderFile({ shape: 'jsc-bytecode', stamp: header.stamp, format: header.format, version: header.version, declaredLength: header.declaredLength, bodyOffset: header.bodyOffset });
-        var structure = analyzeJscModule(bytes);
+        var structure = analyzeJscModule(bytes, opts.sharedJscStrings || null);
         if (structure.blocks > 0) {
             entry.stages[entry.stages.length - 1].detail += ', ' + structure.functions.length + ' functions, ' + structure.blocks + ' blocks, ' + structure.ops + ' ops';
             entry.functions = structure.functions.length;
+            if (opts.sharedJscStrings) {
+                var named = 0;
+                for (var f = 0; f < structure.functions.length; f++) {
+                    var fn = structure.functions[f];
+                    if (fn.name && String(fn.name).indexOf('<ordinal ') !== 0) named++;
+                }
+                structure.sharedTable = { source: opts.sharedJscSource || 'batch', ordinals: opts.sharedJscStrings.length, resolvedNames: named };
+                entry.stages[entry.stages.length - 1].detail += ', ' + named + ' names via shared table';
+            }
             files.push({ path: base + '/functions.json', content: JSON.stringify(structure, null, 2) });
         } else {
             entry.notes.push('JSC function tree did not bind (build opcode drift)');
@@ -864,6 +873,28 @@ export async function unpackAssets(assets, options) {
     var opts = options || {};
     var report = { generatedBy: 'unpack.js', assets: [], totals: { assets: assets.length, unpacked: 0, modules: 0, sources: 0, beautified: 0 } };
     var allFiles = [];
+    // Shared JSC string table: chunks reach this batch as loose assets with
+    // no module graph, so the container-wide EncoderStringTable is discovered
+    // by structure (hash-validated) in any binary asset and shared with every
+    // chunk, resolving `<ordinal N>` name slots to real strings.
+    if (!opts.sharedJscStrings) {
+        var wantsTable = false;
+        for (var d = 0; d < assets.length; d++) {
+            if (assets[d].bytes && detectJscBytecode(assets[d].bytes)) { wantsTable = true; break; }
+        }
+        if (wantsTable) {
+            for (var s = 0; s < assets.length; s++) {
+                var scanBytes = assets[s].bytes;
+                if (!scanBytes || scanBytes.length < 24 || scanBytes.length > LIMITS.maxAssetBytes) continue;
+                var found = findJscSharedTable(scanBytes);
+                if (found && found.resolved >= 8) {
+                    opts.sharedJscStrings = found.strings;
+                    opts.sharedJscSource = assets[s].url || assets[s].zipPath || ('asset ' + s);
+                    break;
+                }
+            }
+        }
+    }
     for (var i = 0; i < assets.length; i++) {
         var result = await unpackAsset(assets[i], {
             index: i,
@@ -873,6 +904,8 @@ export async function unpackAssets(assets, options) {
             fetchText: opts.fetchText,
             inflate: opts.inflate,
             pathPrefix: opts.pathPrefix,
+            sharedJscStrings: opts.sharedJscStrings,
+            sharedJscSource: opts.sharedJscSource,
             zipPath: assets[i].zipPath
         });
         report.assets.push(result.entry);

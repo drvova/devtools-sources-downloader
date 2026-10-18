@@ -23,6 +23,7 @@ import {
     resolveMapUrl,
     assetSlug,
     unpackAsset,
+    unpackAssets,
     unpackAssetsIntoZip,
     sha256Hex
 } from '../src/js/unpack.js';
@@ -38,7 +39,8 @@ import {
     detectV8CodeCache, parseV8CodeCache, parseSealedV8, extractV8Strings
 } from '../src/js/v8codecache.js';
 import {
-    parseJscHeader, detectJscBytecode, recoverJscStrings, wtfStringHash, analyzeJscModule
+    parseJscHeader, detectJscBytecode, recoverJscStrings, wtfStringHash, analyzeJscModule,
+    readJscSharedTable, findJscSharedTable
 } from '../src/js/jscbytecode.js';
 import { detectWasmModule, parseWasmModule } from '../src/js/wasm.js';
 import fs from 'node:fs';
@@ -577,6 +579,115 @@ const structureCases = [
         assert.equal(tree.functions.length, 7);
     }],
 ];
+
+// Minimal shared EncoderStringTable from real claude.exe records: count,
+// offset per ordinal, records laid out in ordinal order (the writer's own
+// layout); unneeded ordinals point at a zero-length marker both readers skip.
+function buildSharedTable(corruptOrdinal) {
+    const recordsJson = JSON.parse(fs.readFileSync(new URL('./fixtures/jsc-shared-records.json', import.meta.url), 'utf8'));
+    const count = recordsJson.count;
+    const ordinals = Object.keys(recordsJson.records).map(Number).sort((a, b) => a - b);
+    const offsetsLen = 4 + count * 4;
+    let total = offsetsLen + 8;
+    const recBytes = ordinals.map((o) => Buffer.from(recordsJson.records[o].hex, 'hex'));
+    for (const b of recBytes) total += Math.ceil(b.length / 4) * 4;
+    const out = Buffer.alloc(total);
+    out.writeUInt32LE(count, 0);
+    let cursor = offsetsLen + 8;
+    const pos = {};
+    for (let i = 0; i < ordinals.length; i++) {
+        const b = recBytes[i];
+        if (ordinals[i] === corruptOrdinal) b[b.length - 1] ^= 0xff; // break the stored hash
+        b.copy(out, cursor);
+        pos[ordinals[i]] = cursor;
+        cursor += Math.ceil(b.length / 4) * 4;
+    }
+    for (let o = 0; o < count; o++) out.writeUInt32LE(pos[o] !== undefined ? pos[o] : offsetsLen, 4 + o * 4);
+    return out;
+}
+
+const sharedCases = [
+    ['jsc: shared reader resolves real records and leaves holes', async () => {
+        const table = buildSharedTable();
+        const read = readJscSharedTable(table, 0, table.length);
+        assert.equal(read.count, 204782);
+        assert.equal(read.resolved, 9);
+        assert.equal(read.strings[0], 'B:/~BUN/root/chunk-6xptctz4.js');
+        assert.equal(read.strings[10609], 'W');
+        assert.equal(read.strings[10759], 'o');
+        assert.equal(read.strings[22490], 'S_t');
+        assert.equal(read.strings[129467], 'njo');
+        assert.equal(read.strings[184967], 'SGs');
+        assert.equal(read.strings[204781], 'file:///B:/%7EBUN/root/chunk-nqhgex2p.js');
+        assert.equal(read.strings[100], undefined, 'gap ordinals stay holes, never shifted names');
+        assert.equal(readJscSharedTable(table, 0, 12).resolved, 0, 'a window too small for the offsets array refuses');
+    }],
+    ['jsc: scanner finds an embedded shared table and rejects noise', async () => {
+        const table = buildSharedTable();
+        const padded = new Uint8Array(512 + table.length);
+        padded.fill(0x41);
+        padded.set(table, 512);
+        const found = findJscSharedTable(padded);
+        assert.ok(found, 'scanner must find the table inside an arbitrary blob');
+        assert.equal(found.offset, 512);
+        assert.equal(found.resolved, 9);
+        assert.equal(found.strings[204781], 'file:///B:/%7EBUN/root/chunk-nqhgex2p.js');
+        assert.equal(findJscSharedTable(new Uint8Array(4096).fill(0x41)), null);
+        assert.equal(findJscSharedTable(table.subarray(0, 100)), null, 'a truncated head cannot hold the offsets array');
+        assert.equal(findJscSharedTable(null), null);
+    }],
+    ['jsc: ordinal name slots resolve against the shared table (oracle parity)', async () => {
+        const chunk = loadFixture('jsc-chunk.jsc');
+        const table = buildSharedTable();
+        const read = readJscSharedTable(table, 0, table.length);
+        const resolved = analyzeJscModule(chunk, read.strings);
+        assert.equal(resolved.rootName, 'file:///B:/%7EBUN/root/chunk-nqhgex2p.js');
+        assert.equal(resolved.bindFailed, 0);
+        const truth = JSON.parse(fs.readFileSync(new URL('./fixtures/jsc-chunk-functions-resolved.json', import.meta.url), 'utf8'));
+        assert.deepEqual(resolved, truth, 'resolved tree must stay stable against the oracle-captured names');
+        // the unresolved walk stays byte-identical when no table is passed
+        const plain = analyzeJscModule(chunk);
+        assert.equal(plain.rootName, '<ordinal 204781>');
+        for (let i = 0; i < truth.functions.length; i++) {
+            const p = plain.functions[i].name, t = truth.functions[i].name;
+            if (t === null) assert.equal(p, null);
+            else assert.ok(String(p).indexOf('<ordinal ') === 0, 'resolved slots degrade to placeholders, got: ' + p);
+        }
+    }],
+    ['jsc: a corrupt record leaves a hole, never a shifted name', async () => {
+        const table = buildSharedTable(129467); // 'njo' record, hash broken
+        const read = readJscSharedTable(table, 0, table.length);
+        assert.equal(read.resolved, 8);
+        assert.equal(read.strings[129467], undefined, 'the broken ordinal is an unresolvable placeholder');
+        assert.equal(read.strings[10609], 'W', 'earlier ordinals keep their own strings');
+        assert.equal(read.strings[184967], 'SGs', 'later ordinals keep their own strings (no dense-list shift)');
+        assert.equal(read.strings[204781], 'file:///B:/%7EBUN/root/chunk-nqhgex2p.js');
+        const chunk = loadFixture('jsc-chunk.jsc');
+        const resolved = analyzeJscModule(chunk, read.strings);
+        assert.equal(resolved.functions.find((f) => f.record === 0x230).name, '<ordinal 129467>');
+    }],
+    ['binary pass: batch discovers the shared table and resolves functions.json', async () => {
+        const chunkBytes = loadFixture('jsc-chunk.jsc');
+        const containerBytes = new Uint8Array(buildSharedTable());
+        const result = await unpackAssets([
+            { url: 'https://x/assets/chunk-nqhgex2p.jsc', bytes: chunkBytes },
+            { url: 'https://x/assets/section.bin', bytes: containerBytes }
+        ], { pathPrefix: '_unpack' });
+        const chunkEntry = result.report.assets[0];
+        assert.ok(chunkEntry.stages.some((s) => s.tool === 'jsc-bytecode'));
+        assert.ok(chunkEntry.stages.some((s) => s.detail.includes('names via shared table')), 'stage detail must name the shared-table resolution, got: ' + chunkEntry.stages.map((s) => s.detail).join(' | '));
+        const artifact = result.files.find((f) => f.path.endsWith('chunk-nqhgex2p.jsc.js/functions.json'));
+        assert.ok(artifact, 'functions.json missing: ' + result.files.map((f) => f.path).join(', '));
+        const tree = JSON.parse(artifact.content);
+        assert.equal(tree.rootName, 'file:///B:/%7EBUN/root/chunk-nqhgex2p.js');
+        assert.equal(tree.sharedTable.source, 'https://x/assets/section.bin');
+        assert.equal(tree.sharedTable.resolvedNames, 6);
+        assert.equal(tree.functions.find((f) => f.name === 'o') !== undefined, true);
+        assert.equal(tree.functions.find((f) => f.name === 'SGs') !== undefined, true);
+    }],
+];
+
+for (const [name, fn] of sharedCases) cases.push({ name, fn });
 
 for (const [name, fn] of structureCases) cases.push({ name, fn });
 
