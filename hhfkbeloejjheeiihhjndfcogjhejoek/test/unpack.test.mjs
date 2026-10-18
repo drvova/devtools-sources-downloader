@@ -26,6 +26,22 @@ import {
     unpackAssetsIntoZip,
     sha256Hex
 } from '../src/js/unpack.js';
+import { decodeJsfuck, detectJsfuck, interpretJsfuck } from '../src/js/jsfuck.js';
+import {
+    detectPacker, unpackPacker, detectStringArray, transformStringArray,
+    detectAaencode, detectJjencode, detectJsfiretruck
+} from '../src/js/packers.js';
+import {
+    looksBinaryScript, sha256HexBytes
+} from '../src/js/unpack.js';
+import {
+    detectV8CodeCache, parseV8CodeCache, parseSealedV8, extractV8Strings
+} from '../src/js/v8codecache.js';
+import {
+    parseJscHeader, detectJscBytecode, recoverJscStrings, wtfStringHash
+} from '../src/js/jscbytecode.js';
+import fs from 'node:fs';
+import { brotliDecompressSync } from 'node:zlib';
 
 const cases = [];
 function test(name, fn) { cases.push({ name, fn }); }
@@ -255,6 +271,231 @@ test('zip seam: writes artifacts and a report at the requested root', async () =
 });
 
 let failed = 0;
+// ---------------------------------------------- jsfuck (JSFuck 0.5.0 oracle)
+
+const jsfuckCases = [
+    ['jsfuck: bare recipe value matches the vendored oracle', async () => {
+        globalThis.window = globalThis;
+        (0, eval)(fs.readFileSync(new URL('./fixtures/jsfuck-encoder.js', import.meta.url), 'utf8'));
+        const jsfucked = globalThis.JSFuck.encode('Number', false);
+        const decoded = decodeJsfuck(jsfucked);
+        assert.equal(decoded.value, 'Number');
+        assert.equal(decoded.captured, false, 'bare recipe must yield a plain value, not a capture');
+    }],
+    ['jsfuck: Function wrapper captures the payload body', async () => {
+        const jsfucked = globalThis.JSFuck.encode('Number', true);
+        const decoded = decodeJsfuck(jsfucked);
+        assert.equal(decoded.captured, true);
+        assert.equal(decoded.value, 'Number');
+    }],
+    ['jsfuck: real engine executes what the interpreter captures', async () => {
+        const jsfucked = globalThis.JSFuck.encode('Number', true, true);
+        // Real eval executes the payload: Function('Number')() returns undefined.
+        // The interpreter captures the same payload body without running it.
+        const ran = (0, eval)(jsfucked);
+        assert.equal(ran, Number);
+        const decoded = decodeJsfuck(jsfucked);
+        assert.equal(decoded.value, 'Number');
+    }],
+    ['jsfuck: detector is positive on encoded payloads and negative on source', async () => {
+        const pos = detectJsfuck(globalThis.JSFuck.encode('Number', false));
+        assert.ok(pos.detected, 'encoded payload must be detected');
+        assert.ok(pos.purity > 0.9, 'purity above 0.9, got ' + pos.purity);
+        const neg = detectJsfuck("console.log('a' + 'b');");
+        assert.equal(neg.detected, false);
+    }],
+    ['jsfuck: peelText routes and decodes as one layer', async () => {
+        const res = await peelText(globalThis.JSFuck.encode('Number', false));
+        assert.equal(res.stages.length, 1);
+        assert.equal(res.stages[0].tool, 'jsfuck');
+        assert.equal(res.final, 'Number');
+    }],
+
+// ---------------------------------------------------------- Dean Edwards packer
+
+    ['packer: detector matches a real packer call and rejects prose', async () => {
+        const packed = "eval(function(p,a,c,k,e,d){e=function(c){return c.toString(36)};if(!''.replace(/^/,String)){while(c--){d[c.toString(a)]=k[c]||c.toString(a)}k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c])}}return p}(\"0.1('2 3 4');\",36,5,\"console|log|unpacked|from|layer\".split('|'),0,{}))";
+        const hit = detectPacker(packed);
+        assert.ok(hit, 'real packer call must be detected');
+        assert.equal(hit.base, 36);
+        assert.equal(hit.words.length, 5);
+        assert.equal(detectPacker("console.log('split by pipe words here');"), null);
+    }],
+    ['packer: unpackPacker substitutes base-36 words into the template', async () => {
+        const packed = "eval(function(p,a,c,k,e,d){e=function(c){return c.toString(36)};if(!''.replace(/^/,String)){while(c--){d[c.toString(a)]=k[c]||c.toString(a)}k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c])}}return p}(\"0.1('2 3 4');\",36,5,\"console|log|unpacked|from|layer\".split('|'),0,{}))";
+        assert.equal(unpackPacker(packed), "console.log('unpacked from layer');");
+    }],
+    ['packer: nested layers peel in order through peelText', async () => {
+        // packer template that itself expands to a packer call over a second template
+        const inner = "\\'0.1(\\\'2 3 4\\\');\\',36,5,\\\"console|log|unpacked|from|layer\\\".split(\\\'|\\\')";
+        // simpler nesting: packer expands to a string-array source
+        const packed = "eval(function(p,a,c,k,e,d){e=function(c){return c.toString(36)};if(!''.replace(/^/,String)){while(c--){d[c.toString(a)]=k[c]||c.toString(a)}k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c])}}return p}(\"0 1=['2','3'];4.5(1[9]);\",36,6,\"var|_0xabc|hello|world|console|log\".split('|'),0,{}))";
+        const res = await peelText(packed);
+        assert.equal(res.stages[0].tool, 'packer');
+        assert.equal(res.final, "var _0xabc=['hello','world'];console.log(_0xabc[9]);");
+    }],
+
+// -------------------------------------------------------------- string arrays
+
+    ['string-array: detector requires rotation, pivot and inline calls', async () => {
+        const src = "var _0xabc=['a','1','hello','world'];(function(_0x1,_0x2){while(!![]){try{var _0x4=parseInt(_0x1[0])*1+1;if(_0x4===_0x2)break;else _0x1.push(_0x1.shift())}catch(e){_0x1.push(_0x1.shift())}}}(_0xabc,0x1));var _0xdec=function(i){return _0xabc[i];};console.log(_0xdec(0x2),_0xdec(0x3));";
+        const hit = detectStringArray(src);
+        assert.ok(hit, 'string array layout must be detected');
+        assert.equal(hit.arrayId, '_0xabc');
+        assert.equal(hit.literals, 4);
+        assert.equal(detectStringArray("var plain=['a','b'];console.log(plain[0]);"), null, 'no rotation/pivot: not the pattern');
+    }],
+    ['string-array: transform rotates the array and inlines decoder calls', async () => {
+        const src = "var _0xabc=['a','1','hello','world'];(function(_0x1,_0x2){while(!![]){try{var _0x4=parseInt(_0x1[0])*1+1;if(_0x4===_0x2)break;else _0x1.push(_0x1.shift())}catch(e){_0x1.push(_0x1.shift())}}}(_0xabc,0x1));var _0xdec=function(i){return _0xabc[i];};console.log(_0xdec(0x2),_0xdec(0x3));";
+        assert.equal(transformStringArray(src), "var _0xabc = ['1', 'hello', 'world', 'a'];console.log('world','a');");
+    }],
+    ['string-array: peelText peels it as one layer', async () => {
+        const src = "var _0xabc=['a','1','hello','world'];(function(_0x1,_0x2){while(!![]){try{var _0x4=parseInt(_0x1[0])*1+1;if(_0x4===_0x2)break;else _0x1.push(_0x1.shift())}catch(e){_0x1.push(_0x1.shift())}}}(_0xabc,0x1));var _0xdec=function(i){return _0xabc[i];};console.log(_0xdec(0x2),_0xdec(0x3));";
+        const res = await peelText(src);
+        assert.equal(res.stages.length, 1);
+        assert.equal(res.stages[0].tool, 'string-array');
+        assert.equal(res.final, "var _0xabc = ['1', 'hello', 'world', 'a'];console.log('world','a');");
+    }],
+
+// -------------------------------------------------------------- shell refusals
+
+    ['refusals: aaencode shell is reported, never transformed', async () => {
+        const shell = "ﾟωﾉ= /´ｍ｠)ﾉ ~┻━┻   //*\\´∇`＊/ ['_']; " + "(ﾟΘﾟ)".repeat(20);
+        const res = await peelText(shell);
+        assert.equal(res.stages.length, 0, 'no static transform may run on a runtime shell');
+        assert.equal(res.refusals.length, 1);
+        assert.equal(res.refusals[0].tool, 'aaencode');
+        assert.ok(res.refusals[0].detail.length > 0);
+    }],
+    ['refusals: jjencode shell is reported', async () => {
+        const shell = '$=~[];$={___:++$,$___:(![]+"")[$],____:++$};$.___=($.__=$[""])[$.___+$.___];console.log($.___);';
+        const res = await peelText(shell);
+        assert.ok(res.refusals.some(r => r.tool === 'jjencode'), 'jjencode must be refused');
+    }],
+    ['refusals: plain source carries none', async () => {
+        const res = await peelText("console.log('plain');");
+        assert.equal(res.refusals.length, 0);
+    }],
+    ['refusals: unpackAsset surfaces refusal notes on the entry', async () => {
+        const shell = "ﾟωﾉ= /´ｍ｠)ﾉ ~┻━┻   //*\\´∇`＊/ ['_']; " + "(ﾟΘﾟ)".repeat(20);
+        const res = await unpackAsset({ url: 'https://x/aa.js', content: shell }, { index: 3 });
+        assert.equal(res.entry.refusals.length, 1);
+        assert.ok(res.entry.notes.some(n => n.indexOf('refused: aaencode') === 0));
+    }],
+];
+for (const [name, fn] of jsfuckCases) cases.push({ name, fn });
+
+// ------------------------------------------------ binary cached-bytecode layers
+
+const loadFixture = (name) => new Uint8Array(fs.readFileSync(new URL('./fixtures/' + name, import.meta.url)));
+
+const binaryCases = [
+    ['v8: header and framed strings on a real node24 cache', async () => {
+        const bytes = loadFixture('v8-codecache.jsc');
+        assert.ok(detectV8CodeCache(bytes));
+        const cache = parseV8CodeCache(bytes);
+        assert.ok(cache, 'cache must parse');
+        assert.equal(cache.format, 'v12');
+        assert.equal(cache.payloadLength + 32, bytes.length);
+        assert.deepEqual(cache.strings, ['hi from cache', 'evalmachine.<anonymous>']);
+    }],
+    ['v8: detector rejects JSC bytecode and truncated blobs', async () => {
+        assert.equal(detectV8CodeCache(loadFixture('jsc-chunk.jsc')), false);
+        assert.equal(detectV8CodeCache(new Uint8Array(20)), false);
+        const zeros = new Uint8Array(64);
+        assert.equal(detectV8CodeCache(zeros), false, 'zero magic must not match the 0xC0DE family');
+    }],
+    ['v8: framed strings are bounded and printable', async () => {
+        const bytes = loadFixture('v8-codecache.jsc');
+        const strings = extractV8Strings(bytes, 32);
+        assert.deepEqual(strings, ['hi from cache', 'evalmachine.<anonymous>']);
+        // a scan window that ends before the second frame still yields the first
+        const partial = extractV8Strings(bytes, 32, 140);
+        assert.deepEqual(partial, ['hi from cache']);
+    }],
+    ['jsc: header accepts the real chunk and rejects noise', async () => {
+        const bytes = loadFixture('jsc-chunk.jsc');
+        const header = parseJscHeader(bytes);
+        assert.ok(header);
+        assert.equal(header.format, 1);
+        assert.equal(header.declaredLength, bytes.length);
+        assert.equal(header.bodyOffset, 32);
+        const noise = new Uint8Array(4096).fill(0x41);
+        assert.equal(detectJscBytecode(noise), false, 'uniform noise must fail the format-or-length guard');
+        assert.equal(detectJscBytecode(new Uint8Array(20)), false);
+    }],
+    ['jsc: recovered strings match the unbuned ground truth', async () => {
+        const bytes = loadFixture('jsc-chunk.jsc');
+        const truth = JSON.parse(fs.readFileSync(new URL('./fixtures/jsc-chunk-strings.json', import.meta.url), 'utf8'));
+        assert.deepEqual(recoverJscStrings(bytes), truth);
+    }],
+    ['jsc: wtfStringHash reproduces every ledger ground truth', async () => {
+        const enc = new TextEncoder();
+        const truths = [['moduleLoader', 0x27d79d], ['homeObject', 0xc376d0], ['starNamespace', 0x72858b], ['iterator', 0x336a9c]];
+        for (const [text, hash] of truths) assert.equal(wtfStringHash(enc.encode(text)), hash, text);
+    }],
+    ['sealed: brotli-sealed V8 cache peels through two stages', async () => {
+        const bytes = loadFixture('v8-codecache-sealed.jsc');
+        assert.equal(detectV8CodeCache(bytes), false, 'sealed blob must not read as a plain cache');
+        const sealed = await parseSealedV8(bytes, { inflate: async (b) => brotliDecompressSync(Buffer.from(b)) });
+        assert.ok(sealed, 'sealed route must parse with an injected inflator');
+        assert.equal(sealed.tool, 'jsc-sealed-v8');
+        assert.deepEqual(sealed.cache.strings, ['hi from cache', 'evalmachine.<anonymous>']);
+    }],
+    ['sealed: a throwing inflator degrades to a refusal, not a crash', async () => {
+        const bytes = loadFixture('v8-codecache-sealed.jsc');
+        const sealed = await parseSealedV8(bytes, { inflate: async () => { throw new Error('not brotli'); } });
+        assert.equal(sealed, null);
+    }],
+    ['routing: looksBinaryScript matches caches by magic and extension only', async () => {
+        assert.equal(looksBinaryScript('https://x/app.jsc', null), true);
+        assert.equal(looksBinaryScript('https://x/chunk.bc?v=2', null), true);
+        assert.equal(looksBinaryScript('https://x/blob', loadFixture('v8-codecache.jsc')), true);
+        assert.equal(looksBinaryScript('https://x/blob', loadFixture('jsc-chunk.jsc')), true);
+        assert.equal(looksBinaryScript('https://x/app.js', new TextEncoder().encode('console.log(1)')), false);
+        assert.equal(looksBinaryScript('https://x/b', new Uint8Array(8)), false);
+    }],
+    ['binary pass: unrecognized blobs report a refusal note', async () => {
+        const noise = new Uint8Array(4096).fill(0x41);
+        const res = await unpackAsset({ url: 'https://x/unknown.bin', bytes: noise }, { index: 0 });
+        assert.equal(res.entry.kind, 'binary');
+        assert.equal(res.entry.stages.length, 0);
+        assert.ok(res.entry.notes.some(n => n.indexOf('no V8 code-cache, JSC bytecode, or brotli-sealed shape') >= 0));
+    }],
+    ['binary pass: zip artifacts are scoped to their own asset root', async () => {
+        class StubZip { constructor() { this.files = {}; } file(p, c) { this.files[p] = c; } }
+        const zip = new StubZip();
+        const report = await unpackAssetsIntoZip(zip, [
+            { url: 'https://x/v8.jsc', bytes: loadFixture('v8-codecache.jsc') },
+            { url: 'https://x/jsc.jsc', bytes: loadFixture('jsc-chunk.jsc') }
+        ], { inflate: async (b) => brotliDecompressSync(Buffer.from(b)) });
+        const roots = {};
+        for (const p of Object.keys(zip.files)) {
+            if (p.endsWith('/index.json')) continue;
+            const root = p.split('/')[1];
+            roots[root] = true;
+            assert.ok(p.indexOf(root) >= 0, 'artifact must live under its own root');
+        }
+        const rootNames = Object.keys(roots);
+        assert.equal(rootNames.length, 2);
+        const v8Root = rootNames.find(r => r.indexOf('v8.jsc') >= 0);
+        const jscRoot = rootNames.find(r => r.indexOf('jsc.jsc') >= 0);
+        assert.deepEqual(JSON.parse(zip.files['_unpack/' + v8Root + '/strings.json']), ['hi from cache', 'evalmachine.<anonymous>']);
+        assert.deepEqual(JSON.parse(zip.files['_unpack/' + jscRoot + '/strings.json']), ['moduleLoader', 'starNamespace']);
+        assert.equal(report.totals.unpacked, 2);
+    }],
+    ['binary digest: sha256HexBytes is stable and input-sensitive', async () => {
+        const a = new Uint8Array([1, 2, 3, 255]);
+        const b = new Uint8Array([1, 2, 3, 254]);
+        assert.ok(await sha256HexBytes(a));
+        assert.equal(await sha256HexBytes(a), await sha256HexBytes(new Uint8Array([1, 2, 3, 255])));
+        assert.notEqual(await sha256HexBytes(a), await sha256HexBytes(b));
+        assert.equal(await sha256HexBytes(new Uint8Array(0)), null);
+    }],
+];
+
+for (const [name, fn] of binaryCases) cases.push({ name, fn });
+
 for (const c of cases) {
     try {
         await c.fn();

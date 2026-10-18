@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { unpackAssetsIntoZip, beautifyJs, looksMinified } from './unpack.js';
+import { unpackAssetsIntoZip, beautifyJs, looksMinified, looksBinaryScript, decodeBase64ToBytes } from './unpack.js';
 
 var reloadDebugBtn = document.getElementById('reloadDebugBtn');
 var downloadBtn = document.getElementById('downloadBtn');
@@ -495,7 +495,27 @@ function doDownload() {
                 resource.getContent(function (content, encoding) {
                     zip.file(sanitizeFilename(resource.url), content, { base64: encoding === 'base64' });
                     var urlLo = resource.url.toLowerCase();
-                    if (/\.(?:js|mjs)(?:\?|$)/.test(urlLo) || /\.js$/.test(urlLo)) {
+                    var binaryBytes = null;
+                    if (encoding === 'base64' && content && content.length <= 8 * 1024 * 1024) {
+                        try { binaryBytes = decodeBase64ToBytes(content); } catch (_) { binaryBytes = null; }
+                    }
+                    if (looksBinaryScript(resource.url, binaryBytes)) {
+                        // Cached bytecode (V8 code cache, JSC bytecode, sealed
+                        // .jsc): routed as bytes so the binary pass reads its
+                        // header and recovers its strings instead of treating
+                        // it as opaque text.
+                        var routedBytes = binaryBytes;
+                        if (!routedBytes) {
+                            try { routedBytes = decodeBase64ToBytes(content); } catch (_) { routedBytes = null; }
+                        }
+                        if (routedBytes) {
+                            jsAssets.push({
+                                url: resource.url,
+                                zipPath: sanitizeFilename(resource.url),
+                                bytes: routedBytes
+                            });
+                        }
+                    } else if (/\.(?:js|mjs)(?:\?|$)/.test(urlLo) || /\.js$/.test(urlLo)) {
                         jsAssets.push({
                             url: resource.url,
                             zipPath: sanitizeFilename(resource.url),

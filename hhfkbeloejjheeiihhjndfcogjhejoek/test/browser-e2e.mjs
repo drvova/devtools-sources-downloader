@@ -25,6 +25,8 @@ const BROWSER_CANDIDATES = [
 const SCRIPT_PAYLOAD = 'function packed(){return document.title;}\nconst marker = "packed-once";';
 const RUNTIME_PAYLOAD = 'function fromEval(){return "runtime";}\nconst runtimeMarker = "runtime-once";';
 const MAP = JSON.stringify({ version: 3, sources: ['webpack://src/original.ts'], sourcesContent: ['export const original = true;'] });
+const JSC_BYTES = fs.readFileSync(path.join(ROOT, 'test/fixtures/v8-codecache.jsc'));
+const JSC_B64 = JSC_BYTES.toString('base64');
 const b64 = (text) => Buffer.from(text, 'utf8').toString('base64');
 
 const CONTENT_TYPES = {
@@ -139,6 +141,7 @@ function readZip(buffer) {
 const stub = (port) => `
 (function(){
   var SCRIPT_URL = 'https://demo.test/app/bundle.js';
+  var JSC_URL = 'https://demo.test/app/chunk.jsc';
   var SCRIPT_BODY = 'eval(atob("${b64(SCRIPT_PAYLOAD)}"))\\n//# sourceMappingURL=data:application/json;base64,${b64(MAP)}';
   var RUNTIME_TEXT = 'eval(atob("${b64(RUNTIME_PAYLOAD)}"))';
   window.__TEST_SCRIPT_BODY__ = SCRIPT_BODY;
@@ -149,7 +152,10 @@ const stub = (port) => `
       inspectedWindow: {
         reload: function () {},
         getResources: function (cb) {
-          cb([{ url: SCRIPT_URL, type: 'script', getContent: function (done) { done(SCRIPT_BODY, 'text'); } }]);
+          cb([
+            { url: SCRIPT_URL, type: 'script', getContent: function (done) { done(SCRIPT_BODY, 'text'); } },
+            { url: JSC_URL, type: 'script', getContent: function (done) { done('${JSC_B64}', 'base64'); } }
+          ]);
         },
         eval: function (expr, cb) {
           if (typeof expr !== 'string') { cb(null, null); return; }
@@ -283,6 +289,10 @@ async function main() {
         assert(hasAsset(scriptRoot, 'sources/src/original.ts'), 'recovered original source missing');
         assert(hasAsset(runtimeRoot, 'layers/01-eval-unwrap.js'), 'runtime eval layer missing');
         assert(hasAsset(runtimeRoot, 'layers/02-base64.js'), 'runtime base64 layer missing');
+        const binaryRoot = '_unpack/0001-demo.test__app__chunk.jsc.js/';
+        assert(hasAsset(binaryRoot, 'cache-header.json'), 'binary cache-header.json missing');
+        assert(hasAsset(binaryRoot, 'strings.json'), 'binary strings.json missing');
+        assert(readAsset(binaryRoot, 'strings.json').includes('hi from cache'), 'binary strings not recovered from the V8 cache');
         assert(has('_analysis/chunk-map.json'), 'existing analysis artifacts must survive');
         assert(has('_unpack-runtime/index.json'), 'runtime payload unpack report missing');
 
@@ -294,9 +304,12 @@ async function main() {
         assert(readAsset(runtimeRoot, 'layers/02-base64.js').includes('function fromEval()'), 'runtime payload not recovered');
 
         const report = JSON.parse(Buffer.from(zip['_unpack/index.json']).toString('utf8'));
-        assert(report.totals.assets === 1, 'report should cover 1 script asset, got ' + report.totals.assets);
-        assert(report.totals.unpacked === 1, 'report should count 1 unpacked asset, got ' + report.totals.unpacked);
+        assert(report.totals.assets === 2, 'report should cover 2 script assets, got ' + report.totals.assets);
+        assert(report.totals.unpacked === 2, 'report should count 2 unpacked assets, got ' + report.totals.unpacked);
         assert(report.assets[0].sources === 1, 'report should count 1 recovered source');
+        assert(report.assets[1].kind === 'binary', 'second asset should be routed as binary, got ' + report.assets[1].kind);
+        assert(report.assets[1].stages.some(function (stage) { return stage.tool === 'v8-code-cache'; }), 'binary asset should carry the v8-code-cache stage, got ' + JSON.stringify(report.assets[1].stages));
+        assert(report.assets[1].sources === 0, 'binary assets have no source-map sources');
 
         const runtimeReport = JSON.parse(Buffer.from(zip['_unpack-runtime/index.json']).toString('utf8'));
         assert(runtimeReport.root === '_unpack-runtime', 'runtime report root mismatch');

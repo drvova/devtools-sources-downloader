@@ -9,6 +9,13 @@
 // outside the browser (see test/unpack.test.mjs).
 
 import * as beautifyNamespace from 'js-beautify';
+import { decodeJsfuck, detectJsfuck } from './jsfuck.js';
+import { detectV8CodeCache, parseV8CodeCache, parseSealedV8 } from './v8codecache.js';
+import { parseJscHeader, detectJscBytecode, recoverJscStrings } from './jscbytecode.js';
+import {
+    detectAaencode, detectJjencode, detectJsfiretruck, detectObfuscatorIo,
+    detectPacker, detectStringArray, transformStringArray, unpackPacker
+} from './packers.js';
 
 const jsBeautify = beautifyNamespace.js || (beautifyNamespace.default && beautifyNamespace.default.js);
 
@@ -37,6 +44,31 @@ export async function sha256Hex(text) {
         hash = Math.imul(hash, 0x01000193) >>> 0;
     }
     return 'fnv1a' + hash.toString(16).padStart(8, '0');
+}
+
+// Digest for binary assets (V8 caches, JSC bytecode) where TextEncoder would
+// mangle byte values above 0x7F into multi-byte sequences.
+export async function sha256HexBytes(bytes) {
+    if (!bytes || !bytes.length) return null;
+    if (globalThis.crypto && globalThis.crypto.subtle) {
+        var digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+        return Array.from(new Uint8Array(digest)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    }
+    var fnv = 0x811c9dc5;
+    for (var i = 0; i < bytes.length; i++) {
+        fnv ^= bytes[i];
+        fnv = Math.imul(fnv, 0x01000193) >>> 0;
+    }
+    return 'fnv1a' + fnv.toString(16).padStart(8, '0');
+}
+
+// Sync routing for resource collection: a script-shaped binary (V8 code cache,
+// JSC bytecode) or a .jsc/.bc URL goes down the bytes path, everything else
+// stays text. Brotli-sealed blobs without an extension are not routed here —
+// they reach unpackBinaryAsset only when named like a script cache.
+export function looksBinaryScript(url, bytes) {
+    if (/\.(jsc|bc)(\?|$)/i.test(String(url || ''))) return true;
+    return !!(bytes && bytes.length >= 32 && (detectV8CodeCache(bytes) || detectJscBytecode(bytes)));
 }
 
 // ------------------------------------------------------- scanner primitives
@@ -290,6 +322,14 @@ export function detectLayers(text) {
     if (gain(reversed) > gain(text) + 2) findings.push({ tool: 'reverse', score: 0.45, detail: 'reversed source' });
     var rot13 = text.replace(/[a-zA-Z]/g, function (c) { return String.fromCharCode((c <= 'Z' ? 90 : 122) >= c.charCodeAt(0) + 13 ? c.charCodeAt(0) + 13 : c.charCodeAt(0) - 13); });
     if (gain(rot13) > gain(text) + 2) findings.push({ tool: 'rot13', score: 0.42, detail: 'rot13 source' });
+    // Self-contained detectors: each one both detects and routes (its own
+    // predicate is the collector), so the transform never guesses.
+    var packer = detectPacker(text);
+    if (packer) findings.push({ tool: 'packer', score: 0.9, detail: 'Dean Edwards packer, base ' + packer.base + ', ' + packer.words.length + ' words' });
+    var jsf = detectJsfuck(text);
+    if (jsf.detected) findings.push({ tool: 'jsfuck', score: 0.95, detail: 'jsfuck, purity ' + (jsf.purity * 100).toFixed(1) + '%' });
+    var stringArray = detectStringArray(text);
+    if (stringArray) findings.push({ tool: 'string-array', score: 0.8, detail: 'string array ' + stringArray.arrayId + ', ' + stringArray.literals + ' literals' });
     findings.sort(function (a, b) { return b.score - a.score; });
     return findings;
 }
@@ -430,7 +470,29 @@ async function applyTransform(tool, text) {
     if (tool === 'charcode') return unwrapCharcode(text);
     if (tool === 'reverse') return unwrapReverse(text);
     if (tool === 'rot13') return unwrapRot13(text);
+    if (tool === 'packer') return unpackPacker(text);
+    if (tool === 'string-array') return transformStringArray(text);
+    if (tool === 'jsfuck') {
+        var decoded = decodeJsfuck(text);
+        return decoded && typeof decoded.value === 'string' ? decoded.value : null;
+    }
     return null;
+}
+
+// Shell encodings whose payload only exists at RUNTIME: detected and reported,
+// never transformed. The string-array pass covers the static slice of
+// obfuscator.io output, so it is reported only when it did NOT match.
+function collectRefusals(text) {
+    var refusals = [];
+    var aa = detectAaencode(text);
+    if (aa) refusals.push(aa);
+    var jj = detectJjencode(text);
+    if (jj) refusals.push(jj);
+    var ft = detectJsfiretruck(text);
+    if (ft) refusals.push(ft);
+    var ob = detectObfuscatorIo(text);
+    if (ob && !detectStringArray(text)) refusals.push({ tool: 'obfuscator-io', detail: ob.detail + ' (runtime shell; static string-array pass did not match)' });
+    return refusals;
 }
 
 // The detect -> route -> transform -> re-detect loop, one layer per iteration.
@@ -441,6 +503,7 @@ export async function peelText(text, options) {
     var maxDepth = opts.maxDepth || LIMITS.maxDepth;
     var stages = [];
     var outputs = [];
+    var refusals = collectRefusals(text);
     var current = text;
     var seen = new Set([await sha256Hex(current)]);
     for (var depth = 0; depth < maxDepth; depth++) {
@@ -472,7 +535,7 @@ export async function peelText(text, options) {
         outputs.push(produced);
         current = produced;
     }
-    return { stages: stages, outputs: outputs, final: current };
+    return { stages: stages, outputs: outputs, final: current, refusals: refusals };
 }
 
 // ------------------------------------------------------------- beautifier
@@ -617,15 +680,84 @@ function safePath(path) {
     }).join('/');
 }
 
-// Full pass over one JavaScript asset. Returns the report entry plus the files
-// that should be written into the export zip.
-export async function unpackAsset(asset, options) {
+// Binary pass for cached-bytecode assets (V8 code cache, JSC bytecode,
+// brotli-sealed V8). The detection ladder is ordered exactly like the peel
+// loop: every rung is a self-contained detector, the first match routes, and
+// an unrecognized blob is a reported refusal, never a silent skip.
+async function unpackBinaryAsset(asset, options) {
     var opts = options || {};
     var index = opts.index == null ? 0 : opts.index;
     var zipPath = opts.zipPath || '';
     var entry = {
         url: asset.url,
         zipPath: zipPath,
+        kind: 'binary',
+        bytes: asset.bytes.length,
+        digest: await sha256HexBytes(asset.bytes),
+        stages: [],
+        modules: 0,
+        sources: 0,
+        beautified: false,
+        sourceMap: null,
+        notes: []
+    };
+    var files = [];
+    if (asset.bytes.length > LIMITS.maxAssetBytes) {
+        entry.notes.push('asset exceeds unpack budget');
+        return { entry: entry, files: files };
+    }
+    var base = (opts.pathPrefix || '_unpack') + '/' + assetSlug(asset.url, index);
+    var bytes = asset.bytes;
+    var strings = null;
+
+    function cacheHeaderFile(payload) {
+        files.push({ path: base + '/cache-header.json', content: JSON.stringify(payload, null, 2) });
+    }
+    function stringsFile(list) {
+        if (list && list.length) files.push({ path: base + '/strings.json', content: JSON.stringify(list, null, 2) });
+    }
+
+    if (detectV8CodeCache(bytes)) {
+        var cache = parseV8CodeCache(bytes);
+        if (cache) {
+            entry.stages.push({ depth: 0, tool: 'v8-code-cache', detail: cache.runtime + ' ' + cache.format + ', payload ' + cache.payloadLength + 'B' });
+            strings = cache.strings;
+            cacheHeaderFile({ shape: 'v8-code-cache', magic: cache.magicHex, runtime: cache.runtime, format: cache.format, versionHash: cache.versionHash, sourceHash: cache.sourceHash, flagHash: cache.flagHash, payloadLength: cache.payloadLength });
+        }
+    }
+    if (!entry.stages.length && detectJscBytecode(bytes)) {
+        var header = parseJscHeader(bytes);
+        entry.stages.push({ depth: 0, tool: 'jsc-bytecode', detail: 'JSC bytecode v' + header.version + ', ' + header.declaredLength + 'B' });
+        strings = recoverJscStrings(bytes);
+        cacheHeaderFile({ shape: 'jsc-bytecode', stamp: header.stamp, format: header.format, version: header.version, declaredLength: header.declaredLength, bodyOffset: header.bodyOffset });
+    }
+    if (!entry.stages.length) {
+        var sealed = await parseSealedV8(bytes, { inflate: opts.inflate });
+        if (sealed) {
+            entry.stages.push({ depth: 0, tool: 'jsc-sealed-v8', detail: 'brotli-sealed V8 cache, ' + sealed.inflatedBytes + 'B inflated' });
+            entry.stages.push({ depth: 1, tool: 'v8-code-cache', detail: sealed.cache.runtime + ' ' + sealed.cache.format + ', payload ' + sealed.cache.payloadLength + 'B' });
+            strings = sealed.cache.strings;
+            cacheHeaderFile({ shape: 'jsc-sealed-v8', inflatedBytes: sealed.inflatedBytes, magic: sealed.cache.magicHex, runtime: sealed.cache.runtime, format: sealed.cache.format });
+        }
+    }
+    stringsFile(strings);
+    if (!entry.stages.length) {
+        entry.notes.push('binary asset: no V8 code-cache, JSC bytecode, or brotli-sealed shape recognized');
+    }
+    return { entry: entry, files: files };
+}
+
+// Full pass over one JavaScript asset. Returns the report entry plus the files
+// that should be written into the export zip.
+export async function unpackAsset(asset, options) {
+    if (asset && asset.bytes) return unpackBinaryAsset(asset, options);
+    var opts = options || {};
+    var index = opts.index == null ? 0 : opts.index;
+    var zipPath = opts.zipPath || '';
+    var entry = {
+        url: asset.url,
+        zipPath: zipPath,
+        kind: 'text',
         bytes: asset.content ? asset.content.length : 0,
         digest: asset.content ? await sha256Hex(asset.content) : null,
         stages: [],
@@ -643,6 +775,10 @@ export async function unpackAsset(asset, options) {
     var base = (opts.pathPrefix || '_unpack') + '/' + assetSlug(asset.url, index);
     var peeled = await peelText(asset.content, { maxDepth: opts.maxDepth });
     entry.stages = peeled.stages;
+    entry.refusals = peeled.refusals;
+    for (var r = 0; r < peeled.refusals.length; r++) {
+        entry.notes.push('refused: ' + peeled.refusals[r].tool + ' — ' + peeled.refusals[r].detail);
+    }
     var current = peeled.final;
 
     for (var s = 0; s < peeled.stages.length; s++) {
@@ -714,6 +850,7 @@ export async function unpackAssets(assets, options) {
             maxModules: opts.maxModules,
             maxBeautifyBytes: opts.maxBeautifyBytes,
             fetchText: opts.fetchText,
+            inflate: opts.inflate,
             pathPrefix: opts.pathPrefix,
             zipPath: assets[i].zipPath
         });
