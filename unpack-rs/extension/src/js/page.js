@@ -528,9 +528,7 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
     downloadBtn.textContent = 'Building zip...';
     setActivity('info', 'Building a site-aware export package...');
     var runtimeEntries =
-        reconData && reconData.recon && reconData.recon.runtime
-            ? reconData.recon.runtime
-            : [];
+        reconData && reconData.recon && reconData.recon.runtime ? reconData.recon.runtime : [];
 
     collectRuntimePayloads(runtimeEntries, function (runtimePayloads) {
         var result;
@@ -542,7 +540,10 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
         } catch (err) {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download All';
-            setActivity('danger', 'Unpacking failed: ' + (err && err.message ? err.message : String(err)));
+            setActivity(
+                'danger',
+                'Unpacking failed: ' + (err && err.message ? err.message : String(err)),
+            );
             return;
         }
         zip.generateAsync({ type: 'blob' }).then(function (zipContent) {
@@ -556,7 +557,6 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
 
 // Runtime payloads (eval, Function, injected scripts, JS workers) are exactly where
 // obfuscation hides, so they take the same peel/beautify/module pass as page scripts.
-
 
 function collectRuntimePayloads(runtimeEntries, onComplete) {
     if (!runtimeEntries || runtimeEntries.length === 0) {
@@ -605,7 +605,3 @@ function fetchRuntimePayload(index, onComplete) {
         }
     });
 }
-
-
-
-

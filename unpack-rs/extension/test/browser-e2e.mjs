@@ -325,9 +325,7 @@ async function main() {
         const errors = consoleErrors.length ? ' | console: ' + consoleErrors.join(' | ') : '';
         if (/failed/i.test(status)) throw new Error('export reported failure: ' + status + errors);
         if (!/Export ready\./.test(status))
-            throw new Error(
-                'export did not complete within 60s; last status: ' + status + errors,
-            );
+            throw new Error('export did not complete within 60s; last status: ' + status + errors);
 
         let zipPath = null;
         for (let i = 0; i < 40 && !zipPath; i++) {

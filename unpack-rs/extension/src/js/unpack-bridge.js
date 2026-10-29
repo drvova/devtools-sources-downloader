@@ -491,7 +491,13 @@ export function panelWriteReconArtifacts(reconData, pageSnapshot) {
     );
 }
 
-export function panelFinalizeZipWithRecon(jsAssets, reconData, pageSnapshot, runtimePayloads, options) {
+export function panelFinalizeZipWithRecon(
+    jsAssets,
+    reconData,
+    pageSnapshot,
+    runtimePayloads,
+    options,
+) {
     return call(
         'panelFinalizeZipWithRecon',
         jsAssets || [],
