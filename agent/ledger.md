@@ -3,6 +3,36 @@
 Append-only. Newest first. One entry per execution-time failure or workflow
 defect fixed during a turn: date, seam, root cause, canonical fix, validation.
 
+- 2026-10-29 (panel port: a range splice defined by ONE grep hit deleted the
+  wrong span): replacing a contiguous block of `src/panel/assets.rs` by an index
+  range derived from a single `grep -n` hit for the block's doc comment left the
+  old functions in place - the file's declaration order was not the order
+  assumed, so `determine_runtime_origin_type`/`score_runtime_entry` (which sit
+  ABOVE the struct they take) survived and the build failed with "defined
+  multiple times" plus `no field ... on type &Value`. A grep hit locates a LINE,
+  never a block boundary. Canonical fix: assert BOTH ends of a range splice
+  against their expected content and print the boundary lines before writing
+  (the second assert is what reported the real line), compile immediately after
+  the splice, and remove a surviving remnant by re-locating it from its own
+  unique doc comment instead of re-deriving indices. Validation: build clean,
+  `cargo test --lib panel` 20/20, `cargo clippy --lib -- -D warnings` clean.
+- 2026-10-29 (serde_json `json!` rejects method chains in value position): the
+  macro's value grammar is restricted, so `.iter().find_map(...)` inside
+  `json!({...})` is a macro syntax error ("no rules expected `.`"), not a type
+  error. Canonical fix: bind each multi-step value to a local before the
+  `json!` call (or parenthesize the whole expression); locals read better
+  anyway. Validation: build clean, `cargo test --lib panel::graph` 2/2 against
+  the node oracle.
+- 2026-10-29 (JSON fidelity: `JSON.stringify` never prints `8.0`): comparing a
+  ported pipeline against node oracles failed on `Number(8.0)` vs `Number(8)` -
+  serde's f64 serialization keeps the fraction while JavaScript drops it, and
+  serde_json's `Number` equality is representation-based, so the mismatch is
+  real output divergence, not a test artifact. Canonical fix: one JS-number
+  serializer/valuer pair (`serialize_js_number` / `js_number_value`: whole
+  values print as integers, non-finite values as `null`) applied to every f64
+  that reaches a report, plus the same treatment in hand-built `json!` rows.
+  Validation: `cargo test --lib panel` 20/20.
+
 - 2026-10-29 (making the extension real: load-automation archaeology on the
   DevTools surface): (1) Branded Chrome/Edge IGNORE `--load-extension`
   (Chrome 137 removal persists in Edge 156) - the known-working route is
