@@ -664,8 +664,9 @@ pub fn field_number(entry: &Value, key: &str) -> f64 {
     }
 }
 
-/// `String(value)` for the reference values the origin model passes through.
-fn value_text(value: &Value) -> String {
+/// `String(value)`: the JavaScript string coercion the panel uses whenever a
+/// reference value is interpolated into text.
+pub fn value_text(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
         Value::Null => String::new(),

@@ -9,8 +9,11 @@ use serde_json::{json, Value};
 
 use crate::jsnumber::js_number_to_string;
 use crate::panel::artifacts::{compute_recon_stats, escape_attr, escape_xml, serialize_inline_json};
-use crate::panel::assets::{field_number, field_str, js_truthy};
+use crate::panel::analysis::build_semantic_analysis;
+use crate::panel::assets::{field_number, field_str, js_truthy, ScriptInput};
 use crate::panel::text::{format_ms, format_size, sanitize_path_part};
+
+use crate::panel::assets::value_text;
 use crate::panel::view::escape_html;
 
 /// The console stylesheet, one rule block per entry.
@@ -631,6 +634,187 @@ pub fn generate_table(timings: &[Value]) -> String {
     html
 }
 
+/// `describeCaptureReason`: the one-line explanation of the current capture
+/// window, preferring the runtime status over the stack profile.
+pub fn describe_capture_reason(status: Option<&Value>, profile: Option<&Value>) -> String {
+    if let Some(reason) = status.map(|s| field_str(s, "reasonText")) {
+        if !reason.is_empty() {
+            return reason;
+        }
+    }
+    if let Some(status) = status {
+        if js_truthy(status.get("ready").unwrap_or(&Value::Null)) {
+            return "Adaptive capture window satisfied. Export can proceed.".to_string();
+        }
+    }
+    let reasons = profile
+        .and_then(|p| p.get("strategy"))
+        .and_then(|s| s.get("reasons"))
+        .and_then(|r| r.as_array());
+    if let Some(reasons) = reasons {
+        if !reasons.is_empty() {
+            let profile_name = profile
+                .and_then(|p| p.get("strategy"))
+                .map(|s| field_str(s, "profile"))
+                .unwrap_or_default();
+            let first = value_text(&reasons[0]);
+            return format!("Adaptive mode: {profile_name}. {first}.");
+        }
+    }
+    "Profiler idle until capture starts.".to_string()
+}
+
+/// `exportFrameworkArtifacts`: the framework state slices, one JSON file each,
+/// written only when the corresponding slice is non-empty.
+pub fn export_framework_artifacts(
+    writer: &mut dyn FnMut(&str, &str),
+    framework_state: Option<&Value>,
+) {
+    let Some(state) = framework_state else { return };
+    let object_len = |value: Option<&Value>| {
+        value
+            .and_then(|v| v.as_object())
+            .map(|o| o.len())
+            .unwrap_or(0)
+    };
+    let array_len = |value: Option<&Value>| {
+        value
+            .and_then(|v| v.as_array())
+            .map(|a| a.len())
+            .unwrap_or(0)
+    };
+    let pretty = |value: &Value| serde_json::to_string_pretty(value).unwrap_or_default();
+    let files: [(&str, &str); 7] = [
+        ("_framework/summary.json", "summary"),
+        ("_framework/router-state.json", "router"),
+        ("_framework/framework-roots.json", "roots"),
+        ("_framework/store-snapshots.json", "stores"),
+        ("_framework/query-caches.json", "queries"),
+        ("_framework/hydration-payloads.json", "hydration"),
+        ("_framework/auth-state.json", "auth"),
+    ];
+    for (path, key) in files {
+        let value = state.get(key);
+        let count = if matches!(value, Some(Value::Array(_))) {
+            array_len(value)
+        } else {
+            object_len(value)
+        };
+        if count == 0 {
+            continue;
+        }
+        if let Some(value) = value {
+            writer(path, &pretty(value));
+        }
+    }
+}
+
+/// `exportRuntimeArtifacts`: writes each runtime payload through the byte
+/// writer (base64 payloads are decoded), then the manifest. Returns the
+/// manifest rows.
+pub fn export_runtime_artifacts(
+    writer: &mut dyn FnMut(&str, &[u8]),
+    runtime_entries: &[Value],
+) -> Vec<Value> {
+    let mut manifest = Vec::new();
+    let mut counters: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for entry in runtime_entries {
+        let mut manifest_entry = serde_json::Map::new();
+        if let Some(object) = entry.as_object() {
+            for (key, value) in object {
+                if matches!(
+                    key.as_str(),
+                    "index" | "text" | "base64" | "hasText" | "hasBase64"
+                ) {
+                    continue;
+                }
+                manifest_entry.insert(key.clone(), value.clone());
+            }
+        }
+        let text = entry.get("text").filter(|v| v.is_string());
+        let base64 = entry.get("base64").filter(|v| v.is_string());
+        if text.is_some() || base64.is_some() {
+            let path = crate::panel::artifacts::build_runtime_path(entry, &mut counters);
+            if let Some(text) = text {
+                writer(&path, text.as_str().unwrap().as_bytes());
+            } else if let Some(base64) = base64 {
+                if let Some(bytes) = crate::decoders::decode_base64_to_bytes(base64.as_str().unwrap())
+                {
+                    writer(&path, &bytes);
+                }
+            }
+            manifest_entry.insert("file".to_string(), Value::String(path));
+        }
+        manifest.push(Value::Object(manifest_entry));
+    }
+    let manifest_value = Value::Array(manifest.clone());
+    writer(
+        "_runtime/runtime-manifest.json",
+        serde_json::to_string_pretty(&manifest_value)
+            .unwrap_or_default()
+            .as_bytes(),
+    );
+    manifest
+}
+
+/// `exportSemanticAnalysis`: the analysis JSON files, the readable
+/// reconstructions and the console page.
+pub fn export_semantic_analysis(
+    writer: &mut dyn FnMut(&str, &str),
+    js_assets: &[ScriptInput],
+    recon_data: Option<&Value>,
+    runtime_entries: &[Value],
+    runtime_manifest: &[Value],
+) {
+    let analysis = build_semantic_analysis(js_assets, recon_data, runtime_entries, runtime_manifest);
+    export_readable_artifacts(writer, &analysis);
+    let pretty = |value: &Value| serde_json::to_string_pretty(value).unwrap_or_default();
+    for (path, key) in [
+        ("_analysis/chunk-map.json", "chunkMap"),
+        ("_analysis/cross-boundary-flows.json", "crossBoundaryFlows"),
+        ("_analysis/module-graph.json", "moduleGraph"),
+        ("_analysis/startup-chain.json", "startupChain"),
+        ("_analysis/runtime-origins.json", "runtimeOrigins"),
+        ("_analysis/boundary-labels.json", "boundaryLabels"),
+        ("_analysis/framework-runtime.json", "frameworkRuntime"),
+        (
+            "_analysis/interesting-entrypoints.json",
+            "interestingEntrypoints",
+        ),
+    ] {
+        if let Some(value) = analysis.get(key) {
+            writer(path, &pretty(value));
+        }
+    }
+    let investigation = analysis.get("investigation").cloned().unwrap_or(Value::Null);
+    writer(
+        "_analysis/index.html",
+        &generate_investigation_index_html(&investigation),
+    );
+    for workspace in investigation
+        .get("workspaces")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+    {
+        writer(
+            &format!("_analysis/workspaces/{}.json", field_str(&workspace, "id")),
+            &pretty(&workspace),
+        );
+    }
+    for journey in investigation
+        .get("journeys")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+    {
+        writer(
+            &format!("_analysis/journeys/{}.json", field_str(&journey, "id")),
+            &pretty(&journey),
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -824,6 +1008,115 @@ mod tests {
             &generate_table(&sorted),
             exp["generateTable"].as_str().unwrap(),
             "table",
+        );
+    }
+
+    #[test]
+    fn capture_reason_matches_oracle() {
+        let fx = fixture();
+        let exp = &fx["expected"];
+        let want = exp["describeCaptureReason"].as_array().unwrap();
+        let status = json!({"reasonText": "Custom reason."});
+        let ready = json!({"ready": true});
+        let profile = json!({"strategy": {"profile": "balanced", "reasons": ["steady traffic"]}});
+        let not_ready = json!({"ready": false});
+        let empty_reasons = json!({"strategy": {"reasons": []}});
+        let cases = [
+            (Some(&status), None),
+            (Some(&ready), None),
+            (None, Some(&profile)),
+            (Some(&not_ready), Some(&empty_reasons)),
+            (None, None),
+        ];
+        for (index, (status, profile)) in cases.iter().enumerate() {
+            assert_eq!(
+                describe_capture_reason(*status, *profile),
+                want[index].as_str().unwrap(),
+                "describeCaptureReason {index}"
+            );
+        }
+    }
+
+    #[test]
+    fn framework_artifact_export_matches_oracle() {
+        let fx = fixture();
+        let exp = &fx["expected"];
+        let state = json!({
+            "summary": {"roots": 2, "stores": 1},
+            "router": {},
+            "roots": [{"id": "app"}, {"id": "root"}],
+            "stores": [],
+            "queries": [{"key": "user"}],
+            "hydration": [],
+            "auth": [{"token": "x"}],
+        });
+        let mut files: Vec<Value> = Vec::new();
+        export_framework_artifacts(
+            &mut |path, content| {
+                files.push(json!([path, content]));
+            },
+            Some(&state),
+        );
+        assert_eq!(
+            Value::Array(files),
+            exp["exportFrameworkArtifacts"],
+            "exportFrameworkArtifacts"
+        );
+        let mut empty: Vec<Value> = Vec::new();
+        export_framework_artifacts(
+            &mut |path, content| {
+                empty.push(json!([path, content]));
+            },
+            None,
+        );
+        assert_eq!(
+            Value::Array(empty),
+            exp["exportFrameworkArtifactsNull"],
+            "exportFrameworkArtifacts(null)"
+        );
+    }
+
+    #[test]
+    fn runtime_artifact_export_matches_oracle() {
+        let fx = fixture();
+        let exp = &fx["expected"];
+        let entries = json!([
+            {"index": 0, "id": "r1", "kind": "eval", "url": "https://x/a.js", "text": "var a = 1",
+             "hasText": true, "hasBase64": false, "size": 9},
+            {"index": 1, "id": "r2", "kind": "wasm", "url": "",
+             "base64": "AGFzbQ==", "hasText": false, "hasBase64": true},
+            {"index": 2, "id": "r3", "kind": "blob", "hasText": false, "hasBase64": false,
+             "note": "not captured"},
+        ]);
+        let entries = entries.as_array().unwrap();
+        let mut written: Vec<(String, Vec<u8>)> = Vec::new();
+        let manifest = export_runtime_artifacts(
+            &mut |path, bytes| {
+                written.push((path.to_string(), bytes.to_vec()));
+            },
+            entries,
+        );
+        let want = exp["exportRuntimeArtifacts"].as_array().unwrap();
+        assert_eq!(written.len(), want.len(), "runtime file count");
+        for (index, (path, bytes)) in written.iter().enumerate() {
+            let row = want[index].as_array().unwrap();
+            assert_eq!(path, row[0].as_str().unwrap(), "runtime path {index}");
+            let expected = row[2].as_str().unwrap();
+            if row[1].as_str().unwrap() == "base64" {
+                let decoded = crate::decoders::decode_base64_to_bytes(expected).unwrap();
+                assert_eq!(bytes, &decoded, "runtime payload {index}");
+            } else {
+                assert_eq!(
+                    std::str::from_utf8(bytes).unwrap(),
+                    expected,
+                    "runtime text {index}"
+                );
+            }
+        }
+        assert_eq!(
+            Value::Array(manifest),
+            exp["exportRuntimeManifest"],
+            "runtime manifest"
         );
     }
 
