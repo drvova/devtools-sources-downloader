@@ -1,0 +1,1741 @@
+{
+ "input": {
+  "scriptFixture": [
+   {
+    "url": "https://demo.test/app/main.js",
+    "content": "import a from \"react\";__webpack_require__(1);"
+   },
+   {
+    "url": "https://demo.test/vendor.js",
+    "content": "plain vendor"
+   },
+   {
+    "url": "https://demo.test/app/router.js",
+    "content": "history.pushState({},\"\",\"/x\");createBrowserRouter([])"
+   },
+   {
+    "url": "https://demo.test/app/auth.js",
+    "content": "const t = localStorage.getItem(\"jwt\");signin()"
+   }
+  ],
+  "reconFixture": {
+   "timings": [
+    {
+     "name": "https://demo.test/app/main.js",
+     "transferSize": 60000,
+     "startTime": 12.5,
+     "duration": 8
+    },
+    {
+     "name": "https://demo.test/vendor.js",
+     "transferSize": 1000,
+     "startTime": 1,
+     "duration": 2
+    }
+   ],
+   "stackProfile": {
+    "technologies": [
+     {
+      "name": "Next.js"
+     },
+     {
+      "name": "jQuery"
+     }
+    ],
+    "confidence": 0.8,
+    "traits": [
+     "ssr"
+    ],
+    "strategy": {
+     "profile": "ssr-app"
+    }
+   },
+   "captureStatus": {
+    "profile": "spa",
+    "confidence": 0.5,
+    "reasonText": "heuristics",
+    "signals": {
+     "a": 1
+    }
+   },
+   "page": {
+    "url": "https://demo.test/app"
+   }
+  },
+  "runtimeEntries": [
+   {
+    "id": "r1",
+    "kind": "eval",
+    "file": "runtime/eval-1.js",
+    "url": "https://demo.test/app/main.js",
+    "stack": "Error\n    at f (https://demo.test/vendor.js:1:2)",
+    "timestamp": 0,
+    "mimeType": "application/javascript",
+    "size": 42
+   },
+   {
+    "id": "r2",
+    "kind": "wasm",
+    "file": "runtime/wasm-1.wasm",
+    "blobId": "blob-1",
+    "timestamp": 30
+   }
+  ],
+  "runtimeManifest": [
+   {
+    "id": "r2",
+    "kind": "wasm",
+    "file": "runtime/wasm-1.wasm",
+    "blobId": "blob-1",
+    "timestamp": 30
+   }
+  ],
+  "recon": {
+   "xhr": [
+    {
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "requestBody": "{\"query\":\"query Q{a}\"}",
+     "timestamp": 5,
+     "status": 200,
+     "requestHeaders": {
+      "authorization": "Bearer x"
+     },
+     "responseText": "{\"data\":1}"
+    },
+    {
+     "url": "https://api.test/collect",
+     "method": "POST",
+     "timestamp": 1,
+     "responseBodyExcerpt": "ok"
+    }
+   ],
+   "fetch": [
+    {
+     "url": "https://demo.test/app/router.js",
+     "timestamp": 3,
+     "responseBodyExcerpt": "{\"x\":1}"
+    },
+    {
+     "url": "https://api.test/_next/data/x.json",
+     "timestamp": 2
+    }
+   ]
+  }
+ },
+ "expected": {
+  "buildBoundarySample": [
+   88,
+   "\n\n\n\n\n\n\n\n\n\n\n\n"
+  ],
+  "inferBoundaryLabels": [
+   [],
+   [
+    {
+     "label": "bootstrap",
+     "score": 30,
+     "reasons": [
+      "bootstraps the page or runtime loader"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "vendor",
+     "score": 20,
+     "reasons": [
+      "looks like third-party or framework code"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "vendor",
+     "score": 20,
+     "reasons": [
+      "looks like third-party or framework code"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "router",
+     "score": 24,
+     "reasons": [
+      "contains route or navigation signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "bootstrap",
+     "score": 30,
+     "reasons": [
+      "bootstraps the page or runtime loader"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "state",
+     "score": 24,
+     "reasons": [
+      "contains state container signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "contains data-fetching or API signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "auth",
+     "score": 24,
+     "reasons": [
+      "contains authentication or session signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "analytics",
+     "score": 22,
+     "reasons": [
+      "contains analytics or telemetry signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "editor",
+     "score": 24,
+     "reasons": [
+      "contains editor/runtime authoring signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "vendor",
+     "score": 20,
+     "reasons": [
+      "looks like third-party or framework code"
+     ]
+    }
+   ],
+   []
+  ],
+  "inferBoundaryLabelsRuntime": [
+   [
+    {
+     "label": "bootstrap",
+     "score": 30,
+     "reasons": [
+      "bootstraps the page or runtime loader"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "vendor",
+     "score": 16,
+     "reasons": [
+      "spawned from a vendor/framework chunk"
+     ]
+    }
+   ],
+   []
+  ],
+  "applyBoundaryLabels": {
+   "url": "https://x/a.js",
+   "content": "axios.get(\"/api/x\") redux dispatch(x)",
+   "boundaryDetails": [
+    {
+     "label": "state",
+     "score": 24,
+     "reasons": [
+      "contains state container signals"
+     ]
+    },
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "contains data-fetching or API signals"
+     ]
+    }
+   ],
+   "boundaryLabels": [
+    "state",
+    "data"
+   ],
+   "primaryBoundary": "state",
+   "boundaryReasons": [
+    "state: contains state container signals",
+    "data: contains data-fetching or API signals"
+   ]
+  },
+  "buildNetworkBoundarySample": [
+   "xhr\nhttps://api.test/graphql\npost\n{\"query\":\"query q{a}\"}\n\n\n",
+   "fetch\nhttps://x/_next/data/a.json\nget\n\n\n\n",
+   "xhr\nhttps://x/token/refresh\npost\n\n{\"authorization\":\"bearer 1\"}\n\n",
+   "xhr\nhttps://x/collect\npost\n\n\n\n",
+   "fetch\nhttps://x/draft/save\nput\n\n\n\n{\"content\":1}",
+   "fetch\nhttps://x/persist\npost\n\n\n\n",
+   "fetch\nhttps://x/plain\nget\n\n\n\n"
+  ],
+  "inferNetworkBoundaryLabels": [
+   [
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "network activity contains data-fetching or API signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "network activity contains data-fetching or API signals"
+     ]
+    },
+    {
+     "label": "router",
+     "score": 18,
+     "reasons": [
+      "network activity contains routing or navigation signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "auth",
+     "score": 28,
+     "reasons": [
+      "network activity contains authentication or session signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "analytics",
+     "score": 26,
+     "reasons": [
+      "network activity contains analytics or telemetry signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "network activity contains data-fetching or API signals"
+     ]
+    },
+    {
+     "label": "editor",
+     "score": 18,
+     "reasons": [
+      "network activity contains editor or content workflow signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "network activity contains data-fetching or API signals"
+     ]
+    },
+    {
+     "label": "state",
+     "score": 14,
+     "reasons": [
+      "network activity contains state synchronization signals"
+     ]
+    }
+   ],
+   [
+    {
+     "label": "data",
+     "score": 24,
+     "reasons": [
+      "network activity contains data-fetching or API signals"
+     ]
+    }
+   ]
+  ],
+  "stringifyLooseValue": [
+   "str",
+   "",
+   "{\"a\":1}",
+   "7",
+   "[1,2]"
+  ],
+  "buildNetworkFlowEvents": [
+   {
+    "type": "xhr",
+    "url": "https://api.test/collect",
+    "method": "POST",
+    "status": 0,
+    "timestamp": 1,
+    "requestBody": "",
+    "requestHeaders": {},
+    "responseHeaders": "",
+    "responsePreview": "ok",
+    "id": "xhr-0001",
+    "label": "POST collect",
+    "boundaryDetails": [
+     {
+      "label": "analytics",
+      "score": 26,
+      "reasons": [
+       "network activity contains analytics or telemetry signals"
+      ]
+     }
+    ],
+    "boundaryLabels": [
+     "analytics"
+    ],
+    "primaryBoundary": "analytics",
+    "boundaryReasons": [
+     "analytics: network activity contains analytics or telemetry signals"
+    ]
+   },
+   {
+    "type": "fetch",
+    "url": "https://api.test/_next/data/x.json",
+    "method": "GET",
+    "status": 0,
+    "timestamp": 2,
+    "requestBody": "",
+    "requestHeaders": {},
+    "responseHeaders": "",
+    "responsePreview": "",
+    "id": "fetch-0002",
+    "label": "GET x.json",
+    "boundaryDetails": [
+     {
+      "label": "data",
+      "score": 24,
+      "reasons": [
+       "network activity contains data-fetching or API signals"
+      ]
+     },
+     {
+      "label": "router",
+      "score": 18,
+      "reasons": [
+       "network activity contains routing or navigation signals"
+      ]
+     }
+    ],
+    "boundaryLabels": [
+     "data",
+     "router"
+    ],
+    "primaryBoundary": "data",
+    "boundaryReasons": [
+     "data: network activity contains data-fetching or API signals",
+     "router: network activity contains routing or navigation signals"
+    ]
+   },
+   {
+    "type": "fetch",
+    "url": "https://demo.test/app/router.js",
+    "method": "GET",
+    "status": 0,
+    "timestamp": 3,
+    "requestBody": "",
+    "requestHeaders": {},
+    "responseHeaders": "",
+    "responsePreview": "{\"x\":1}",
+    "id": "fetch-0003",
+    "label": "GET router.js",
+    "boundaryDetails": [
+     {
+      "label": "data",
+      "score": 24,
+      "reasons": [
+       "network activity contains data-fetching or API signals"
+      ]
+     },
+     {
+      "label": "router",
+      "score": 18,
+      "reasons": [
+       "network activity contains routing or navigation signals"
+      ]
+     }
+    ],
+    "boundaryLabels": [
+     "data",
+     "router"
+    ],
+    "primaryBoundary": "data",
+    "boundaryReasons": [
+     "data: network activity contains data-fetching or API signals",
+     "router: network activity contains routing or navigation signals"
+    ]
+   },
+   {
+    "type": "xhr",
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "status": 200,
+    "timestamp": 5,
+    "requestBody": "{\"query\":\"query Q{a}\"}",
+    "requestHeaders": {
+     "authorization": "Bearer x"
+    },
+    "responseHeaders": "",
+    "responsePreview": "{\"data\":1}",
+    "id": "xhr-0004",
+    "label": "POST graphql",
+    "boundaryDetails": [
+     {
+      "label": "auth",
+      "score": 28,
+      "reasons": [
+       "network activity contains authentication or session signals"
+      ]
+     },
+     {
+      "label": "data",
+      "score": 24,
+      "reasons": [
+       "network activity contains data-fetching or API signals"
+      ]
+     }
+    ],
+    "boundaryLabels": [
+     "auth",
+     "data"
+    ],
+    "primaryBoundary": "auth",
+    "boundaryReasons": [
+     "auth: network activity contains authentication or session signals",
+     "data: network activity contains data-fetching or API signals"
+    ]
+   }
+  ],
+  "buildBoundaryLabels": {
+   "categories": [
+    "bootstrap",
+    "router",
+    "state",
+    "data",
+    "auth",
+    "analytics",
+    "editor",
+    "vendor"
+   ],
+   "summary": {
+    "chunkLabels": {
+     "bootstrap": 1,
+     "router": 3,
+     "vendor": 4,
+     "auth": 1
+    },
+    "runtimeLabels": {
+     "vendor": 1
+    },
+    "taggedChunks": 4,
+    "taggedRuntime": 1
+   },
+   "chunks": [
+    {
+     "kind": "chunk",
+     "id": "chunk-router.js-6ef23ce1",
+     "label": "router.js",
+     "file": "demo.test/app/router.js",
+     "url": "https://demo.test/app/router.js",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router",
+      "vendor"
+     ],
+     "boundaryReasons": [
+      "router: contains route or navigation signals",
+      "vendor: looks like third-party or framework code"
+     ],
+     "classification": "framework",
+     "originType": "",
+     "score": 39
+    },
+    {
+     "kind": "chunk",
+     "id": "chunk-main.js-1e7d8eef",
+     "label": "main.js",
+     "file": "demo.test/app/main.js",
+     "url": "https://demo.test/app/main.js",
+     "primaryBoundary": "bootstrap",
+     "boundaryLabels": [
+      "bootstrap",
+      "router",
+      "vendor"
+     ],
+     "boundaryReasons": [
+      "bootstrap: bootstraps the page or runtime loader",
+      "router: contains route or navigation signals",
+      "vendor: looks like third-party or framework code"
+     ],
+     "classification": "framework",
+     "originType": "",
+     "score": 34
+    },
+    {
+     "kind": "chunk",
+     "id": "chunk-auth.js-39940360",
+     "label": "auth.js",
+     "file": "demo.test/app/auth.js",
+     "url": "https://demo.test/app/auth.js",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router",
+      "auth",
+      "vendor"
+     ],
+     "boundaryReasons": [
+      "router: contains route or navigation signals",
+      "auth: contains authentication or session signals",
+      "vendor: looks like third-party or framework code"
+     ],
+     "classification": "framework",
+     "originType": "",
+     "score": 32
+    },
+    {
+     "kind": "chunk",
+     "id": "chunk-vendor.js-12d54eae",
+     "label": "vendor.js",
+     "file": "demo.test/vendor.js",
+     "url": "https://demo.test/vendor.js",
+     "primaryBoundary": "vendor",
+     "boundaryLabels": [
+      "vendor"
+     ],
+     "boundaryReasons": [
+      "vendor: looks like third-party or framework code"
+     ],
+     "classification": "vendor",
+     "originType": "",
+     "score": 18
+    }
+   ],
+   "runtime": [
+    {
+     "kind": "runtime",
+     "id": "r1",
+     "label": "eval-1.js",
+     "file": "runtime/eval-1.js",
+     "url": "https://demo.test/app/main.js",
+     "primaryBoundary": "vendor",
+     "boundaryLabels": [
+      "vendor"
+     ],
+     "boundaryReasons": [
+      "vendor: spawned from a vendor/framework chunk"
+     ],
+     "classification": "",
+     "originType": "bundle-linked",
+     "score": 62
+    }
+   ]
+  },
+  "taggedAssets": [
+   [
+    "chunk-main.js-1e7d8eef",
+    "bootstrap",
+    [
+     "bootstrap",
+     "router",
+     "vendor"
+    ],
+    [
+     "bootstrap: bootstraps the page or runtime loader",
+     "router: contains route or navigation signals",
+     "vendor: looks like third-party or framework code"
+    ]
+   ],
+   [
+    "chunk-vendor.js-12d54eae",
+    "vendor",
+    [
+     "vendor"
+    ],
+    [
+     "vendor: looks like third-party or framework code"
+    ]
+   ],
+   [
+    "chunk-router.js-6ef23ce1",
+    "router",
+    [
+     "router",
+     "vendor"
+    ],
+    [
+     "router: contains route or navigation signals",
+     "vendor: looks like third-party or framework code"
+    ]
+   ],
+   [
+    "chunk-auth.js-39940360",
+    "router",
+    [
+     "router",
+     "auth",
+     "vendor"
+    ],
+    [
+     "router: contains route or navigation signals",
+     "auth: contains authentication or session signals",
+     "vendor: looks like third-party or framework code"
+    ]
+   ]
+  ],
+  "buildCrossBoundaryFlows": {
+   "summary": {
+    "totalFlows": 2,
+    "crossBoundaryFlows": 1,
+    "structuralFlows": 1,
+    "labeledEvents": 9,
+    "eventKinds": {
+     "chunk": 4,
+     "runtime": 2,
+     "network": 4
+    },
+    "relations": {
+     "materializes-runtime": 2
+    }
+   },
+   "topTransitions": [
+    {
+     "path": "bootstrap->vendor",
+     "fromBoundary": "bootstrap",
+     "toBoundary": "vendor",
+     "count": 1,
+     "averageConfidence": 70,
+     "relations": [
+      "materializes-runtime"
+     ]
+    },
+    {
+     "path": "vendor->vendor",
+     "fromBoundary": "vendor",
+     "toBoundary": "vendor",
+     "count": 1,
+     "averageConfidence": 70,
+     "relations": [
+      "materializes-runtime"
+     ]
+    }
+   ],
+   "chains": [],
+   "events": [
+    {
+     "id": "chunk:chunk-router.js-6ef23ce1",
+     "recordId": "chunk-router.js-6ef23ce1",
+     "kind": "chunk",
+     "label": "router.js",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router",
+      "vendor"
+     ],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "https://demo.test/app/router.js",
+     "file": "demo.test/app/router.js",
+     "method": "",
+     "status": 0,
+     "classification": "framework",
+     "originType": ""
+    },
+    {
+     "id": "chunk:chunk-auth.js-39940360",
+     "recordId": "chunk-auth.js-39940360",
+     "kind": "chunk",
+     "label": "auth.js",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router",
+      "auth",
+      "vendor"
+     ],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "https://demo.test/app/auth.js",
+     "file": "demo.test/app/auth.js",
+     "method": "",
+     "status": 0,
+     "classification": "framework",
+     "originType": ""
+    },
+    {
+     "id": "chunk:chunk-vendor.js-12d54eae",
+     "recordId": "chunk-vendor.js-12d54eae",
+     "kind": "chunk",
+     "label": "vendor.js",
+     "primaryBoundary": "vendor",
+     "boundaryLabels": [
+      "vendor"
+     ],
+     "approxTime": 1,
+     "timestamp": 0,
+     "url": "https://demo.test/vendor.js",
+     "file": "demo.test/vendor.js",
+     "method": "",
+     "status": 0,
+     "classification": "vendor",
+     "originType": ""
+    },
+    {
+     "id": "chunk:chunk-main.js-1e7d8eef",
+     "recordId": "chunk-main.js-1e7d8eef",
+     "kind": "chunk",
+     "label": "main.js",
+     "primaryBoundary": "bootstrap",
+     "boundaryLabels": [
+      "bootstrap",
+      "router",
+      "vendor"
+     ],
+     "approxTime": 13,
+     "timestamp": 0,
+     "url": "https://demo.test/app/main.js",
+     "file": "demo.test/app/main.js",
+     "method": "",
+     "status": 0,
+     "classification": "framework",
+     "originType": ""
+    },
+    {
+     "id": "runtime:r1",
+     "recordId": "r1",
+     "kind": "runtime",
+     "label": "eval-1.js",
+     "primaryBoundary": "vendor",
+     "boundaryLabels": [
+      "vendor"
+     ],
+     "approxTime": 71,
+     "timestamp": 0,
+     "url": "https://demo.test/app/main.js",
+     "file": "runtime/eval-1.js",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": "bundle-linked"
+    },
+    {
+     "id": "network:xhr-0001",
+     "recordId": "xhr-0001",
+     "kind": "network",
+     "label": "POST collect",
+     "primaryBoundary": "analytics",
+     "boundaryLabels": [
+      "analytics"
+     ],
+     "approxTime": 71,
+     "timestamp": 1,
+     "url": "https://api.test/collect",
+     "file": "",
+     "method": "POST",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    {
+     "id": "network:fetch-0002",
+     "recordId": "fetch-0002",
+     "kind": "network",
+     "label": "GET x.json",
+     "primaryBoundary": "data",
+     "boundaryLabels": [
+      "data",
+      "router"
+     ],
+     "approxTime": 72,
+     "timestamp": 2,
+     "url": "https://api.test/_next/data/x.json",
+     "file": "",
+     "method": "GET",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    {
+     "id": "network:fetch-0003",
+     "recordId": "fetch-0003",
+     "kind": "network",
+     "label": "GET router.js",
+     "primaryBoundary": "data",
+     "boundaryLabels": [
+      "data",
+      "router"
+     ],
+     "approxTime": 73,
+     "timestamp": 3,
+     "url": "https://demo.test/app/router.js",
+     "file": "",
+     "method": "GET",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    {
+     "id": "network:xhr-0004",
+     "recordId": "xhr-0004",
+     "kind": "network",
+     "label": "POST graphql",
+     "primaryBoundary": "auth",
+     "boundaryLabels": [
+      "auth",
+      "data"
+     ],
+     "approxTime": 75,
+     "timestamp": 5,
+     "url": "https://api.test/graphql",
+     "file": "",
+     "method": "POST",
+     "status": 200,
+     "classification": "",
+     "originType": ""
+    }
+   ],
+   "transitions": [
+    {
+     "id": "flow-0001",
+     "relation": "materializes-runtime",
+     "crossBoundary": true,
+     "fromBoundary": "bootstrap",
+     "toBoundary": "vendor",
+     "confidence": 70,
+     "deltaMs": 58,
+     "evidence": "runtime artifact links back to its originating chunk",
+     "from": {
+      "id": "chunk:chunk-main.js-1e7d8eef",
+      "recordId": "chunk-main.js-1e7d8eef",
+      "kind": "chunk",
+      "label": "main.js",
+      "primaryBoundary": "bootstrap",
+      "boundaryLabels": [
+       "bootstrap",
+       "router",
+       "vendor"
+      ],
+      "approxTime": 13,
+      "timestamp": 0,
+      "url": "https://demo.test/app/main.js",
+      "file": "demo.test/app/main.js",
+      "method": "",
+      "status": 0,
+      "classification": "framework",
+      "originType": ""
+     },
+     "to": {
+      "id": "runtime:r1",
+      "recordId": "r1",
+      "kind": "runtime",
+      "label": "eval-1.js",
+      "primaryBoundary": "vendor",
+      "boundaryLabels": [
+       "vendor"
+      ],
+      "approxTime": 71,
+      "timestamp": 0,
+      "url": "https://demo.test/app/main.js",
+      "file": "runtime/eval-1.js",
+      "method": "",
+      "status": 0,
+      "classification": "",
+      "originType": "bundle-linked"
+     }
+    },
+    {
+     "id": "flow-0002",
+     "relation": "materializes-runtime",
+     "crossBoundary": false,
+     "fromBoundary": "vendor",
+     "toBoundary": "vendor",
+     "confidence": 70,
+     "deltaMs": 70,
+     "evidence": "runtime artifact links back to its originating chunk",
+     "from": {
+      "id": "chunk:chunk-vendor.js-12d54eae",
+      "recordId": "chunk-vendor.js-12d54eae",
+      "kind": "chunk",
+      "label": "vendor.js",
+      "primaryBoundary": "vendor",
+      "boundaryLabels": [
+       "vendor"
+      ],
+      "approxTime": 1,
+      "timestamp": 0,
+      "url": "https://demo.test/vendor.js",
+      "file": "demo.test/vendor.js",
+      "method": "",
+      "status": 0,
+      "classification": "vendor",
+      "originType": ""
+     },
+     "to": {
+      "id": "runtime:r1",
+      "recordId": "r1",
+      "kind": "runtime",
+      "label": "eval-1.js",
+      "primaryBoundary": "vendor",
+      "boundaryLabels": [
+       "vendor"
+      ],
+      "approxTime": 71,
+      "timestamp": 0,
+      "url": "https://demo.test/app/main.js",
+      "file": "runtime/eval-1.js",
+      "method": "",
+      "status": 0,
+      "classification": "",
+      "originType": "bundle-linked"
+     }
+    }
+   ]
+  },
+  "collectFlowEvents": {
+   "events": [
+    {
+     "id": "chunk:chunk-router.js-6ef23ce1",
+     "recordId": "chunk-router.js-6ef23ce1",
+     "kind": "chunk",
+     "label": "router.js",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router",
+      "vendor"
+     ],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "https://demo.test/app/router.js",
+     "file": "demo.test/app/router.js",
+     "method": "",
+     "status": 0,
+     "classification": "framework",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "",
+     "boundaryReasons": [
+      "router: contains route or navigation signals",
+      "vendor: looks like third-party or framework code"
+     ]
+    },
+    {
+     "id": "chunk:chunk-auth.js-39940360",
+     "recordId": "chunk-auth.js-39940360",
+     "kind": "chunk",
+     "label": "auth.js",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router",
+      "auth",
+      "vendor"
+     ],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "https://demo.test/app/auth.js",
+     "file": "demo.test/app/auth.js",
+     "method": "",
+     "status": 0,
+     "classification": "framework",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "",
+     "boundaryReasons": [
+      "router: contains route or navigation signals",
+      "auth: contains authentication or session signals",
+      "vendor: looks like third-party or framework code"
+     ]
+    },
+    {
+     "id": "chunk:chunk-vendor.js-12d54eae",
+     "recordId": "chunk-vendor.js-12d54eae",
+     "kind": "chunk",
+     "label": "vendor.js",
+     "primaryBoundary": "vendor",
+     "boundaryLabels": [
+      "vendor"
+     ],
+     "approxTime": 1,
+     "timestamp": 0,
+     "url": "https://demo.test/vendor.js",
+     "file": "demo.test/vendor.js",
+     "method": "",
+     "status": 0,
+     "classification": "vendor",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "",
+     "boundaryReasons": [
+      "vendor: looks like third-party or framework code"
+     ]
+    },
+    {
+     "id": "chunk:chunk-main.js-1e7d8eef",
+     "recordId": "chunk-main.js-1e7d8eef",
+     "kind": "chunk",
+     "label": "main.js",
+     "primaryBoundary": "bootstrap",
+     "boundaryLabels": [
+      "bootstrap",
+      "router",
+      "vendor"
+     ],
+     "approxTime": 12.5,
+     "timestamp": 0,
+     "url": "https://demo.test/app/main.js",
+     "file": "demo.test/app/main.js",
+     "method": "",
+     "status": 0,
+     "classification": "framework",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "",
+     "boundaryReasons": [
+      "bootstrap: bootstraps the page or runtime loader",
+      "router: contains route or navigation signals",
+      "vendor: looks like third-party or framework code"
+     ]
+    },
+    {
+     "id": "runtime:r1",
+     "recordId": "r1",
+     "kind": "runtime",
+     "label": "eval-1.js",
+     "primaryBoundary": "vendor",
+     "boundaryLabels": [
+      "vendor"
+     ],
+     "approxTime": 70.5,
+     "timestamp": 0,
+     "url": "https://demo.test/app/main.js",
+     "file": "runtime/eval-1.js",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": "bundle-linked",
+     "relatedChunks": [
+      "chunk-main.js-1e7d8eef",
+      "chunk-vendor.js-12d54eae"
+     ],
+     "blobId": null,
+     "source": "",
+     "boundaryReasons": [
+      "vendor: spawned from a vendor/framework chunk"
+     ]
+    },
+    {
+     "id": "network:xhr-0001",
+     "recordId": "xhr-0001",
+     "kind": "network",
+     "label": "POST collect",
+     "primaryBoundary": "analytics",
+     "boundaryLabels": [
+      "analytics"
+     ],
+     "approxTime": 70.5,
+     "timestamp": 1,
+     "url": "https://api.test/collect",
+     "file": "",
+     "method": "POST",
+     "status": 0,
+     "classification": "",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "xhr",
+     "boundaryReasons": [
+      "analytics: network activity contains analytics or telemetry signals"
+     ]
+    },
+    {
+     "id": "network:fetch-0002",
+     "recordId": "fetch-0002",
+     "kind": "network",
+     "label": "GET x.json",
+     "primaryBoundary": "data",
+     "boundaryLabels": [
+      "data",
+      "router"
+     ],
+     "approxTime": 71.5,
+     "timestamp": 2,
+     "url": "https://api.test/_next/data/x.json",
+     "file": "",
+     "method": "GET",
+     "status": 0,
+     "classification": "",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "fetch",
+     "boundaryReasons": [
+      "data: network activity contains data-fetching or API signals",
+      "router: network activity contains routing or navigation signals"
+     ]
+    },
+    {
+     "id": "network:fetch-0003",
+     "recordId": "fetch-0003",
+     "kind": "network",
+     "label": "GET router.js",
+     "primaryBoundary": "data",
+     "boundaryLabels": [
+      "data",
+      "router"
+     ],
+     "approxTime": 72.5,
+     "timestamp": 3,
+     "url": "https://demo.test/app/router.js",
+     "file": "",
+     "method": "GET",
+     "status": 0,
+     "classification": "",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "fetch",
+     "boundaryReasons": [
+      "data: network activity contains data-fetching or API signals",
+      "router: network activity contains routing or navigation signals"
+     ]
+    },
+    {
+     "id": "network:xhr-0004",
+     "recordId": "xhr-0004",
+     "kind": "network",
+     "label": "POST graphql",
+     "primaryBoundary": "auth",
+     "boundaryLabels": [
+      "auth",
+      "data"
+     ],
+     "approxTime": 74.5,
+     "timestamp": 5,
+     "url": "https://api.test/graphql",
+     "file": "",
+     "method": "POST",
+     "status": 200,
+     "classification": "",
+     "originType": "",
+     "relatedChunks": [],
+     "blobId": null,
+     "source": "xhr",
+     "boundaryReasons": [
+      "auth: network activity contains authentication or session signals",
+      "data: network activity contains data-fetching or API signals"
+     ]
+    },
+    {
+     "id": "runtime:r2",
+     "recordId": "r2",
+     "kind": "runtime",
+     "label": "wasm-1.wasm",
+     "primaryBoundary": "",
+     "boundaryLabels": [],
+     "approxTime": 99.5,
+     "timestamp": 30,
+     "url": "",
+     "file": "runtime/wasm-1.wasm",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": "blob-derived",
+     "relatedChunks": [],
+     "blobId": "blob-1",
+     "source": "",
+     "boundaryReasons": []
+    }
+   ],
+   "keys": [
+    "chunk:chunk-main.js-1e7d8eef",
+    "chunk:chunk-vendor.js-12d54eae",
+    "chunk:chunk-router.js-6ef23ce1",
+    "chunk:chunk-auth.js-39940360",
+    "runtime:r1",
+    "runtime:r2",
+    "network:xhr-0001",
+    "network:fetch-0002",
+    "network:fetch-0003",
+    "network:xhr-0004"
+   ]
+  },
+  "scoreFlowTransition": [
+   42,
+   30,
+   50,
+   0,
+   15,
+   0,
+   12,
+   46,
+   12
+  ],
+  "describeFlowTransition": [
+   "one labeled chunk imported another labeled chunk 300ms later",
+   "runtime activity was followed by a labeled request 300ms later",
+   "network activity was followed by a labeled runtime effect 300ms later",
+   "one labeled request preceded another labeled request 300ms later",
+   "data activity led into data activity 300ms later",
+   "one labeled chunk imported another labeled chunk 300ms later",
+   "data activity led into data activity 300ms later",
+   "one labeled chunk imported another labeled chunk 300ms later",
+   "data activity led into auth activity 300ms later"
+  ],
+  "describeFlowTransitionNoLag": "one labeled chunk imported another labeled chunk",
+  "inferFlowRelation": [
+   "imports-boundary",
+   "triggers-request",
+   "follows-response",
+   "triggers-request",
+   "materializes-runtime",
+   "imports-boundary",
+   "spawns-runtime",
+   "imports-boundary",
+   "follows-response"
+  ],
+  "addBoundaryFlow": [
+   {
+    "id": "flow-0001",
+    "relation": "imports-boundary",
+    "crossBoundary": true,
+    "fromBoundary": "bootstrap",
+    "toBoundary": "router",
+    "confidence": 50,
+    "deltaMs": 251,
+    "timestamp": 100,
+    "evidence": "e1",
+    "from": {
+     "id": "chunk:bootstrap:0",
+     "kind": "chunk",
+     "primaryBoundary": "bootstrap",
+     "boundaryLabels": [
+      "bootstrap"
+     ],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    "to": {
+     "id": "chunk:router:100",
+     "kind": "chunk",
+     "primaryBoundary": "router",
+     "boundaryLabels": [
+      "router"
+     ],
+     "approxTime": 100,
+     "timestamp": 100,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    }
+   },
+   {
+    "id": "flow-0002",
+    "relation": "materializes-runtime",
+    "crossBoundary": false,
+    "fromBoundary": "data",
+    "toBoundary": "data",
+    "confidence": 68,
+    "deltaMs": 10,
+    "timestamp": 100,
+    "evidence": "e2",
+    "from": {
+     "id": "chunk:data:0",
+     "kind": "chunk",
+     "primaryBoundary": "data",
+     "boundaryLabels": [
+      "data"
+     ],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    "to": {
+     "id": "runtime:data:100",
+     "kind": "runtime",
+     "primaryBoundary": "data",
+     "boundaryLabels": [
+      "data"
+     ],
+     "approxTime": 100,
+     "timestamp": 100,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    }
+   },
+   {
+    "id": "flow-0003",
+    "relation": "follows-response",
+    "crossBoundary": true,
+    "fromBoundary": "data",
+    "toBoundary": "analytics",
+    "confidence": 40,
+    "deltaMs": null,
+    "timestamp": 100,
+    "evidence": "e3",
+    "from": {
+     "id": "network:data:0",
+     "kind": "network",
+     "primaryBoundary": "data",
+     "boundaryLabels": [],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    "to": {
+     "id": "runtime:analytics:100",
+     "kind": "runtime",
+     "primaryBoundary": "analytics",
+     "boundaryLabels": [],
+     "approxTime": 100,
+     "timestamp": 100,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    }
+   },
+   {
+    "id": "flow-0004",
+    "relation": "triggers-request",
+    "crossBoundary": true,
+    "fromBoundary": "data",
+    "toBoundary": "auth",
+    "confidence": 46,
+    "deltaMs": 5,
+    "timestamp": 100,
+    "evidence": "e4",
+    "from": {
+     "id": "runtime:data:0",
+     "kind": "runtime",
+     "primaryBoundary": "data",
+     "boundaryLabels": [],
+     "approxTime": 0,
+     "timestamp": 0,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    },
+    "to": {
+     "id": "network:auth:100",
+     "kind": "network",
+     "primaryBoundary": "auth",
+     "boundaryLabels": [],
+     "approxTime": 100,
+     "timestamp": 100,
+     "url": "",
+     "file": "",
+     "method": "",
+     "status": 0,
+     "classification": "",
+     "originType": ""
+    }
+   }
+  ],
+  "summarizeBoundaryTransitions": [
+   {
+    "path": "data->data",
+    "fromBoundary": "data",
+    "toBoundary": "data",
+    "count": 1,
+    "averageConfidence": 68,
+    "relations": [
+     "materializes-runtime"
+    ]
+   },
+   {
+    "path": "bootstrap->router",
+    "fromBoundary": "bootstrap",
+    "toBoundary": "router",
+    "count": 1,
+    "averageConfidence": 50,
+    "relations": [
+     "imports-boundary"
+    ]
+   },
+   {
+    "path": "data->auth",
+    "fromBoundary": "data",
+    "toBoundary": "auth",
+    "count": 1,
+    "averageConfidence": 46,
+    "relations": [
+     "triggers-request"
+    ]
+   },
+   {
+    "path": "data->analytics",
+    "fromBoundary": "data",
+    "toBoundary": "analytics",
+    "count": 1,
+    "averageConfidence": 40,
+    "relations": [
+     "follows-response"
+    ]
+   }
+  ],
+  "buildBoundaryChains": [],
+  "stripFlowTransition": {
+   "id": "flow-0001",
+   "relation": "imports-boundary",
+   "crossBoundary": true,
+   "fromBoundary": "bootstrap",
+   "toBoundary": "router",
+   "confidence": 50,
+   "deltaMs": 251,
+   "evidence": "e1",
+   "from": {
+    "id": "chunk:bootstrap:0",
+    "kind": "chunk",
+    "primaryBoundary": "bootstrap",
+    "boundaryLabels": [
+     "bootstrap"
+    ],
+    "approxTime": 0,
+    "timestamp": 0,
+    "url": "",
+    "file": "",
+    "method": "",
+    "status": 0,
+    "classification": "",
+    "originType": ""
+   },
+   "to": {
+    "id": "chunk:router:100",
+    "kind": "chunk",
+    "primaryBoundary": "router",
+    "boundaryLabels": [
+     "router"
+    ],
+    "approxTime": 100,
+    "timestamp": 100,
+    "url": "",
+    "file": "",
+    "method": "",
+    "status": 0,
+    "classification": "",
+    "originType": ""
+   }
+  },
+  "stripFlowEvent": {
+   "id": "chunk:bootstrap:0",
+   "kind": "chunk",
+   "primaryBoundary": "bootstrap",
+   "boundaryLabels": [
+    "bootstrap"
+   ],
+   "approxTime": 0,
+   "timestamp": 0,
+   "url": "",
+   "file": "",
+   "method": "",
+   "status": 0,
+   "classification": "",
+   "originType": ""
+  },
+  "stripBoundaryEntry": {
+   "kind": "chunk",
+   "id": "c1",
+   "label": "a.js",
+   "file": "https://x/a.js",
+   "url": "https://x/a.js",
+   "primaryBoundary": "data",
+   "boundaryLabels": [
+    "data"
+   ],
+   "boundaryReasons": [
+    "r"
+   ],
+   "classification": "app",
+   "originType": "",
+   "score": 30
+  },
+  "buildFrameworkStateSummary": {
+   "profile": "next",
+   "generatedAt": "2026-01-01T00:00:00.000Z",
+   "reason": "why",
+   "rootCount": 2,
+   "storeCount": 1,
+   "queryCount": 3,
+   "hydrationCount": 0,
+   "authCount": 1,
+   "routerFramework": "next",
+   "route": "/a",
+   "routerSource": "x",
+   "queryKeyCount": 1,
+   "detectedTechnologies": [
+    "Next.js",
+    "Redux"
+   ],
+   "roots": [
+    1,
+    2
+   ],
+   "stores": [
+    1
+   ],
+   "queries": [
+    1,
+    2,
+    3
+   ],
+   "hydration": [],
+   "auth": [
+    1
+   ],
+   "relatedArtifacts": [
+    "_framework/summary.json",
+    "_framework/router-state.json",
+    "_framework/framework-roots.json",
+    "_framework/store-snapshots.json",
+    "_framework/query-caches.json",
+    "_framework/auth-state.json"
+   ]
+  },
+  "buildFrameworkStateSummaryNull": null,
+  "collectFrameworkArtifactPaths": [
+   "_framework/summary.json",
+   "_framework/router-state.json",
+   "_framework/framework-roots.json",
+   "_framework/store-snapshots.json",
+   "_framework/query-caches.json",
+   "_framework/auth-state.json"
+  ],
+  "collectFrameworkArtifactPathsEmpty": [],
+  "buildFrameworkRuntimeSummary": {
+   "page": {
+    "url": "https://demo.test/app"
+   },
+   "profile": "spa",
+   "confidence": 0.8,
+   "technologies": [
+    {
+     "name": "Next.js"
+    },
+    {
+     "name": "jQuery"
+    }
+   ],
+   "traits": [
+    "ssr"
+   ],
+   "strategy": {
+    "profile": "ssr-app"
+   },
+   "captureReason": "heuristics",
+   "assetClasses": {
+    "framework": 3,
+    "vendor": 1
+   },
+   "bundlersObserved": [
+    "webpack"
+   ],
+   "boundaries": {
+    "chunkLabels": {
+     "bootstrap": 1,
+     "router": 3,
+     "vendor": 4,
+     "auth": 1
+    },
+    "runtimeLabels": {
+     "vendor": 1
+    },
+    "taggedChunks": 4,
+    "taggedRuntime": 1
+   },
+   "runtimeKinds": {
+    "eval": 1,
+    "wasm": 1
+   },
+   "graphQLEndpoints": [
+    "https://api.test/graphql"
+   ],
+   "topBoundaryFlows": [
+    {
+     "path": "bootstrap->vendor",
+     "fromBoundary": "bootstrap",
+     "toBoundary": "vendor",
+     "count": 1,
+     "averageConfidence": 70,
+     "relations": [
+      "materializes-runtime"
+     ]
+    },
+    {
+     "path": "vendor->vendor",
+     "fromBoundary": "vendor",
+     "toBoundary": "vendor",
+     "count": 1,
+     "averageConfidence": 70,
+     "relations": [
+      "materializes-runtime"
+     ]
+    }
+   ],
+   "likelyEntrypoints": [
+    {
+     "id": "ep1"
+    },
+    {
+     "id": "ep2"
+    }
+   ],
+   "frameworkState": null,
+   "signals": {
+    "a": 1
+   }
+  }
+ }
+}

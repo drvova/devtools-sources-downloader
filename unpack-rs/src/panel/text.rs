@@ -344,11 +344,16 @@ pub fn format_ms(ms: f64) -> String {
 }
 
 /// JS `Math.round`: half toward positive infinity.
-fn js_math_round(value: f64) -> String {
+pub fn js_round(value: f64) -> f64 {
     if !value.is_finite() {
-        return js_number_to_string(value);
+        return value;
     }
-    js_number_to_string((value + 0.5).floor())
+    (value + 0.5).floor()
+}
+
+/// JS `Math.round` rendered as a string.
+fn js_math_round(value: f64) -> String {
+    js_number_to_string(js_round(value))
 }
 
 /// JS `Number.prototype.toFixed`: round to `digits` decimals, ties away from

@@ -13,6 +13,7 @@
 //! implementation).
 
 pub mod assets;
+pub mod boundary;
 pub mod graph;
 pub mod model;
 pub mod text;
