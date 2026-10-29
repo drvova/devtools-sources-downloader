@@ -1,0 +1,109 @@
+{
+ "expected": {
+  "runtimeFolderName": [
+   "eval",
+   "function",
+   "blob",
+   "workers",
+   "shared-workers",
+   "service-workers",
+   "script-injections",
+   "wasm",
+   "misc",
+   "misc"
+  ],
+  "runtimeExtension": [
+   "wasm",
+   "js",
+   "json",
+   "html",
+   "css",
+   "svg",
+   "xml",
+   "txt",
+   "js",
+   "js",
+   "js",
+   "js",
+   "js",
+   "js",
+   "txt",
+   "bin",
+   "wasm"
+  ],
+  "buildRuntimePath": [
+   "_runtime/eval/0001.js",
+   "_runtime/eval/0002.js",
+   "_runtime/wasm/0001.wasm",
+   "_runtime/workers/0001.js",
+   "_runtime/workers/0002.js",
+   "_runtime/misc/0001.txt"
+  ],
+  "buildRuntimeUnpackAssets": [
+   [
+    {
+     "url": "https://x/a.js",
+     "content": "var a = 1",
+     "zipPath": "runtime/eval-1.js"
+    },
+    {
+     "url": "labelled",
+     "content": "var b = 2",
+     "zipPath": "runtime/eval-4.js"
+    },
+    {
+     "url": "r5",
+     "content": "var c = 3",
+     "zipPath": ""
+    }
+   ],
+   []
+  ],
+  "mergeUnpackReports": {
+   "totals": {
+    "assets": 8,
+    "unpacked": 6,
+    "modules": 4,
+    "sources": 6,
+    "beautified": 3
+   },
+   "files": [
+    "a.js"
+   ]
+  },
+  "parseCookies": [
+   {
+    "a": "1",
+    "b": "2",
+    "c": "3=4"
+   },
+   {}
+  ],
+  "serializeInlineJson": [
+   "{\"a\":\"\\u003cb\\u003e\\u0026\",\"c\":[\"\\u003c/script\\u003e\"]}",
+   "{}"
+  ],
+  "escapeXml": [
+   "&lt;a &amp; &quot;b&quot; &#39;c&#39;&gt;",
+   "",
+   "",
+   "7"
+  ],
+  "escapeAttr": [
+   "&lt;a &amp; &quot;b&quot; 'c'&gt;",
+   "",
+   ""
+  ],
+  "computeReconStats": "<div class=\"stat\"><div class=\"val\">4</div><div class=\"lbl\">Requests</div></div><div class=\"stat\"><div class=\"val\">3.4 KB</div><div class=\"lbl\">Total Size</div></div><div class=\"stat\"><div class=\"val\">2</div><div class=\"lbl\">Domains</div></div><div class=\"stat\"><div class=\"val\">20.0 ms</div><div class=\"lbl\">Slowest</div></div><div class=\"stat\"><div class=\"val\">1</div><div class=\"lbl\">script</div></div><div class=\"stat\"><div class=\"val\">1</div><div class=\"lbl\">link</div></div><div class=\"stat\"><div class=\"val\">1</div><div class=\"lbl\">other</div></div><div class=\"stat\"><div class=\"val\">1</div><div class=\"lbl\">img</div></div>",
+  "computeReconStatsEmpty": "<div class=\"stat\"><div class=\"val\">0</div><div class=\"lbl\">Requests</div></div><div class=\"stat\"><div class=\"val\">0 B</div><div class=\"lbl\">Total Size</div></div><div class=\"stat\"><div class=\"val\">0</div><div class=\"lbl\">Domains</div></div><div class=\"stat\"><div class=\"val\">0 us</div><div class=\"lbl\">Slowest</div></div>",
+  "generateDOMSnapshotHTML": [
+   "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>DOM Snapshot</title>\n<style>body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#222}h1{margin:0 0 8px}p{margin:0 0 16px;color:#555}pre{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.5;background:#f7f7f7;border:1px solid #ddd;border-radius:6px;padding:16px}</style>\n</head>\n<body><h1>&lt;t&gt;</h1><p>https://x/?a=1&amp;b=2</p><pre>&lt;div&gt;&amp;amp;&lt;/div&gt;</pre></body>\n</html>",
+   "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>DOM Snapshot</title>\n<style>body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#222}h1{margin:0 0 8px}p{margin:0 0 16px;color:#555}pre{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.5;background:#f7f7f7;border:1px solid #ddd;border-radius:6px;padding:16px}</style>\n</head>\n<body><h1>DOM Snapshot</h1><p></p><pre></pre></body>\n</html>"
+  ],
+  "buildReadableArtifact": [
+   "/*\n * Semantic reconstruction\n * Kind: chunk\n * Label: L\n * URL: https://x/a.js\n * File: a.js\n * Boundaries: data, auth\n * Why: why\n * Score: 30\n * Beautified: yes\n */\nBEAUTIFIED(MINvar a=1)",
+   "/*\n * Semantic reconstruction\n * Kind: runtime\n * Label: r1\n * URL: \n * File: \n * Boundaries: none\n * Why: \n * Score: 0\n * Beautified: no\n */\nplain text",
+   "/*\n * Semantic reconstruction\n * Kind: runtime\n * Label: r2\n * URL: \n * File: \n * Boundaries: none\n * Why: \n * Score: 0\n * Beautified: yes\n */\nBEAUTIFIED(MINx)"
+  ]
+ }
+}

@@ -13,6 +13,7 @@
 //! implementation).
 
 pub mod analysis;
+pub mod artifacts;
 pub mod assets;
 pub mod boundary;
 pub mod graph;
