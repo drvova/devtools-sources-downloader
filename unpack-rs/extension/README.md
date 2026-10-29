@@ -5,20 +5,16 @@ and framework state, then exports an unpacked, site-aware package as `sources.zi
 
 ## Layout
 
-The extension exists in two loadable copies that must stay identical:
-
-- `dist/` - rsbuild (Rstack CLI) build output (`manifest.json` + `js/ html/ css/ images/`).
-- repository root - an unpacked load of the same files.
-
-`npm run build` writes `dist/` and then mirrors it over the root with `scripts/sync.cjs`,
-so the build output is the single source of truth and the two copies cannot drift.
-`src/js/*` is the source; nothing in `js/` or `dist/` should be edited by hand.
+- `dist/` - the loadable extension: rsbuild output holding `manifest.json` plus
+  `js/ html/ css/ images/`. Point Chrome's "Load unpacked" at this folder.
+- `src/js/*` is the source; `src/html`, `src/css`, `src/images` and `manifest.json`
+  are copied into `dist/` by the build. Nothing in `dist/` is edited by hand.
 
 ## Commands
 
 | Command                | What it does                                                                                        |
 | ---------------------- | --------------------------------------------------------------------------------------------------- |
-| `npm run build`        | production rsbuild build + mirror into the root layout                                              |
+| `npm run build`        | production rsbuild build into `dist/` (the loadable extension)                                      |
 | `npm run dev`          | development build (unminified, source maps) + mirror                                                |
 | `npm run dev:ext`      | watch build + a dedicated Chrome for Testing window with the extension auto-reloading               |
 | `npm test`             | unit tests for the unpack engine (`test/unpack.test.mjs`)                                           |

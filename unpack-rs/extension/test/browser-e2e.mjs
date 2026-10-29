@@ -15,6 +15,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+const DIST = path.join(ROOT, 'dist');
 const BROWSER_CANDIDATES = [
     'C:/Program Files/Google/Chrome/Application/chrome.exe',
     'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -46,8 +47,8 @@ const CONTENT_TYPES = {
 function startServer() {
     const server = http.createServer((req, res) => {
         const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
-        const file = path.join(ROOT, rel || 'html/page.html');
-        if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+        const file = path.join(DIST, rel || 'html/page.html');
+        if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
             res.writeHead(404).end('not found');
             return;
         }

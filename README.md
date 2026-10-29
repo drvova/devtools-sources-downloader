@@ -13,6 +13,6 @@ Builds:
 
 ```
 cd unpack-rs && cargo test                     # engine
-cd unpack-rs/extension && npm run build        # wasm + bundles + root layout
+cd unpack-rs/extension && npm run build        # wasm + extension bundle (dist/)
 cd unpack-rs/extension && npm test             # 67 cases against the wasm bridge
 ```

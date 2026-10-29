@@ -1,1 +1,0 @@
-chrome.devtools.panels.create("Sources Downloader","../images/icons/48.png","../html/page.html");

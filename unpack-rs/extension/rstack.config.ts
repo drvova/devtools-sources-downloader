@@ -6,7 +6,7 @@
 //                          devtools panel wiring load these exact names)
 //   - dist/manifest.json : byte-for-byte copy
 //   - dist/{html,css,images}/ : byte-for-byte copies
-//   - scripts/sync.cjs then mirrors dist/ over the root loadable layout
+//   - dist/ is the loadable extension: point Chrome's Load unpacked at it
 import { define } from 'rstack';
 
 define.app({
@@ -29,7 +29,7 @@ define.app({
         },
         copy: {
             patterns: [
-                { from: 'manifest.json', to: 'manifest.json' },
+                { from: 'src/manifest.json', to: 'manifest.json' },
                 { from: 'src/html', to: 'html' },
                 { from: 'src/css', to: 'css', info: { minimized: true } },
                 { from: 'src/images', to: 'images' },
@@ -65,7 +65,7 @@ define.test({
     testEnvironment: 'node',
 });
 define.lint(({ js, globalIgnores }) => [
-    // Build output mirrors (dist, the synced root layout) and tracked data
+    // Build output (dist/) and tracked data
     // (fixtures, scratch) are never lint input.
     globalIgnores([
         'dist/**',
@@ -113,10 +113,8 @@ define.fmt({
     // Tracked trees that are data or build output, never formatter input:
     //   - test/fixtures/** : byte-sensitive ground truth (the unpack-rs Rust
     //     port verifies byte-identity against these exact files)
-    //   - {js,html,css,images} : the root loadable layout that sync.cjs
-    //     overwrites from dist/ on every build
-    //   - src/{html,css}/** and manifest.json : copied byte-for-byte into the
-    //     build output, so they are contract data too (src/css is vendored)
+    //   - src/{html,css}/** and src/manifest.json : copied byte-for-byte into
+    //     the build output, so they are contract data too (src/css is vendored)
     //   - dist/** and .scratch/** : build output and development scaffolding
     ignorePatterns: [
         'dist/**',
@@ -126,7 +124,7 @@ define.fmt({
         'images/**',
         'src/html/**',
         'src/css/**',
-        'manifest.json',
+        'src/manifest.json',
         'test/fixtures/**',
         '.scratch/**',
     ],
