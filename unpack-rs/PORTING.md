@@ -1,7 +1,8 @@
 # PORTING.md - devtools-unpack (JS -> Rust)
 
 Behavior-faithful port of the DevTools sources-downloader unpack engine
-(`../hhfkbeloejjheeiihhjndfcogjhejoek/src/js/{unpack,packers,jsfuck,v8codecache,jscbytecode,wasm}.js`)
+(`../hhfkbeloejjheeiihhjndfcogjhejoek/src/js/{unpack,packers,jsfuck,v8codecache,jscbytecode,wasm}.js`,
+since replaced by `src/js/unpack-bridge.js` + the compiled `engine.wasm`)
 to the `devtools-unpack` crate. Same observable behavior, same test surface:
 every one of the 67 node baseline cases in
 `../hhfkbeloejjheeiihhjndfcogjhejoek/test/unpack.test.mjs` has a 1:1 Rust
@@ -12,6 +13,49 @@ Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 77/77
 clean. Fixtures are referenced in place
 (`env!("CARGO_MANIFEST_DIR")/../hhfkbeloejjheeiihhjndfcogjhejoek/test/fixtures`),
 never copied.
+
+## Browser integration (wasm bridge)
+
+The extension no longer ships the JavaScript engine. `scripts/build-engine.cjs`
+compiles this crate for `wasm32-unknown-unknown` (release), stages
+`.cache/engine.wasm`, and the rsbuild copy pattern ships it as
+`js/engine.wasm` next to the bundles; `src/js/unpack-bridge.js` replaces the
+old six-file engine and keeps the exact export surface. The 67-case node
+suite runs against the bridge (wasm compiled synchronously at import time via
+`WebAssembly.Module`/`Instance`), so the tests exercise the shipped artifact,
+not a parallel implementation.
+
+Bridge seams (deliberate, documented):
+
+- **Sync engine, sync bootstrap.** The wasm bytes load synchronously at
+  module import (local XHR on the extension origin, `fs` in node via
+  `process.getBuiltinModule`, hidden from the bundler). A static `node:`
+  import would fail the browser build; a `new URL(<literal>,
+  import.meta.url)` would make the bundler emit a second copy of the wasm
+  as an asset chunk - both are worked around in the bridge.
+- **`fetchText` closures cannot cross the wasm boundary.** The JS engine
+  accepted an async `fetchText(url)` option; the wasm seam is synchronous.
+  Callers either let the bridge's built-in credentialed sync XHR run
+  (`withCredentials = true`, replacing the old extension-fetch + in-page
+  fallback pair) or pass a static `fetchMap: { url: text }` dictionary,
+  which `wasm_fetch_text` consults before falling back to the host import.
+  The injected-fetcher test now spells its fetcher as a `fetchMap`.
+- **`parseSealedV8` inflator sentinel.** A JS inflator function maps to the
+  engine's brotli default; the `{ inflate: 'throw' }` string sentinel injects
+  a failing inflator engine-side to exercise the refusal path (the throwing
+  closure is no longer expressible across the boundary).
+- **`onProgress` fires once per batch.** The engine runs a batch atomically,
+  so the bridge emulates the callback with a single final `(total, total)`
+  tick after the run.
+- **Shared-table holes.** The engine serializes unshared string slots as
+  JSON `null`; the JS contract spells holes `undefined`. The bridge repairs
+  the spelling in `readJscSharedTable`/`findJscSharedTable` results.
+- **wasm32 span-math hardening.** `read_jsc_shared_table`,
+  `find_jsc_shared_table`, and the wasm section walkers compute string-span
+  bounds in u64: on 32-bit targets a garbage u32 length wraps and can pass
+  the bounds check before slicing past the buffer (a wasm trap; a silent
+  reject on 64-bit). The x86_64 behavior is unchanged.
+
 
 ## Module map
 

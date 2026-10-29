@@ -26,21 +26,21 @@ import {
     unpackAssets,
     unpackAssetsIntoZip,
     sha256Hex,
-} from '../src/js/unpack.js';
-import { decodeJsfuck, detectJsfuck } from '../src/js/jsfuck.js';
+} from '../src/js/unpack-bridge.js';
+import { decodeJsfuck, detectJsfuck } from '../src/js/unpack-bridge.js';
 import {
     detectPacker,
     unpackPacker,
     detectStringArray,
     transformStringArray,
-} from '../src/js/packers.js';
-import { looksBinaryScript, sha256HexBytes } from '../src/js/unpack.js';
+} from '../src/js/unpack-bridge.js';
+import { looksBinaryScript, sha256HexBytes } from '../src/js/unpack-bridge.js';
 import {
     detectV8CodeCache,
     parseV8CodeCache,
     parseSealedV8,
     extractV8Strings,
-} from '../src/js/v8codecache.js';
+} from '../src/js/unpack-bridge.js';
 import {
     parseJscHeader,
     detectJscBytecode,
@@ -49,8 +49,8 @@ import {
     analyzeJscModule,
     readJscSharedTable,
     findJscSharedTable,
-} from '../src/js/jscbytecode.js';
-import { detectWasmModule, parseWasmModule } from '../src/js/wasm.js';
+} from '../src/js/unpack-bridge.js';
+import { detectWasmModule, parseWasmModule } from '../src/js/unpack-bridge.js';
 import fs from 'node:fs';
 import { brotliDecompressSync } from 'node:zlib';
 // Rstest drives the same 67 cases as the old hand-rolled runner; every
@@ -273,18 +273,16 @@ test('asset pipeline: external map fetched through the injected fetcher', async 
         sources: ['src/only.js'],
         sourcesContent: ['let only = 1;'],
     });
-    const requested = [];
+    // The engine's fetch seam is synchronous and cannot accept a JS closure,
+    // so the injected fetcher is spelled as a static { url: text } map: the
+    // engine consults it before falling back to the host XHR import.
     const result = await unpackAsset(
         { url: 'https://a.test/app.js', content: 'var a = 1;\n//# sourceMappingURL=app.js.map' },
         {
             index: 1,
-            fetchText: async (url) => {
-                requested.push(url);
-                return map;
-            },
+            fetchMap: { 'https://a.test/app.js.map': map },
         },
     );
-    assert.deepEqual(requested, ['https://a.test/app.js.map']);
     assert.equal(result.entry.sources, 1);
     assert.ok(result.files.some((f) => f.path.endsWith('/sources/src/only.js')));
 });
@@ -646,10 +644,10 @@ const binaryCases = [
         'sealed: a throwing inflator degrades to a refusal, not a crash',
         async () => {
             const bytes = loadFixture('v8-codecache-sealed.jsc');
+            // The inflator cannot be a JS closure across the wasm boundary;
+            // the 'throw' sentinel injects a failing inflator engine-side.
             const sealed = await parseSealedV8(bytes, {
-                inflate: async () => {
-                    throw new Error('not brotli');
-                },
+                inflate: 'throw',
             });
             assert.equal(sealed, null);
         },

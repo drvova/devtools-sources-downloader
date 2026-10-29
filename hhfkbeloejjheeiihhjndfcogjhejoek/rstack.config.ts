@@ -33,6 +33,15 @@ define.app({
                 { from: 'src/html', to: 'html' },
                 { from: 'src/css', to: 'css', info: { minimized: true } },
                 { from: 'src/images', to: 'images' },
+                {
+                    // The Rust unpack engine (scripts/build-engine.cjs builds
+                    // it from the devtools-unpack crate). info.minimized
+                    // marks it pre-minimized so the copy pipeline leaves the
+                    // binary alone.
+                    from: '.cache/engine.wasm',
+                    to: 'js/engine.wasm',
+                    info: { minimized: true },
+                },
             ],
         },
     },

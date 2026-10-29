@@ -25,6 +25,11 @@ pub mod util;
 pub mod v8codecache;
 pub mod wasm;
 
+/// Browser engine seam (wasm exports for unpack-bridge.js); host builds never
+/// compile it and cargo test is unaffected.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_api;
+
 /// JS `LIMITS` from unpack.js.
 pub struct Limits {
     pub max_depth: usize,

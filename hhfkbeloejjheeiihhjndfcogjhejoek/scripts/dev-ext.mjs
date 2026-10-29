@@ -9,7 +9,6 @@
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { connect, DIST, ensureChromeForTesting, unpackedExtensionId } from './ext-lib.mjs';
 
@@ -32,7 +31,7 @@ async function waitForPort(userDataDir) {
 // The reload trigger runs in the extension's own page context: opening the
 // panel page as a target and calling chrome.runtime.reload() restarts the
 // extension, which re-runs its devtools page and refreshes any open panel.
-async function reloadExtension(debugPort, extensionId) {
+async function reloadExtension(debugPort, _extensionId) {
     const version = await (await fetch('http://127.0.0.1:' + debugPort + '/json/version')).json();
     const cdp = await connect(version.webSocketDebuggerUrl);
     try {

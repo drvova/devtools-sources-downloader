@@ -247,6 +247,7 @@ fn is_space_byte(b: u8) -> bool {
     matches!(b, b' ' | b'\t' | b'\n' | 0x0B | b'\x0c' | b'\r')
 }
 
+#[derive(serde::Serialize)]
 pub struct PackerFound {
     pub payload: String,
     pub base: i64,
@@ -1075,6 +1076,8 @@ pub fn transform_string_array(source: &str) -> Option<String> {
     Some(inline.source)
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StringArrayDetected {
     pub array_id: String,
     pub literals: usize,

@@ -112,6 +112,7 @@ fn scan_printable_strings(bytes: &[u8], at: usize, end: usize, min: usize) -> Ve
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WasmSection {
     pub id: u8,
     pub name: String,
@@ -122,6 +123,7 @@ pub struct WasmSection {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WasmImport {
     pub module: String,
     pub field: String,
@@ -129,6 +131,7 @@ pub struct WasmImport {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WasmExport {
     pub name: String,
     pub kind: String,
@@ -136,6 +139,7 @@ pub struct WasmExport {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WasmModuleInfo {
     pub version: u32,
     pub sections: Vec<WasmSection>,
@@ -158,10 +162,13 @@ fn parse_name_subsection(payload: &[u8], info: &mut WasmModuleInfo) {
             return;
         };
         at = next;
-        let size = size as usize;
-        if at + size > payload.len() {
+        // u64 bound math: a huge LEB size saturating on 32-bit targets must
+        // reject, not wrap into a passing check.
+        let size64 = size as u64;
+        if size64 > (payload.len() - at) as u64 {
             return;
         }
+        let size = size64 as usize;
         let body = &payload[at..at + size];
         let mut cursor = 0usize;
         if id == 0 {
@@ -225,12 +232,14 @@ pub fn parse_wasm_module(bytes: &[u8]) -> Option<WasmModuleInfo> {
             break;
         };
         at = next;
-        let size = size as usize;
-        if at + size > bytes.len() {
+        // u64 bound math - see the name walker above.
+        let size64 = size as u64;
+        if size64 > (bytes.len() - at) as u64 {
             info.notes
                 .push(format!("section {} overruns the module", section_name(id)));
             break;
         }
+        let size = size64 as usize;
         let end = at + size;
         let mut section = WasmSection {
             id,
@@ -371,10 +380,12 @@ pub fn parse_wasm_module(bytes: &[u8]) -> Option<WasmModuleInfo> {
                                 return false;
                             };
                             cursor = next;
-                            let seg_size = seg_size as usize;
-                            if cursor + seg_size > end {
+                            // u64 bound math - see the name walker above.
+                            let seg64 = seg_size as u64;
+                            if seg64 > (end - cursor) as u64 {
                                 return false;
                             }
+                            let seg_size = seg64 as usize;
                             for found in scan_printable_strings(bytes, cursor, cursor + seg_size, WASM_MIN_STRING) {
                                 if !info.data_strings.contains(&found) {
                                     info.data_strings.push(found);

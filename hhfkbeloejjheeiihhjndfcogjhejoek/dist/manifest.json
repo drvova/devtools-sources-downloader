@@ -1,17 +1,18 @@
 {
-"update_url": "https://clients2.google.com/service/update2/crx",
-
+    "update_url": "https://clients2.google.com/service/update2/crx",
     "manifest_version": 3,
     "name": "DevTools - Sources downloader",
     "description": "DevTools downloader",
     "version": "0.1.0",
-    "devtools_page": "html/devtools.html",    
-    "icons":{
+    "devtools_page": "html/devtools.html",
+    "icons": {
         "16": "images/icons/16.png",
         "32": "images/icons/32.png",
         "48": "images/icons/48.png",
         "128": "images/icons/128.png"
     },
-    "permissions": [        
-    ]
+    "permissions": [],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    }
 }

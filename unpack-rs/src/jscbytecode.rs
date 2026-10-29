@@ -114,6 +114,7 @@ pub fn wtf_string_hash(bytes: &[u8]) -> u32 {
 }
 
 #[derive(Debug, Clone, serde::Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct JscHeader {
     pub stamp: u32,
     pub format: u32,
@@ -519,6 +520,7 @@ fn read_jsc_inline_string(bytes: &[u8], at: i64) -> Option<String> {
 
 // ------------------------------------------------------- shared string table
 
+#[derive(serde::Serialize)]
 pub struct JscSharedTable {
     pub strings: Vec<Option<String>>,
     pub count: usize,
@@ -558,11 +560,15 @@ pub fn read_jsc_shared_table(bytes: &[u8], offset: usize, length: usize) -> JscS
         let stored = u32(bytes, at + 4);
         let text_length = flags & 0x7FFF_FFFF;
         let width: u32 = if (flags >> 31) & 1 == 1 { 1 } else { 2 };
-        let byte_length = (text_length * width) as usize;
-        if text_length == 0 || at + 8 + byte_length > end {
+        // The span arithmetic is done in u64: on 32-bit targets (wasm32) the
+        // u32 product and offset sum wrap, and a wrapped sum can pass this
+        // bounds check before slicing past the buffer - a panic there, a
+        // silent reject everywhere else.
+        let byte_length = text_length as u64 * width as u64;
+        if text_length == 0 || at as u64 + 8 + byte_length > end as u64 {
             continue;
         }
-        let chars = &bytes[at + 8..at + 8 + byte_length];
+        let chars = &bytes[at + 8..at + 8 + byte_length as usize];
         if wtf_string_hash(chars) != stored {
             continue;
         }
@@ -621,12 +627,14 @@ pub fn find_jsc_shared_table(bytes: &[u8]) -> Option<JscSharedTable> {
             let stored = u32(bytes, rec + 4);
             let text_length = flags & 0x7FFF_FFFF;
             let width: u32 = if (flags >> 31) & 1 == 1 { 1 } else { 2 };
-            let byte_length = (text_length * width) as usize;
-            if text_length == 0 || rec + 8 + byte_length > bytes.len() {
+            // u64 span math - see read_jsc_shared_table for the wasm32 wrap
+            // this prevents.
+            let byte_length = text_length as u64 * width as u64;
+            if text_length == 0 || rec as u64 + 8 + byte_length > bytes.len() as u64 {
                 ok = false;
                 break;
             }
-            if wtf_string_hash(&bytes[rec + 8..rec + 8 + byte_length]) != stored {
+            if wtf_string_hash(&bytes[rec + 8..rec + 8 + byte_length as usize]) != stored {
                 ok = false;
                 break;
             }

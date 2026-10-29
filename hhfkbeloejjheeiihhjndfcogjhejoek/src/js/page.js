@@ -6,7 +6,7 @@ import {
     looksMinified,
     looksBinaryScript,
     decodeBase64ToBytes,
-} from './unpack.js';
+} from './unpack-bridge.js';
 
 var reloadDebugBtn = document.getElementById('reloadDebugBtn');
 var downloadBtn = document.getElementById('downloadBtn');

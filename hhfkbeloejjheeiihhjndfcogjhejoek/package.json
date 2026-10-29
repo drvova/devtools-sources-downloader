@@ -4,8 +4,8 @@
     "private": true,
     "description": "DevTools extension - download inspected page sources with debug mode",
     "scripts": {
-        "build": "rs build && node scripts/sync.cjs",
-        "dev": "set NODE_ENV=development&& rs build --source-map && node scripts/sync.cjs",
+        "build": "npm run build:engine && rs build && node scripts/sync.cjs",
+        "dev": "npm run build:engine && set NODE_ENV=development&& rs build --source-map && node scripts/sync.cjs",
         "watch": "rs build --watch --source-map",
         "test": "rs test",
         "test:e2e": "node test/browser-e2e.mjs",
@@ -14,7 +14,8 @@
         "check": "rs check",
         "verify": "npm test && npm run build && npm run test:e2e && npm run test:e2e:ext",
         "dev:ext": "node scripts/dev-ext.mjs",
-        "test:e2e:ext": "node test/browser-e2e-extension.mjs"
+        "test:e2e:ext": "node test/browser-e2e-extension.mjs",
+        "build:engine": "node scripts/build-engine.cjs"
     },
     "dependencies": {
         "file-saver": "^2.0.5",

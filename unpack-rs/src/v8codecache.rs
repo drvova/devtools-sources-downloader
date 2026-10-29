@@ -49,6 +49,8 @@ pub fn detect_v8_code_cache(bytes: &[u8]) -> bool {
     (V8_MIN_EXT_REFS..=V8_MAX_EXT_REFS).contains(&ext_refs)
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct V8CodeCache {
     pub magic: u32,
     pub magic_hex: String,

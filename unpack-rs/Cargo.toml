@@ -18,3 +18,13 @@ url = "2"
 [lib]
 name = "devtools_unpack"
 path = "src/lib.rs"
+# cdylib builds the browser engine (wasm32); rlib keeps cargo test working.
+crate-type = ["rlib", "cdylib"]
+
+[profile.release]
+# wasm engine build: size over speed (decompressors dominate either way)
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

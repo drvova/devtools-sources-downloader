@@ -75,12 +75,14 @@ pub enum JValue {
     RegExp { source: String, flags: String },
 }
 
+#[derive(serde::Serialize)]
 pub struct JsfuckDetect {
     pub detected: bool,
     pub purity: f64,
     pub reason: String,
 }
 
+#[derive(serde::Serialize)]
 pub struct JsfuckDecode {
     pub value: Option<String>,
     pub captured: bool,
