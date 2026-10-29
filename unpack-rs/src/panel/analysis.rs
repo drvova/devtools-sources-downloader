@@ -6,9 +6,10 @@
 //! JavaScript does, and hands back the analysis object every report is
 //! rendered from.
 //!
-//! Note: JSON object key order follows `serde_json`'s map, so a serialized
-//! analysis has the same keys and values as the JavaScript one but not
-//! necessarily the same textual ordering.
+//! Object key order is insertion order: the crate enables `serde_json`'s
+//! `preserve_order` feature, so a serialized analysis has the same keys in the
+//! same textual order as the JavaScript one, and the report pages that embed
+//! it are byte-identical.
 
 use serde_json::{json, Value};
 

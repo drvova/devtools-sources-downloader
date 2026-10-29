@@ -18,6 +18,7 @@ pub mod assets;
 pub mod boundary;
 pub mod graph;
 pub mod model;
+pub mod report;
 pub mod text;
 pub mod view;
 pub mod workspace;
