@@ -1371,6 +1371,125 @@ fn count_property<'a>(items: impl Iterator<Item = &'a Value>, key: &str) -> BTre
     counts
 }
 
+/// `collectInterestingEntrypoints`: the ranked entrypoint list the workspace
+/// builders slice.
+pub fn collect_interesting_entrypoints(
+    assets: &[ScriptAsset],
+    origins: &[RuntimeOrigin],
+) -> Vec<Value> {
+    let mut items: Vec<Value> = Vec::new();
+    for asset in assets {
+        let why = [
+            asset.primary_boundary.clone(),
+            asset.classification.clone(),
+            asset.bundler.clone(),
+            asset.startup_signals.join(", "),
+        ]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<String>>()
+        .join(" | ");
+        let label = {
+            let bare = get_bare_file_name(&asset.url);
+            if bare.is_empty() {
+                asset.id.clone()
+            } else {
+                bare
+            }
+        };
+        items.push(json!({
+            "kind": "chunk",
+            "id": asset.id,
+            "label": label,
+            "file": asset.file,
+            "url": asset.url,
+            "score": js_number_value(asset.score),
+            "classification": asset.classification,
+            "primaryBoundary": asset.primary_boundary,
+            "boundaryLabels": asset.boundary_labels,
+            "why": why,
+            "startupSignals": asset.startup_signals,
+            "routeHints": asset.route_hints,
+            "frameworkHints": asset.framework_hints,
+        }));
+    }
+    for origin in origins {
+        let file = field_str(origin, "file");
+        let url = field_str(origin, "url");
+        let kind = field_str(origin, "kind");
+        let id = field_str(origin, "id");
+        let label_source = if !file.is_empty() {
+            file.clone()
+        } else if !url.is_empty() {
+            url.clone()
+        } else {
+            kind.clone()
+        };
+        let label = {
+            let bare = get_bare_file_name(&label_source);
+            if bare.is_empty() {
+                id.clone()
+            } else {
+                bare
+            }
+        };
+        let related: Vec<String> = origin
+            .get("relatedChunks")
+            .and_then(|v| v.as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let display_url = if !url.is_empty() {
+            url
+        } else {
+            field_str(origin, "objectUrl")
+        };
+        let why = [
+            field_str(origin, "primaryBoundary"),
+            kind.clone(),
+            field_str(origin, "originType"),
+            related.join(", "),
+        ]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<String>>()
+        .join(" | ");
+        items.push(json!({
+            "kind": "runtime",
+            "id": id,
+            "label": label,
+            "file": file,
+            "url": display_url,
+            "score": js_number_value(field_number(origin, "score")),
+            "originType": field_str(origin, "originType"),
+            "timestamp": js_number_value(field_number(origin, "timestamp")),
+            "primaryBoundary": field_str(origin, "primaryBoundary"),
+            "boundaryLabels": origin.get("boundaryLabels").cloned().unwrap_or_else(|| json!([])),
+            "why": why,
+            "relatedChunks": related,
+        }));
+    }
+    items.sort_by(|left, right| {
+        let left_score = field_number(left, "score");
+        let right_score = field_number(right, "score");
+        if left_score != right_score {
+            return right_score
+                .partial_cmp(&left_score)
+                .unwrap_or(std::cmp::Ordering::Equal);
+        }
+        let left_time = field_number(left, "timestamp");
+        let right_time = field_number(right, "timestamp");
+        left_time
+            .partial_cmp(&right_time)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    items.into_iter().take(14).collect()
+}
+
 /// `buildFrameworkStateSummary`.
 pub fn build_framework_state_summary(framework_state: Option<&Value>) -> Value {
     let state = match framework_state.filter(|v| js_truthy(v)) {
@@ -2010,6 +2129,19 @@ mod tests {
             ),
             exp["stripBoundaryEntry"],
             "stripBoundaryEntry"
+        );
+    }
+
+    #[test]
+    fn interesting_entrypoints_match_oracle() {
+        let fx = fixture();
+        let exp = &fx["expected"];
+        let (mut assets, mut origins, _, _) = prepared();
+        build_boundary_labels(&mut assets, &mut origins);
+        assert_eq!(
+            Value::Array(collect_interesting_entrypoints(&assets, &origins)),
+            exp["collectInterestingEntrypoints"],
+            "collectInterestingEntrypoints"
         );
     }
 

@@ -1284,6 +1284,138 @@
     "network:xhr-0004"
    ]
   },
+  "collectInterestingEntrypoints": [
+   {
+    "kind": "runtime",
+    "id": "r1",
+    "label": "eval-1.js",
+    "file": "runtime/eval-1.js",
+    "url": "https://demo.test/app/main.js",
+    "score": 62,
+    "originType": "bundle-linked",
+    "timestamp": 0,
+    "primaryBoundary": "vendor",
+    "boundaryLabels": [
+     "vendor"
+    ],
+    "why": "vendor | eval | bundle-linked | chunk-main.js-1e7d8eef, chunk-vendor.js-12d54eae",
+    "relatedChunks": [
+     "chunk-main.js-1e7d8eef",
+     "chunk-vendor.js-12d54eae"
+    ]
+   },
+   {
+    "kind": "runtime",
+    "id": "r2",
+    "label": "wasm-1.wasm",
+    "file": "runtime/wasm-1.wasm",
+    "url": "",
+    "score": 56,
+    "originType": "blob-derived",
+    "timestamp": 30,
+    "primaryBoundary": "",
+    "boundaryLabels": [],
+    "why": "wasm | blob-derived",
+    "relatedChunks": []
+   },
+   {
+    "kind": "chunk",
+    "id": "chunk-router.js-6ef23ce1",
+    "label": "router.js",
+    "file": "demo.test/app/router.js",
+    "url": "https://demo.test/app/router.js",
+    "score": 39,
+    "classification": "framework",
+    "primaryBoundary": "router",
+    "boundaryLabels": [
+     "router",
+     "vendor"
+    ],
+    "why": "router | framework | unknown | router",
+    "startupSignals": [
+     "router"
+    ],
+    "routeHints": [
+     "app",
+     "router"
+    ],
+    "frameworkHints": [
+     "Next.js",
+     "jQuery"
+    ]
+   },
+   {
+    "kind": "chunk",
+    "id": "chunk-main.js-1e7d8eef",
+    "label": "main.js",
+    "file": "demo.test/app/main.js",
+    "url": "https://demo.test/app/main.js",
+    "score": 34,
+    "classification": "framework",
+    "primaryBoundary": "bootstrap",
+    "boundaryLabels": [
+     "bootstrap",
+     "router",
+     "vendor"
+    ],
+    "why": "bootstrap | framework | webpack",
+    "startupSignals": [],
+    "routeHints": [
+     "app",
+     "main"
+    ],
+    "frameworkHints": [
+     "React",
+     "Next.js",
+     "jQuery"
+    ]
+   },
+   {
+    "kind": "chunk",
+    "id": "chunk-auth.js-39940360",
+    "label": "auth.js",
+    "file": "demo.test/app/auth.js",
+    "url": "https://demo.test/app/auth.js",
+    "score": 32,
+    "classification": "framework",
+    "primaryBoundary": "router",
+    "boundaryLabels": [
+     "router",
+     "auth",
+     "vendor"
+    ],
+    "why": "router | framework | unknown",
+    "startupSignals": [],
+    "routeHints": [
+     "app",
+     "auth"
+    ],
+    "frameworkHints": [
+     "Next.js",
+     "jQuery"
+    ]
+   },
+   {
+    "kind": "chunk",
+    "id": "chunk-vendor.js-12d54eae",
+    "label": "vendor.js",
+    "file": "demo.test/vendor.js",
+    "url": "https://demo.test/vendor.js",
+    "score": 18,
+    "classification": "vendor",
+    "primaryBoundary": "vendor",
+    "boundaryLabels": [
+     "vendor"
+    ],
+    "why": "vendor | vendor | unknown",
+    "startupSignals": [],
+    "routeHints": [],
+    "frameworkHints": [
+     "Next.js",
+     "jQuery"
+    ]
+   }
+  ],
   "scoreFlowTransition": [
    42,
    30,
