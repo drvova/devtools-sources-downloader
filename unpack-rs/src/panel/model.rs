@@ -17,7 +17,9 @@ pub struct Resource {
     pub kind: String,
     pub source: String,
     pub url: String,
+    #[serde(serialize_with = "crate::panel::text::serialize_js_number")]
     pub size: f64,
+    #[serde(serialize_with = "crate::panel::text::serialize_js_number")]
     pub time: f64,
     pub order: usize,
 }
@@ -53,7 +55,7 @@ fn js_string(value: &Value) -> String {
 }
 
 /// JS `Number(value)` for a JSON value (`NaN` where JS would produce it).
-fn js_number(value: &Value) -> f64 {
+pub fn js_number(value: &Value) -> f64 {
     match value {
         Value::Null => 0.0,
         Value::Bool(b) => {
@@ -219,12 +221,12 @@ mod tests {
             .map(|(raw, status, index)| serde_json::to_value(normalize_resource(raw, status, *index)).unwrap())
             .collect();
         let want = json!([
-            {"status": "loaded", "type": "script", "source": "network", "url": "https://x/a.js", "size": 100.0, "time": 5.0, "order": 0},
-            {"status": "unloaded", "type": "?", "source": "?", "url": "?", "size": 0.0, "time": 0.0, "order": 3},
-            {"status": "loaded", "type": "?", "source": "?", "url": "?", "size": 2048.0, "time": 12.0, "order": 1},
-            {"status": "loaded", "type": "?", "source": "?", "url": "?", "size": 0.0, "time": 0.0, "order": 2},
-            {"status": "unloaded", "type": "?", "source": "?", "url": "?", "size": 0.0, "time": 0.0, "order": 4},
-            {"status": "loaded", "type": "?", "source": "?", "url": "?", "size": 0.0, "time": 7.0, "order": 5},
+            {"status": "loaded", "type": "script", "source": "network", "url": "https://x/a.js", "size": 100, "time": 5, "order": 0},
+            {"status": "unloaded", "type": "?", "source": "?", "url": "?", "size": 0, "time": 0, "order": 3},
+            {"status": "loaded", "type": "?", "source": "?", "url": "?", "size": 2048, "time": 12, "order": 1},
+            {"status": "loaded", "type": "?", "source": "?", "url": "?", "size": 0, "time": 0, "order": 2},
+            {"status": "unloaded", "type": "?", "source": "?", "url": "?", "size": 0, "time": 0, "order": 4},
+            {"status": "loaded", "type": "?", "source": "?", "url": "?", "size": 0, "time": 7, "order": 5},
         ]);
         assert_eq!(Value::Array(got), want);
     }

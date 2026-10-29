@@ -32,6 +32,29 @@ fn is_js_trim_char(c: char) -> bool {
     )
 }
 
+/// `JSON.stringify` for a number: whole values print without a fraction and
+/// non-finite values print as `null`.
+pub fn serialize_js_number<S: serde::Serializer>(value: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+    if !value.is_finite() {
+        return serializer.serialize_none();
+    }
+    if value.fract() == 0.0 && value.abs() < 9_007_199_254_740_992.0 {
+        return serializer.serialize_i64(*value as i64);
+    }
+    serializer.serialize_f64(*value)
+}
+
+/// `JSON.stringify` for a number as a JSON value.
+pub fn js_number_value(value: f64) -> serde_json::Value {
+    if !value.is_finite() {
+        return serde_json::Value::Null;
+    }
+    if value.fract() == 0.0 && value.abs() < 9_007_199_254_740_992.0 {
+        return serde_json::Value::from(value as i64);
+    }
+    serde_json::Value::from(value)
+}
+
 pub fn js_trim(text: &str) -> &str {
     text.trim_matches(is_js_trim_char)
 }

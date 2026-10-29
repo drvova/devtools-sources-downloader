@@ -12,6 +12,7 @@
 //! semantics (verified against node oracles captured from the pre-port
 //! implementation).
 
+pub mod assets;
 pub mod model;
 pub mod text;
 pub mod view;
