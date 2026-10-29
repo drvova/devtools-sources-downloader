@@ -395,29 +395,55 @@ pub fn keys_len(value: &Value) -> usize {
     }
 }
 
+/// Byte values of a binary script input: the panel holds a `Uint8Array`,
+/// which `JSON.stringify` turns into an object keyed by index, while a plain
+/// array of numbers arrives as an array. Both shapes mean the same bytes.
+fn byte_values(value: &Value) -> Option<Vec<u8>> {
+    let values: Vec<&Value> = match value {
+        Value::Array(items) => items.iter().collect(),
+        Value::Object(map) => {
+            let mut keyed: Vec<(u64, &Value)> = map
+                .iter()
+                .filter_map(|(key, item)| key.parse::<u64>().ok().map(|index| (index, item)))
+                .collect();
+            keyed.sort_by_key(|(index, _)| *index);
+            keyed.into_iter().map(|(_, item)| item).collect()
+        }
+        _ => return None,
+    };
+    if values.is_empty() {
+        return None;
+    }
+    Some(
+        values
+            .iter()
+            .map(|value| value.as_u64().unwrap_or(0) as u8)
+            .collect(),
+    )
+}
+
 /// The panel's script inputs as the unpack engine's assets: string content is
-/// a text asset, an array of byte values is a binary one.
+/// a text asset, byte content is a binary one.
 pub fn assets_from_inputs(inputs: &[ScriptInput]) -> Vec<crate::pipeline::Asset> {
     use crate::pipeline::Asset;
     inputs
         .iter()
         .map(|input| {
             let url = input.url.clone().unwrap_or_default();
-            match &input.content {
-                Value::String(text) => Asset::Text {
+            if let Value::String(text) = &input.content {
+                return Asset::Text {
                     url,
                     content: text.clone(),
                     zip_path: None,
-                },
-                Value::Array(values) if !values.is_empty() => Asset::Bytes {
+                };
+            }
+            match byte_values(&input.content) {
+                Some(bytes) => Asset::Bytes {
                     url,
-                    bytes: values
-                        .iter()
-                        .map(|value| value.as_u64().unwrap_or(0) as u8)
-                        .collect(),
+                    bytes,
                     zip_path: None,
                 },
-                _ => Asset::Text {
+                None => Asset::Text {
                     url,
                     content: String::new(),
                     zip_path: None,
@@ -425,6 +451,39 @@ pub fn assets_from_inputs(inputs: &[ScriptInput]) -> Vec<crate::pipeline::Asset>
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod byte_values_tests {
+    use super::*;
+
+    #[test]
+    fn byte_content_accepts_both_js_shapes() {
+        // A plain array of numbers.
+        let array = serde_json::json!({ "url": "a.js", "content": [1, 2, 255] });
+        // What JSON.stringify does to a Uint8Array: an index-keyed object.
+        let object = serde_json::json!({ "url": "a.js", "content": { "0": 1, "1": 2, "2": 255 } });
+        for input in [array, object] {
+            let parsed: ScriptInput = serde_json::from_value(input).unwrap();
+            let assets = assets_from_inputs(&[parsed]);
+            match &assets[0] {
+                crate::pipeline::Asset::Bytes { bytes, .. } => assert_eq!(bytes, &[1, 2, 255]),
+                crate::pipeline::Asset::Text { .. } => panic!("byte content must not be text"),
+            }
+        }
+    }
+
+    #[test]
+    fn string_content_stays_text() {
+        let parsed: ScriptInput =
+            serde_json::from_value(serde_json::json!({ "url": "a.js", "content": "var a=1;" }))
+                .unwrap();
+        let assets = assets_from_inputs(&[parsed]);
+        assert!(matches!(
+            &assets[0],
+            crate::pipeline::Asset::Text { content, .. } if content == "var a=1;"
+        ));
+    }
 }
 
 /// `buildTimingLookup`: full URL and query-stripped URL, first writer wins.

@@ -471,7 +471,11 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                     &options,
                 )
             };
-            Ok(serde_json::json!({ "files": files, "report": report }))
+            Ok(serde_json::json!({
+                "files": files,
+                "report": report,
+                "summary": panel::export::export_summary(&report),
+            }))
         }
         "sha256Hex" => Ok(serde_json::Value::String(digest::sha256_hex(
             &arg_str(a, 0).ok_or("sha256Hex: text")?,

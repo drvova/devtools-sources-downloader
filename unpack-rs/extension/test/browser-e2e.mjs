@@ -270,6 +270,14 @@ async function main() {
 
         await cdp.send('Page.enable');
         await cdp.send('Runtime.enable');
+        // Module-load failures surface in the Log domain, not as exceptions.
+        cdp.on('Log.entryAdded', (p) => {
+            if (!p.entry || p.entry.level !== 'error') return;
+            // The static test server has no favicon; that is not a page error.
+            if ((p.entry.url || '').endsWith('/favicon.ico')) return;
+            consoleErrors.push(p.entry.text + (p.entry.url ? ' <' + p.entry.url + '>' : ''));
+        });
+        await cdp.send('Log.enable');
         await cdp.send('Browser.setDownloadBehavior', {
             behavior: 'allow',
             downloadPath: downloadDir,
@@ -304,9 +312,22 @@ async function main() {
             await new Promise((r) => setTimeout(r, 250));
         }
         console.log('export status: ' + status);
-        if (/failed/i.test(status)) throw new Error('export reported failure: ' + status);
+        // Report what the page said before the status check, so a stalled
+        // export names its own cause instead of timing out silently.
+        if (!/Export ready\./.test(status)) {
+            const probe = await cdp.send('Runtime.evaluate', {
+                expression:
+                    "JSON.stringify({button: !!document.getElementById('downloadBtn'), handler: typeof (document.getElementById('downloadBtn')||{}).onclick, banner: (document.getElementById('activityBanner')||{}).style && document.getElementById('activityBanner').style.display, scripts: Array.from(document.querySelectorAll('script')).map(function(s){return s.src||'(inline)'})})",
+                returnByValue: true,
+            });
+            console.log('page probe: ' + probe.result.value);
+        }
+        const errors = consoleErrors.length ? ' | console: ' + consoleErrors.join(' | ') : '';
+        if (/failed/i.test(status)) throw new Error('export reported failure: ' + status + errors);
         if (!/Export ready\./.test(status))
-            throw new Error('export did not complete within 60s; last status: ' + status);
+            throw new Error(
+                'export did not complete within 60s; last status: ' + status + errors,
+            );
 
         let zipPath = null;
         for (let i = 0; i < 40 && !zipPath; i++) {
@@ -321,7 +342,10 @@ async function main() {
         const zip = readZip(fs.readFileSync(zipPath));
         const names = Object.keys(zip).sort();
         const assert = (cond, message) => {
-            if (!cond) throw new Error('assertion failed: ' + message);
+            if (!cond) {
+                console.log('zip entries:\n  ' + names.join('\n  '));
+                throw new Error('assertion failed: ' + message);
+            }
         };
 
         const unpackRoot = names

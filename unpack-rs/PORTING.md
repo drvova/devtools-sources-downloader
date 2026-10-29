@@ -192,7 +192,7 @@ compare against that captured output, including three whole HTML documents
 byte for byte. Where an oracle was impossible, the test says so and names the
 substitute (see "Census instead of oracle" below).
 
-## Module map
+## Module map (panel)
 
 | JS source | Rust module | Notes |
 |---|---|---|
@@ -205,7 +205,7 @@ substitute (see "Census instead of oracle" below).
 | `page.js` console page, waterfall, table, capture reason, export wrappers | `panel/report.rs` | |
 | `page.js` `writeReconArtifacts` + `finalizeZipWithRecon` | `panel/export.rs` | |
 
-## API map (JS -> Rust)
+## API map (panel)
 
 - `escapeXml` / `escapeAttr` / `escapeHtml` -> `panel::view::escape_html` (one
   implementation; `escape_attr`/`escape_xml` coerce through `assets::value_text`)
@@ -235,7 +235,7 @@ substitute (see "Census instead of oracle" below).
   `finalizeZipWithRecon`) / `finalizeZipWithRecon` -> `panel::export`
 - `Object.keys(x).length` guards -> `panel::assets::keys_len`
 
-## Test map
+## Test map (panel)
 
 | JS behaviour | Rust test |
 |---|---|
@@ -246,6 +246,29 @@ substitute (see "Census instead of oracle" below).
 | runtime paths, unpack assets, report merge, cookies, inline JSON, recon stats, readable artifacts | `panel::artifacts` |
 | the three console documents (byte for byte), waterfall, table, capture reason, framework/runtime/analysis exports | `panel::report` |
 | recon artifact set and order, section guards, DOM snapshot fallback, the full export run and merged totals, runtime payload collection | `panel::export` |
+| binary routing of a cached-bytecode resource (V8 code cache -> `cache-header.json`, `strings.json`) | `panel::assets` byte-content tests |
+| the whole export through the real extension: reload, poll, click Download All, and the 63-entry zip asserted from the download directory | `extension/test/browser-e2e.mjs` (Chromium over CDP) |
+
+## Panel surface on the wasm bridge
+
+The wasm API carries the panel as well as the engine: twelve `xu_call` arms
+(`panelBuildSemanticAnalysis`, the four document generators,
+`panelDescribeCaptureReason`, the four exporters, `panelWriteReconArtifacts`
+and `panelFinalizeZipWithRecon`) with matching `unpack-bridge.js` exports. Two
+seams are worth naming:
+
+- **The clock is a host import.** `wasm32-unknown-unknown` has no clock and
+  `SystemTime::now()` panics there, which took out every arm that stamps a
+  report until `util::iso8601_now` read the time through `xu_host_now_ms`
+  (the bridge answers `Date.now()`).
+- **Binary payloads cross as base64.** `decoders::encode_base64` is the
+  inverse of the decoder, so runtime payloads can be handed to JSZip's
+  `{ base64: true }` without a lossy UTF-8 round trip.
+- **Byte content has one field, two shapes.** A script input's `content` is a
+  string for text and byte values for a binary asset. `JSON.stringify` turns
+  the panel's `Uint8Array` into an index-keyed object while a plain array
+  stays an array, so `panel::assets::byte_values` accepts both and the caller
+  never has to remember which one it holds.
 
 ## Deliberate differences (panel)
 
@@ -254,16 +277,29 @@ substitute (see "Census instead of oracle" below).
    matching `JSON.stringify`. Without it every serialized report differs from
    the JavaScript byte-wise (same data, reordered keys) and the console page's
    embedded data blob cannot match.
-2. **The DOM and `chrome.devtools` layers are not ported.** `setActivity`,
-   `clearActivity`, `doDownload`, `injectAndReload`, `startPolling`,
-   `stopPolling`, `resetTrackerView`, `renderResults`, `renderPageOrigin`,
-   `renderStackProfile`, `renderTrackerView`, `fetchRuntimePayload`,
+2. **The DOM and `chrome.devtools` layers stay in the extension.** They read
+   or write the inspected page and the panel UI, which a crate cannot do:
+   `setActivity`, `clearActivity`, `doDownload`, `injectAndReload`,
+   `startPolling`, `stopPolling`, `resetTrackerView`, `renderResults`,
+   `renderPageOrigin`, `renderStackProfile`, `renderTrackerView`,
    `fetchTextAsset`, `fetchSourceMapText`, `fetchSourceMapTextInPage` and
-   `collectReconAndFinalize` read or write the inspected page and the panel
-   UI; they stay in the extension. Their logic-free parts survive as seams:
-   payload fetching is `export::collect_runtime_payloads`'s `fetch` closure,
+   `collectReconAndFinalize`. Their logic-free parts are seams: payload
+   fetching is `export::collect_runtime_payloads`'s `fetch` closure (the
+   extension keeps its own copy because it reads the page per entry),
    source-map fetching is `pipeline::UnpackOptions::fetch_text`, and the
    finished archive is the writer closure.
+
+   `page.js` was rewired onto the wasm panel surface: the entry points
+   (`buildSemanticAnalysis`, the console/waterfall/table/DOM-snapshot
+   generators, `describeCaptureReason`, the four exporters and
+   `finalizeZipWithRecon`) call the bridge, file-producing calls return
+   `[{path, content}]` (binary payloads as `{path, base64}`) and the file goes
+   straight into the zip, and the 99 local copies of ported logic were deleted
+   (3676 lines to 606). What is left in `page.js` is the platform layer and
+   the per-cell formatting helpers the DOM calls on every render
+   (`sanitizePathPart`, `sanitizeFilename`, `normalizeUrlCandidate`, …), which
+   keep their Rust twins in `panel::text` rather than crossing the boundary
+   per cell.
 3. **The beautifier is an injectable seam.** `buildReadableArtifact` calls the
    engine's `looksMinified`/`beautifyJs`; the port defaults to
    `beautify::{looks_minified, beautify_js}` and takes both as parameters in
@@ -285,6 +321,16 @@ substitute (see "Census instead of oracle" below).
 7. **Numbers in embedded JSON are JS-formatted.** Values interpolated into
    documents go through `jsnumber::js_number_to_string`, and tests that build
    JSON fixtures use `panel::text::js_number_value` so `0.0` serializes as `0`.
+8. **The parity gate compares text, not parsed JSON.** Two divergences that
+   value equality cannot see were found only by comparing serialized output
+   byte for byte: the asset record's boundary fields were in the wrong order
+   (`applyBoundaryLabels` assigns `boundaryDetails` first) and the analysis
+   counters were `BTreeMap`s, so every counts object serialized
+   alphabetically instead of in first-seen order. `panel::model::Counts` is
+   the insertion-ordered counter, and
+   `tests/fixtures/panel/parity-oracle.json` (captured from the pre-port
+   `page.js`) gates the analysis, the three documents, the capture reason and
+   the recon/framework/runtime file sets as text.
 
 ## Preserved JS quirks (panel)
 
