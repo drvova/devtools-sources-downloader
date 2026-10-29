@@ -9,3 +9,6 @@ node_modules/
 Thumbs.db
 desktop.ini
 *.log
+
+# dev-build source maps
+*.js.map
