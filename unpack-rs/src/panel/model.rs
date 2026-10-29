@@ -4,6 +4,54 @@
 
 use std::cmp::Ordering;
 
+use serde::{Deserialize, Serialize};
+
+/// A `{}`-style counter. JavaScript objects keep first-seen key order and
+/// these maps are serialized straight into the exported analysis, so the
+/// counter preserves insertion order instead of sorting.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Counts(serde_json::Map<String, Value>);
+
+impl Counts {
+    pub fn add(&mut self, key: impl Into<String>) {
+        let key = key.into();
+        let next = self.0.get(&key).and_then(|value| value.as_u64()).unwrap_or(0) + 1;
+        self.0.insert(key, Value::from(next));
+    }
+
+    pub fn get(&self, key: &str) -> Option<u64> {
+        self.0.get(key).and_then(|value| value.as_u64())
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.0.keys()
+    }
+
+    pub fn to_value(&self) -> Value {
+        Value::Object(self.0.clone())
+    }
+}
+
+impl Serialize for Counts {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Counts {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(Counts(serde_json::Map::deserialize(deserializer)?))
+    }
+}
+
 use serde_json::Value;
 
 use crate::jsnumber::{js_number_to_string, js_string_to_number};

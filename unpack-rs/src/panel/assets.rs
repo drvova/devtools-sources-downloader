@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
+
+use crate::panel::model::Counts;
 use serde_json::Value;
 
 use crate::jsnumber::js_number_to_string;
@@ -338,14 +340,17 @@ pub struct ScriptAsset {
     pub classification: String,
     #[serde(serialize_with = "serialize_js_number")]
     pub score: f64,
+    // The four boundary fields keep the JavaScript's assignment order
+    // (`applyBoundaryLabels` sets details first), because these records are
+    // serialized straight into the exported analysis files.
+    #[serde(default)]
+    pub boundary_details: Vec<BoundaryDetail>,
     #[serde(default)]
     pub boundary_labels: Vec<String>,
     #[serde(default)]
     pub primary_boundary: String,
     #[serde(default)]
     pub boundary_reasons: Vec<String>,
-    #[serde(default)]
-    pub boundary_details: Vec<BoundaryDetail>,
 }
 
 /// One boundary match, as recorded by `applyBoundaryLabels`.
@@ -567,8 +572,8 @@ fn is_truthy(value: &Value) -> bool {
 }
 
 /// `countPropertyValues`: values keyed by the given property, falsy -> unknown.
-pub fn count_property_values(items: &[ScriptAsset], key: &str) -> BTreeMap<String, usize> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+pub fn count_property_values(items: &[ScriptAsset], key: &str) -> Counts {
+    let mut counts = Counts::default();
     for item in items {
         let value = match key {
             "classification" => item.classification.clone(),
@@ -576,17 +581,17 @@ pub fn count_property_values(items: &[ScriptAsset], key: &str) -> BTreeMap<Strin
             _ => String::new(),
         };
         let value = if value.is_empty() { "unknown".to_string() } else { value };
-        *counts.entry(value).or_insert(0) += 1;
+        counts.add(value);
     }
     counts
 }
 
 /// `countBoundaryLabels`.
-pub fn count_boundary_labels(items: &[ScriptAsset]) -> BTreeMap<String, usize> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+pub fn count_boundary_labels(items: &[ScriptAsset]) -> Counts {
+    let mut counts = Counts::default();
     for item in items {
         for label in &item.boundary_labels {
-            *counts.entry(label.clone()).or_insert(0) += 1;
+            counts.add(label.clone());
         }
     }
     counts
@@ -872,12 +877,12 @@ pub fn strip_runtime_entry(entry: &Value) -> Value {
 }
 
 /// `countPropertyValues` over runtime origins.
-fn count_origin_property(origins: &[RuntimeOrigin], key: &str) -> BTreeMap<String, usize> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+fn count_origin_property(origins: &[RuntimeOrigin], key: &str) -> Counts {
+    let mut counts = Counts::default();
     for item in origins {
         let value = field_str(item, key);
         let value = if value.is_empty() { "unknown".to_string() } else { value };
-        *counts.entry(value).or_insert(0) += 1;
+        counts.add(value);
     }
     counts
 }

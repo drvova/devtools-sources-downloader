@@ -15,7 +15,7 @@ use crate::panel::assets::{
     RuntimeOrigin, ScriptAsset,
 };
 use crate::panel::graph::{collect_graphql_operations, collect_network_operations};
-use crate::panel::model::js_number;
+use crate::panel::model::{js_number, Counts};
 use crate::panel::text::{js_number_value, js_round};
 use crate::util::{iso8601_now, utf16_prefix};
 
@@ -426,8 +426,8 @@ pub fn apply_boundary_labels(entry: &mut Value, matches: Vec<Value>) {
 }
 
 /// `countBoundaryLabels` over JSON entries.
-pub fn count_boundary_labels_values(items: &[Value]) -> BTreeMap<String, usize> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+pub fn count_boundary_labels_values(items: &[Value]) -> Counts {
+    let mut counts = Counts::default();
     for item in items {
         for label in item
             .get("boundaryLabels")
@@ -436,7 +436,7 @@ pub fn count_boundary_labels_values(items: &[Value]) -> BTreeMap<String, usize> 
             .unwrap_or_default()
         {
             if let Some(label) = label.as_str() {
-                *counts.entry(label.to_string()).or_insert(0) += 1;
+                counts.add(label.to_string());
             }
         }
     }
@@ -1412,12 +1412,12 @@ fn value_text(value: &Value) -> String {
 }
 
 /// `countPropertyValues` over an iterator of JSON objects.
-fn count_property<'a>(items: impl Iterator<Item = &'a Value>, key: &str) -> BTreeMap<String, usize> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+fn count_property<'a>(items: impl Iterator<Item = &'a Value>, key: &str) -> Counts {
+    let mut counts = Counts::default();
     for item in items {
         let value = field_str(item, key);
         let value = if value.is_empty() { "unknown".to_string() } else { value };
-        *counts.entry(value).or_insert(0) += 1;
+        counts.add(value);
     }
     counts
 }
@@ -1795,12 +1795,12 @@ pub fn build_framework_runtime_summary(
     })
 }
 
-fn count_origin_kinds(origins: &[RuntimeOrigin]) -> BTreeMap<String, usize> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+fn count_origin_kinds(origins: &[RuntimeOrigin]) -> Counts {
+    let mut counts = Counts::default();
     for origin in origins {
         let value = field_str(origin, "kind");
         let value = if value.is_empty() { "unknown".to_string() } else { value };
-        *counts.entry(value).or_insert(0) += 1;
+        counts.add(value);
     }
     counts
 }

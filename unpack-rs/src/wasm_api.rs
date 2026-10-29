@@ -200,6 +200,15 @@ fn arg_bytes(array: &[serde_json::Value], i: usize) -> Option<Vec<u8>> {
 }
 
 #[cfg(target_arch = "wasm32")]
+fn arg_array(array: &[serde_json::Value], i: usize) -> Vec<serde_json::Value> {
+    array
+        .get(i)
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+}
+
+#[cfg(target_arch = "wasm32")]
 fn arg_usize(array: &[serde_json::Value], i: usize) -> Option<usize> {
     array.get(i).and_then(|v| v.as_u64()).map(|n| n as usize)
 }
@@ -288,6 +297,181 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 .unwrap_or_default();
             let view = panel::view::tracker_view(&tracker, &filters);
             serde_json::to_value(view).map_err(|e| e.to_string())
+        }
+        // The panel's computation and artifact assembly. Each of these
+        // returns either a document string, the analysis object, or a list of
+        // {path, content} files (binary payloads as {path, base64}) so the
+        // extension keeps the zip and the DOM while the logic lives here.
+        "panelBuildSemanticAnalysis" => {
+            let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
+                a.first().cloned().unwrap_or(serde_json::Value::Null),
+            )
+            .map_err(|e| e.to_string())?;
+            let recon = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
+            let runtime_entries = a
+                .get(2)
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let runtime_manifest = a
+                .get(3)
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            Ok(panel::analysis::build_semantic_analysis(
+                &assets,
+                if recon.is_null() { None } else { Some(&recon) },
+                &runtime_entries,
+                &runtime_manifest,
+            ))
+        }
+        "panelGenerateInvestigationIndexHTML" => Ok(serde_json::Value::String(
+            panel::report::generate_investigation_index_html(
+                a.first().unwrap_or(&serde_json::Value::Null),
+            ),
+        )),
+        "panelGenerateWaterfallHTML" => Ok(serde_json::Value::String(
+            panel::report::generate_waterfall_html(&arg_array(a, 0)),
+        )),
+        "panelGenerateTable" => Ok(serde_json::Value::String(
+            panel::report::generate_table(&arg_array(a, 0)),
+        )),
+        "panelGenerateDOMSnapshotHTML" => Ok(serde_json::Value::String(
+            panel::artifacts::generate_dom_snapshot_html(
+                &arg_str(a, 0).unwrap_or_default(),
+                a.get(1).unwrap_or(&serde_json::Value::Null),
+            ),
+        )),
+        "panelDescribeCaptureReason" => Ok(serde_json::Value::String(
+            panel::report::describe_capture_reason(
+                a.first().filter(|v| !v.is_null()),
+                a.get(1).filter(|v| !v.is_null()),
+            ),
+        )),
+        "panelExportFrameworkArtifacts" => {
+            let mut files: Vec<serde_json::Value> = Vec::new();
+            {
+                let mut writer = |path: &str, content: &str| {
+                    files.push(serde_json::json!({ "path": path, "content": content }));
+                };
+                panel::report::export_framework_artifacts(
+                    &mut writer,
+                    a.first().filter(|v| !v.is_null()),
+                );
+            }
+            Ok(serde_json::Value::Array(files))
+        }
+        "panelExportRuntimeArtifacts" => {
+            let entries = arg_array(a, 0);
+            let mut files: Vec<serde_json::Value> = Vec::new();
+            let manifest = {
+                let mut writer = |path: &str, bytes: &[u8]| {
+                    files.push(match std::str::from_utf8(bytes) {
+                        Ok(text) => {
+                            serde_json::json!({ "path": path, "content": text })
+                        }
+                        Err(_) => serde_json::json!({
+                            "path": path,
+                            "base64": decoders::encode_base64(bytes),
+                        }),
+                    });
+                };
+                panel::report::export_runtime_artifacts(&mut writer, &entries)
+            };
+            Ok(serde_json::json!({ "files": files, "manifest": manifest }))
+        }
+        "panelExportReadableArtifacts" => {
+            let analysis = a.first().cloned().unwrap_or(serde_json::Value::Null);
+            let mut files: Vec<serde_json::Value> = Vec::new();
+            {
+                let mut writer = |path: &str, content: &str| {
+                    files.push(serde_json::json!({ "path": path, "content": content }));
+                };
+                panel::report::export_readable_artifacts(&mut writer, &analysis);
+            }
+            Ok(serde_json::Value::Array(files))
+        }
+        "panelExportSemanticAnalysis" => {
+            let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
+                a.first().cloned().unwrap_or(serde_json::Value::Null),
+            )
+            .map_err(|e| e.to_string())?;
+            let recon = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
+            let runtime_entries = arg_array(a, 2);
+            let runtime_manifest = arg_array(a, 3);
+            let mut files: Vec<serde_json::Value> = Vec::new();
+            {
+                let mut writer = |path: &str, content: &str| {
+                    files.push(serde_json::json!({ "path": path, "content": content }));
+                };
+                panel::report::export_semantic_analysis(
+                    &mut writer,
+                    &assets,
+                    if recon.is_null() { None } else { Some(&recon) },
+                    &runtime_entries,
+                    &runtime_manifest,
+                );
+            }
+            Ok(serde_json::Value::Array(files))
+        }
+        "panelWriteReconArtifacts" => {
+            let recon = a.first().cloned().unwrap_or(serde_json::Value::Null);
+            let snapshot = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
+            let mut files: Vec<serde_json::Value> = Vec::new();
+            let runtime_entries = {
+                let mut writer = |path: &str, content: &str| {
+                    files.push(serde_json::json!({ "path": path, "content": content }));
+                };
+                panel::export::write_recon_artifacts(
+                    &mut writer,
+                    if recon.is_null() { None } else { Some(&recon) },
+                    if snapshot.is_null() {
+                        None
+                    } else {
+                        Some(&snapshot)
+                    },
+                )
+            };
+            Ok(serde_json::json!({ "files": files, "runtimeEntries": runtime_entries }))
+        }
+        "panelFinalizeZipWithRecon" => {
+            let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
+                a.first().cloned().unwrap_or(serde_json::Value::Null),
+            )
+            .map_err(|e| e.to_string())?;
+            let recon = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
+            let snapshot = a.get(2).cloned().unwrap_or(serde_json::Value::Null);
+            let runtime_payloads = arg_array(a, 3);
+            let options: HostOptions = serde_json::from_value(
+                a.get(4).cloned().unwrap_or(serde_json::Value::Null),
+            )
+            .unwrap_or_default();
+            let options = options.into_native();
+            let mut files: Vec<serde_json::Value> = Vec::new();
+            let report = {
+                let mut writer = |path: &str, bytes: &[u8]| {
+                    files.push(match std::str::from_utf8(bytes) {
+                        Ok(text) => serde_json::json!({ "path": path, "content": text }),
+                        Err(_) => serde_json::json!({
+                            "path": path,
+                            "base64": decoders::encode_base64(bytes),
+                        }),
+                    });
+                };
+                panel::export::finalize_zip_with_recon(
+                    &mut writer,
+                    &assets,
+                    if recon.is_null() { None } else { Some(&recon) },
+                    if snapshot.is_null() {
+                        None
+                    } else {
+                        Some(&snapshot)
+                    },
+                    &runtime_payloads,
+                    &options,
+                )
+            };
+            Ok(serde_json::json!({ "files": files, "report": report }))
         }
         "sha256Hex" => Ok(serde_json::Value::String(digest::sha256_hex(
             &arg_str(a, 0).ok_or("sha256Hex: text")?,
@@ -586,8 +770,8 @@ impl HostAsset {
 }
 
 #[cfg(target_arch = "wasm32")]
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(serde::Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
 struct HostOptions {
     #[serde(default)]
     index: Option<usize>,

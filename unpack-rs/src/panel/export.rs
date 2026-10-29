@@ -255,7 +255,9 @@ pub fn export_summary(report: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::panel::analysis::build_semantic_analysis;
     use crate::panel::assets::ScriptInput;
+    use crate::panel::report::describe_capture_reason;
 
     fn fixture() -> Value {
         let path = concat!(
@@ -416,6 +418,171 @@ mod tests {
         assert_eq!(collected[2]["base64"], json!("AGFzbQ=="));
         assert!(collected[3].get("text").is_none(), "failed fetch leaves none");
         assert!(collect_runtime_payloads(&[], &mut |_| None).is_empty());
+    }
+
+    /// The parity oracle is the *text* page.js produced, not a JSON value: it
+    /// gates object field order and counter key order, which value equality
+    /// cannot see and which the exported analysis files carry verbatim.
+    #[test]
+    fn panel_surface_matches_page_js_text() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/panel/parity-oracle.json"
+        );
+        let oracle: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        static STAMP: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+            regex::Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z").unwrap()
+        });
+        let normalize = |text: &str| STAMP.replace_all(text, "<timestamp>").to_string();
+        let text = |value: &Value| normalize(&serde_json::to_string(value).unwrap());
+        let assert_text = |got: &str, want: &Value, label: &str| {
+            // Both sides carry the current time (the console embeds it in its
+            // data blob), so both are normalized before comparing.
+            let got = normalize(got);
+            let got = got.as_str();
+            let want = normalize(want.as_str().unwrap());
+            if got == want {
+                return;
+            }
+            let at = got
+                .char_indices()
+                .zip(want.chars())
+                .find(|((_, left), right)| left != right)
+                .map(|((offset, _), _)| offset)
+                .unwrap_or_else(|| got.len().min(want.len()));
+            let start = at.saturating_sub(70);
+            panic!(
+                "{label} diverges at byte {at} (got {} bytes, want {} bytes)\n  got: {:?}\n want: {:?}",
+                got.len(),
+                want.len(),
+                &got[start..(at + 70).min(got.len())],
+                &want[start..(at + 70).min(want.len())],
+            );
+        };
+
+        let timings = json!([
+            {"name": "https://demo.test/static/app.js?v=3", "initiatorType": "script", "startTime": 0,
+             "domainLookupStart": 0.4, "domainLookupEnd": 3.2, "connectStart": 3.2, "connectEnd": 14.6,
+             "secureConnectionStart": 6.1, "requestStart": 15, "responseStart": 42.75, "responseEnd": 118.5,
+             "duration": 118.5, "transferSize": 20480, "encodedBodySize": 19000, "decodedBodySize": 51000},
+            {"name": "https://cdn.other.test/lib/vendor.css", "initiatorType": "link", "startTime": 12.25,
+             "requestStart": 31, "responseStart": 55.5, "responseEnd": 90, "duration": 77.75},
+        ]);
+        let js_assets = vec![ScriptInput {
+            url: Some("https://demo.test/app.js".to_string()),
+            content: json!("var a = 1;\nfunction at(){}"),
+        }];
+        let recon_data = json!({
+            "page": {"title": "Demo", "url": "https://demo.test/"},
+            "timings": timings.clone(),
+            "recon": {"fetch": [{"url": "https://demo.test/api", "method": "POST"}]},
+            "frameworkState": {"summary": {"roots": 1}, "roots": [{"id": "app"}]},
+        });
+        let runtime_entries = json!([
+            {"index": 0, "id": "r1", "kind": "eval", "url": "https://demo.test/eval.js",
+             "text": "var b = 2;", "hasText": true},
+        ]);
+        let runtime_manifest = json!([{"id": "r1", "file": "_runtime/eval/0001.js"}]);
+        let snapshot = json!({"html": "<html><body>x</body></html>", "title": "Snapshot"});
+
+        let analysis = build_semantic_analysis(
+            &js_assets,
+            Some(&recon_data),
+            runtime_entries.as_array().unwrap(),
+            runtime_manifest.as_array().unwrap(),
+        );
+        assert_text(&text(&analysis), &oracle["analysisText"], "analysis");
+
+        let investigation = analysis.get("investigation").cloned().unwrap_or(Value::Null);
+        assert_text(
+            &crate::panel::report::generate_investigation_index_html(&investigation),
+            &oracle["consoleText"],
+            "console",
+        );
+        let timing_list = timings.as_array().unwrap();
+        assert_text(
+            &crate::panel::report::generate_waterfall_html(timing_list),
+            &oracle["waterfallText"],
+            "waterfall",
+        );
+        assert_text(
+            &crate::panel::report::generate_table(timing_list),
+            &oracle["tableText"],
+            "table",
+        );
+        assert_text(
+            &crate::panel::artifacts::generate_dom_snapshot_html(
+                "<html><body>x</body></html>",
+                &json!({"title": "Snapshot"}),
+            ),
+            &oracle["domSnapshotText"],
+            "dom snapshot",
+        );
+        assert_eq!(
+            describe_capture_reason(Some(&json!({"ready": true})), None),
+            oracle["reason"].as_str().unwrap(),
+            "capture reason"
+        );
+
+        let mut recon_files: Vec<Value> = Vec::new();
+        {
+            let mut writer = |path: &str, content: &str| {
+                if path.starts_with("_recon/") {
+                    recon_files.push(json!({"path": path, "content": content}));
+                }
+            };
+            write_recon_artifacts(&mut writer, Some(&recon_data), Some(&snapshot));
+        }
+        let want_recon = oracle["reconFiles"].as_array().unwrap();
+        assert_eq!(recon_files.len(), want_recon.len(), "recon file count");
+        for (index, want) in want_recon.iter().enumerate() {
+            let got = &recon_files[index];
+            assert_eq!(
+                got.get("path"),
+                want.get("path"),
+                "recon path {index}"
+            );
+            assert_eq!(
+                got.get("content").and_then(|v| v.as_str()).map(normalize),
+                want.get("content")
+                    .and_then(|v| v.as_str())
+                    .map(normalize),
+                "recon content {}",
+                want.get("path").and_then(|v| v.as_str()).unwrap_or("?")
+            );
+        }
+
+        let mut framework_files: Vec<Value> = Vec::new();
+        {
+            let mut writer = |path: &str, content: &str| {
+                framework_files.push(json!({"path": path, "content": content}));
+            };
+            export_framework_artifacts(&mut writer, recon_data.get("frameworkState"));
+        }
+        assert_eq!(
+            Value::Array(framework_files),
+            oracle["frameworkFiles"],
+            "framework files"
+        );
+
+        let mut runtime_files: Vec<Value> = Vec::new();
+        let manifest = {
+            let mut writer = |path: &str, bytes: &[u8]| {
+                let text = std::str::from_utf8(bytes).unwrap_or_default();
+                runtime_files.push(json!({"path": path, "content": text, "base64": false}));
+            };
+            export_runtime_artifacts(&mut writer, runtime_entries.as_array().unwrap())
+        };
+        assert_eq!(
+            Value::Array(runtime_files),
+            oracle["runtimeFiles"],
+            "runtime files"
+        );
+        assert_eq!(
+            Value::Array(manifest),
+            oracle["runtimeManifest"],
+            "runtime manifest"
+        );
     }
 
     #[test]

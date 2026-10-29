@@ -148,6 +148,32 @@ pub fn decode_base64_to_bytes(base64: &str) -> Option<Vec<u8>> {
         .ok()
 }
 
+/// The base64 alphabet encoder: the inverse of [`decode_base64_to_bytes`],
+/// used when binary payloads have to cross a text boundary.
+pub fn encode_base64(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = *chunk.get(1).unwrap_or(&0) as u32;
+        let b2 = *chunk.get(2).unwrap_or(&0) as u32;
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+        out.push(ALPHABET[(triple >> 18) as usize & 0x3f] as char);
+        out.push(ALPHABET[(triple >> 12) as usize & 0x3f] as char);
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(triple >> 6) as usize & 0x3f] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[triple as usize & 0x3f] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
 /// JS `bytesToText`: TextDecoder('utf-8', { fatal: false }).
 pub fn bytes_to_text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
@@ -214,5 +240,32 @@ mod tests {
         assert_eq!(bytes_to_text(&decode_base64_to_bytes("aGVsbG8=").unwrap()), "hello");
         assert_eq!(printable_ratio("hello\nworld"), 1.0);
         assert!(printable_ratio("\u{0}\u{1}") < 0.1);
+    }
+}
+
+#[cfg(test)]
+mod base64_tests {
+    use super::{decode_base64_to_bytes, encode_base64};
+
+    #[test]
+    fn encode_base64_round_trips_every_tail_length() {
+        for case in [
+            Vec::new(),
+            vec![0x00],
+            vec![0x61],
+            vec![0x00, 0x61, 0x73, 0x6d],
+            vec![0xff, 0xfe, 0xfd],
+            (0u8..=255).collect::<Vec<u8>>(),
+        ] {
+            let encoded = encode_base64(&case);
+            assert_eq!(
+                decode_base64_to_bytes(&encoded).as_deref(),
+                Some(case.as_slice()),
+                "round trip for {case:?}"
+            );
+        }
+        assert_eq!(encode_base64(b"a"), "YQ==");
+        assert_eq!(encode_base64(b"ab"), "YWI=");
+        assert_eq!(encode_base64(b"abc"), "YWJj");
     }
 }
