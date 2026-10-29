@@ -17,6 +17,7 @@ pub mod jscbytecode;
 pub mod jsfuck;
 pub mod jsnumber;
 pub mod packers;
+pub mod panel;
 pub mod pipeline;
 pub mod scanner;
 pub mod sourcemaps;
