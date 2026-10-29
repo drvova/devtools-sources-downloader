@@ -86,7 +86,7 @@ pub fn append_path_suffix(path: &str, suffix: &str) -> String {
     let mut dot: Option<usize> = None;
     let mut slash: Option<usize> = None;
     let mut utf16_at = 0usize;
-    for (byte_at, c) in path.char_indices() {
+    for (_byte_at, c) in path.char_indices() {
         if c == '.' {
             dot = Some(utf16_at);
         } else if c == '/' {
@@ -94,23 +94,14 @@ pub fn append_path_suffix(path: &str, suffix: &str) -> String {
         }
         utf16_at += c.len_utf16();
     }
-    let _ = byte_at_unused();
-    let dot_at = dot.map(|d| (d, utf16_byte_index(path, d)));
+    let dot_utf16 = dot.map(|d| d as i64).unwrap_or(-1);
     let slash_utf16 = slash.map(|s| s as i64).unwrap_or(-1);
-    if let Some((dot_utf16, dot_byte)) = dot_at {
-        if dot_utf16 as i64 > slash_utf16 {
-            return format!(
-                "{}{}{}",
-                &path[..dot_byte],
-                suffix,
-                &path[dot_byte..]
-            );
-        }
+    if dot_utf16 > slash_utf16 {
+        let dot_byte = utf16_byte_index(path, dot_utf16 as usize);
+        return format!("{}{}{}", &path[..dot_byte], suffix, &path[dot_byte..]);
     }
     format!("{path}{suffix}")
 }
-
-fn byte_at_unused() {}
 
 /// Byte offset of the given UTF-16 index in `text`.
 fn utf16_byte_index(text: &str, target: usize) -> usize {

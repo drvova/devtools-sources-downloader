@@ -6,6 +6,7 @@ import {
     looksMinified,
     looksBinaryScript,
     decodeBase64ToBytes,
+    panelTrackerView,
 } from './unpack-bridge.js';
 
 var reloadDebugBtn = document.getElementById('reloadDebugBtn');
@@ -264,145 +265,26 @@ function renderResults(tracker) {
 function renderTrackerView() {
     if (!latestTracker) return;
 
-    var items = getTrackerItems(latestTracker);
-    updateTypeFilterOptions(items);
+    // Normalization, filtering, sorting and the row markup all live in the
+    // Rust panel module; this applies the produced view to the DOM.
+    var view = panelTrackerView(latestTracker, {
+        status: statusFilter.value || 'all',
+        kind: typeFilter.value || 'all',
+        search: resourceSearch.value || '',
+        sort: sortOrder.value || 'newest',
+    });
 
-    var filtered = [];
-    for (var i = 0; i < items.length; i++) {
-        if (matchesResourceFilters(items[i])) filtered.push(items[i]);
-    }
-    filtered.sort(compareResources);
+    loadedCountEl.textContent = String(view.loaded);
+    unloadedCountEl.textContent = String(view.unloaded);
+    visibleCountEl.textContent = String(view.visible);
+    totalCountEl.textContent = String(view.total);
+    statusBar.style.display = view.showStatusBar ? 'grid' : 'none';
 
-    loadedCountEl.textContent = String((latestTracker.loaded || []).length);
-    unloadedCountEl.textContent = String((latestTracker.unloaded || []).length);
-    visibleCountEl.textContent = String(filtered.length);
-    totalCountEl.textContent = String(items.length);
-    statusBar.style.display = 'grid';
-
-    resourceBody.innerHTML = '';
-    if (!items.length) {
-        resourceList.style.display = 'none';
-        emptyState.style.display = 'none';
-        return;
-    }
-
-    resourceList.style.display = filtered.length ? 'block' : 'none';
-    emptyState.style.display = filtered.length ? 'none' : 'block';
-    for (var j = 0; j < filtered.length; j++) appendResourceRow(filtered[j]);
-}
-
-function getTrackerItems(tracker) {
-    var items = [];
-    var loaded = tracker.loaded || [];
-    var unloaded = tracker.unloaded || [];
-    for (var i = 0; i < loaded.length; i++) items.push(normalizeResource(loaded[i], 'loaded', i));
-    for (var j = 0; j < unloaded.length; j++)
-        items.push(normalizeResource(unloaded[j], 'unloaded', loaded.length + j));
-    return items;
-}
-
-function normalizeResource(resource, status, index) {
-    resource = resource || {};
-    return {
-        status: status,
-        type: String(resource.type || '?'),
-        source: String(resource.source || '?'),
-        url: String(resource.url || '?'),
-        size: Number(resource.size) || 0,
-        time: getResourceTime(resource),
-        order: index,
-    };
-}
-
-function getResourceTime(resource) {
-    var value =
-        resource &&
-        (resource.time || resource.timestamp || resource.seenAt || resource.startTime || 0);
-    value = Number(value);
-    return isFinite(value) ? value : 0;
-}
-
-function updateTypeFilterOptions(items) {
-    var current = typeFilter.value || 'all';
-    var seen = {};
-    var types = [];
-    for (var i = 0; i < items.length; i++) {
-        var type = items[i].type || '?';
-        if (seen[type]) continue;
-        seen[type] = true;
-        types.push(type);
-    }
-    types.sort();
-    typeFilter.innerHTML = '<option value="all">All types</option>';
-    for (var j = 0; j < types.length; j++) {
-        var option = document.createElement('option');
-        option.value = types[j];
-        option.textContent = types[j];
-        typeFilter.appendChild(option);
-    }
-    typeFilter.value = seen[current] || current === 'all' ? current : 'all';
-}
-
-function matchesResourceFilters(item) {
-    var statusValue = statusFilter.value || 'all';
-    if (statusValue !== 'all' && item.status !== statusValue) return false;
-    var typeValue = typeFilter.value || 'all';
-    if (typeValue !== 'all' && item.type !== typeValue) return false;
-
-    var search = (resourceSearch.value || '').trim().toLowerCase();
-    if (!search) return true;
-    return (
-        [item.status, item.type, item.source, item.url].join(' ').toLowerCase().indexOf(search) >= 0
-    );
-}
-
-function compareResources(left, right) {
-    var mode = sortOrder.value || 'newest';
-    if (mode === 'largest') {
-        if (right.size !== left.size) return right.size - left.size;
-        return right.time - left.time;
-    }
-    if (mode === 'type') {
-        var typeCompare = left.type.localeCompare(right.type);
-        return typeCompare || left.url.localeCompare(right.url);
-    }
-    if (mode === 'url') return left.url.localeCompare(right.url);
-    if (right.time !== left.time) return right.time - left.time;
-    return left.order - right.order;
-}
-
-function appendResourceRow(r) {
-    var tr = document.createElement('tr');
-    var statusTd = document.createElement('td');
-    statusTd.setAttribute('data-label', 'Status');
-    var dot = document.createElement('span');
-    dot.style.cssText =
-        'display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;';
-    dot.style.backgroundColor = r.status === 'loaded' ? '#48c774' : '#f14668';
-    statusTd.appendChild(dot);
-    statusTd.appendChild(document.createTextNode(r.status));
-
-    var typeTd = document.createElement('td');
-    typeTd.setAttribute('data-label', 'Type');
-    typeTd.textContent = r.type || '?';
-    var sourceTd = document.createElement('td');
-    sourceTd.setAttribute('data-label', 'Source');
-    sourceTd.textContent = r.source || '?';
-    var urlTd = document.createElement('td');
-    urlTd.setAttribute('data-label', 'URL');
-    urlTd.className = 'url-cell mono';
-    urlTd.textContent = r.url || '?';
-    urlTd.title = r.url || '';
-    var sizeTd = document.createElement('td');
-    sizeTd.setAttribute('data-label', 'Size');
-    sizeTd.textContent = formatSize(r.size || 0);
-
-    tr.appendChild(statusTd);
-    tr.appendChild(typeTd);
-    tr.appendChild(sourceTd);
-    tr.appendChild(urlTd);
-    tr.appendChild(sizeTd);
-    resourceBody.appendChild(tr);
+    typeFilter.innerHTML = view.typesHtml;
+    typeFilter.value = view.typeSelection;
+    resourceBody.innerHTML = view.rowsHtml;
+    resourceList.style.display = view.showList ? 'block' : 'none';
+    emptyState.style.display = view.showEmpty ? 'block' : 'none';
 }
 
 function hashString(text) {

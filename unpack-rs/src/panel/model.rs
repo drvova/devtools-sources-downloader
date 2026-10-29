@@ -116,12 +116,14 @@ pub fn normalize_resource(resource: &Value, status: &str, index: usize) -> Resou
     }
 }
 
-/// The filter control values, as read from the DOM by the pre-port code.
+/// The filter/sort control values, as read from the DOM by the pre-port code.
 #[derive(Debug, Clone, Default)]
 pub struct ResourceFilters {
     pub status: String,
     pub kind: String,
     pub search: String,
+    /// One of `newest` (the default), `largest`, `type`, `url`.
+    pub sort: String,
 }
 
 /// `matchesResourceFilters`.
@@ -263,6 +265,7 @@ mod tests {
                 status: status.to_string(),
                 kind: kind.to_string(),
                 search: search.to_string(),
+                ..Default::default()
             };
             let got: Vec<bool> = items
                 .iter()

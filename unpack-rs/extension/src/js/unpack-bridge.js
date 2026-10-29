@@ -416,6 +416,14 @@ export function findJscSharedTable(bytes) {
     return repairSharedHoles(call('findJscSharedTable', Array.from(bytes || [])));
 }
 
+// ---------------------------------------------------------------------------
+// Panel surface: the extension's own panel logic (capture state, filtering,
+// sorting, view markup) computed by the Rust panel module.
+
+export function panelTrackerView(tracker, filters) {
+    return call('panelTrackerView', tracker || {}, filters || {});
+}
+
 export function detectWasmModule(bytes) {
     return call('detectWasmModule', Array.from(bytes || []));
 }

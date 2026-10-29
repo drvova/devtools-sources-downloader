@@ -13,7 +13,7 @@
 #[cfg(target_arch = "wasm32")]
 use crate::pipeline::{self, Asset, UnpackOptions};
 #[cfg(target_arch = "wasm32")]
-use crate::{beautify, bundler, decoders, digest, detectors, jscbytecode, jsfuck, packers, scanner, sourcemaps, transforms, v8codecache, wasm as wasm_mod};
+use crate::{beautify, bundler, decoders, digest, detectors, jscbytecode, jsfuck, packers, panel, scanner, sourcemaps, transforms, v8codecache, wasm as wasm_mod};
 
 #[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "env")]
@@ -257,6 +257,37 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 "maxMapBytes": l.max_map_bytes,
                 "minPayloadLength": l.min_payload_length,
             }))
+        }
+        "panelTrackerView" => {
+            let tracker = a.get(0).cloned().unwrap_or(serde_json::Value::Null);
+            let filters = a
+                .get(1)
+                .and_then(|v| v.as_object())
+                .map(|o| panel::model::ResourceFilters {
+                    status: o
+                        .get("status")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("all")
+                        .to_string(),
+                    kind: o
+                        .get("kind")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("all")
+                        .to_string(),
+                    search: o
+                        .get("search")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .to_string(),
+                    sort: o
+                        .get("sort")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("newest")
+                        .to_string(),
+                })
+                .unwrap_or_default();
+            let view = panel::view::tracker_view(&tracker, &filters);
+            serde_json::to_value(view).map_err(|e| e.to_string())
         }
         "sha256Hex" => Ok(serde_json::Value::String(digest::sha256_hex(
             &arg_str(a, 0).ok_or("sha256Hex: text")?,
