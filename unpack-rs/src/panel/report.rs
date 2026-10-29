@@ -7,9 +7,10 @@
 
 use serde_json::{json, Value};
 
-use crate::panel::artifacts::serialize_inline_json;
-use crate::panel::assets::{field_str, js_truthy};
-use crate::panel::text::sanitize_path_part;
+use crate::jsnumber::js_number_to_string;
+use crate::panel::artifacts::{compute_recon_stats, escape_attr, escape_xml, serialize_inline_json};
+use crate::panel::assets::{field_number, field_str, js_truthy};
+use crate::panel::text::{format_ms, format_size, sanitize_path_part};
 use crate::panel::view::escape_html;
 
 /// The console stylesheet, one rule block per entry.
@@ -243,9 +244,397 @@ pub fn export_readable_artifacts_with(
     }
 }
 
+// The waterfall report's colours and its fixed markup blocks, transcribed
+// verbatim from the JavaScript source.
+const COLOR_DNS: &str = "rgba(3,169,244,0.6)";
+const COLOR_TCP: &str = "rgba(255,152,0,0.6)";
+const COLOR_SSL: &str = "rgba(156,39,176,0.6)";
+const COLOR_TTFB: &str = "rgba(76,175,80,0.6)";
+const COLOR_DOWNLOAD: &str = "rgba(3,169,244,0.9)";
+const COLOR_TEXT: &str = "#ccc";
+const COLOR_BG: &str = "#242424";
+const COLOR_STRIPE: &str = "#2a2a2a";
+/// `e.name.replace(/^https?:\/\/[^\/]+\//, '')`: drops the origin and the
+/// first path separator.
+static STRIP_ORIGIN: std::sync::LazyLock<regex::Regex> =
+    std::sync::LazyLock::new(|| regex::Regex::new(r"^https?://[^/]+/").unwrap());
+
+const ROW_H: f64 = 22.0;
+const LABEL_W: f64 = 360.0;
+const BAR_START: f64 = LABEL_W + 8.0;
+const TOTAL_W: f64 = 1200.0;
+const BAR_W: f64 = TOTAL_W - BAR_START - 10.0;
+
+const WF_0: &str = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waterfall Report</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px}h1{font-size:20px;margin-bottom:6px;color:#03a9f4}.sub{color:#888;font-size:12px;margin-bottom:16px}.summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}.stat{background:#16213e;border-radius:6px;padding:8px 14px;border:1px solid #2a2a4a}.stat .val{font-size:18px;font-weight:600;color:#03a9f4}.stat .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px}.chart{background:#1e1e36;border-radius:8px;padding:16px;overflow-x:auto;border:1px solid #2a2a4a}.legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}.legend span{display:flex;align-items:center;gap:4px;font-size:11px}.legend .sw{width:12px;height:12px;border-radius:2px}.controls{display:flex;gap:8px;margin-bottom:12px}.controls button{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px}.controls button:hover{background:#1e1e46;border-color:#03a9f4}.controls input{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px 10px;border-radius:4px;font-size:11px;width:240px}.controls input:focus{outline:none;border-color:#03a9f4}.controls select{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px;border-radius:4px;font-size:11px}.dark{background:#f5f5f5;color:#333}.dark h1{color:#0288d1}.dark .stat{background:#fff;border:1px solid #ddd}.dark .stat .val{color:#0288d1}.dark .chart{background:#fff;border:1px solid #ddd}.dark .controls button{background:#eee;color:#333;border:1px solid #ccc}.dark .controls input{background:#fff;color:#333;border:1px solid #ccc}.dark .controls select{background:#fff;color:#333;border:1px solid #ccc}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #2a2a4a}th{color:#888;font-weight:500;position:sticky;top:0;background:#1e1e36}tr:hover{background:rgba(3,169,244,.1)}.dark th{background:#fff;color:#666}.dark td{border-color:#eee}</style>
+</head>
+<body><h1>Network Waterfall</h1><div class="sub">Generated "#;
+const WF_2: &str = r#" | "#;
+const WF_4: &str = r#" requests | Total: "#;
+const WF_6: &str = r#"</div><div class="summary">"#;
+const WF_8: &str = r#"</div><div class="controls"><button onclick="toggleTheme()">Toggle Dark/Light</button><input id="search" placeholder="Filter by URL..." oninput="filterTable()"><select id="typeFilter" onchange="filterTable()"><option value="">All types</option></select></div><div class="chart"><div class="legend"><span><span class="sw" style="background:"#;
+const WF_10: &str = r#""></span> DNS</span><span><span class="sw" style="background:"#;
+const WF_12: &str = r#""></span> TCP</span><span><span class="sw" style="background:"#;
+const WF_14: &str = r#""></span> SSL</span><span><span class="sw" style="background:"#;
+const WF_16: &str = r#""></span> TTFB</span><span><span class="sw" style="background:"#;
+const WF_18: &str = r#""></span> Download</span></div><svg viewBox="0 0 "#;
+const WF_20: &str = r#" "#;
+const WF_22: &str = r#"" style="width:100%;height:auto;min-width:"#;
+const WF_24: &str = r#"px"><rect width=""#;
+const WF_26: &str = r#"" height=""#;
+const WF_28: &str = r#"" fill=""#;
+const WF_30: &str = r#"" rx="6"/>"#;
+const WF_33: &str = r#"</svg></div>"#;
+const WF_35: &str = r#"<script>var timings="#;
+const WF_37: &str = r##";function toggleTheme(){document.body.classList.toggle("dark")}var types=[...new Set(timings.map(function(t){return t.initiatorType||"other"}))];var sel=document.getElementById("typeFilter");for(var i=0;i<types.length;i++){var o=document.createElement("option");o.value=types[i];o.textContent=types[i];sel.appendChild(o)}function filterTable(){var q=(document.getElementById("search").value||"").toLowerCase();var tp=sel.value;var rows=document.querySelectorAll("#resTable tbody tr");for(var i=0;i<rows.length;i++){var r=rows[i];var url=(r.cells[0].textContent||"").toLowerCase();var type=r.cells[1].textContent||"";var show=!q||url.indexOf(q)>-1;if(tp&&type!==tp)show=false;r.style.display=show?"":"none"}}</script></body></html>"##;
+
+/// `formatMs`-style duration with a JavaScript truthiness fallback.
+fn number_or(value: f64, fallback: f64) -> f64 {
+    if value != 0.0 && !value.is_nan() {
+        value
+    } else {
+        fallback
+    }
+}
+
+/// `generateWaterfallHTML`: the request waterfall chart page.
+pub fn generate_waterfall_html(timings: &[Value]) -> String {
+    if timings.is_empty() {
+        return "<html><body>No timing data available.</body></html>".to_string();
+    }
+    let mut sorted = timings.to_vec();
+    sorted.sort_by(|a, b| {
+        field_number(a, "startTime")
+            .partial_cmp(&field_number(b, "startTime"))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let mut max_end = 0.0f64;
+    for entry in &sorted {
+        let end = number_or(
+            field_number(entry, "responseEnd"),
+            field_number(entry, "startTime") + field_number(entry, "duration"),
+        );
+        if end > max_end {
+            max_end = end;
+        }
+    }
+    let total_time = max_end;
+    let chart_height = sorted.len() as f64 * ROW_H + 60.0;
+    let svg_height = chart_height + 120.0;
+    let to_x = |t: f64| BAR_START + (t / total_time) * BAR_W;
+
+    let mut rows = String::new();
+    for (r, entry) in sorted.iter().enumerate() {
+        let y = 40.0 + r as f64 * ROW_H;
+        if r % 2 == 0 {
+            rows.push_str("<rect x=\"");
+            rows.push_str(&js_number_to_string(BAR_START));
+            rows.push_str("\" y=\"");
+            rows.push_str(&js_number_to_string(y));
+            rows.push_str("\" width=\"");
+            rows.push_str(&js_number_to_string(BAR_W));
+            rows.push_str("\" height=\"");
+            rows.push_str(&js_number_to_string(ROW_H));
+            rows.push_str("\" fill=\"");
+            rows.push_str(COLOR_STRIPE);
+            rows.push_str("\" opacity=\"0.3\"/>");
+        }
+        let label = {
+            let name = field_str(entry, "name");
+            let stripped = STRIP_ORIGIN.replace(&name, "").to_string();
+            stripped.chars().take(55).collect::<String>()
+        };
+        rows.push_str("<text x=\"");
+        rows.push_str(&js_number_to_string(BAR_START - 6.0));
+        rows.push_str("\" y=\"");
+        rows.push_str(&js_number_to_string(y + 14.0));
+        rows.push_str("\" fill=\"");
+        rows.push_str(COLOR_TEXT);
+        rows.push_str("\" font-size=\"11\" font-family=\"monospace\" text-anchor=\"end\">");
+        rows.push_str(&escape_xml(&Value::String(label)));
+        rows.push_str("</text>");
+
+        let dns_start = field_number(entry, "domainLookupStart");
+        let dns_end = field_number(entry, "domainLookupEnd");
+        if dns_start > 0.0 && dns_end > dns_start {
+            rows.push_str("<rect x=\"");
+            rows.push_str(&js_number_to_string(to_x(dns_start)));
+            rows.push_str("\" y=\"");
+            rows.push_str(&js_number_to_string(y + 4.0));
+            rows.push_str("\" width=\"");
+            rows.push_str(&js_number_to_string(f64::max(
+                1.0,
+                to_x(dns_end) - to_x(dns_start),
+            )));
+            rows.push_str("\" height=\"");
+            rows.push_str(&js_number_to_string(ROW_H - 8.0));
+            rows.push_str("\" fill=\"");
+            rows.push_str(COLOR_DNS);
+            rows.push_str("\"><title>DNS: ");
+            rows.push_str(&format_ms(dns_end - dns_start));
+            rows.push_str("</title></rect>");
+        }
+
+        let connect_start = field_number(entry, "connectStart");
+        let connect_end = field_number(entry, "connectEnd");
+        let secure_start = field_number(entry, "secureConnectionStart");
+        if connect_start > 0.0 && connect_end > 0.0 {
+            let mut tcp_width = f64::max(1.0, to_x(connect_end) - to_x(connect_start));
+            if secure_start > 0.0 && secure_start > connect_start {
+                tcp_width = f64::max(1.0, to_x(secure_start) - to_x(connect_start));
+            }
+            if tcp_width > 0.0 {
+                rows.push_str("<rect x=\"");
+                rows.push_str(&js_number_to_string(to_x(connect_start)));
+                rows.push_str("\" y=\"");
+                rows.push_str(&js_number_to_string(y + 4.0));
+                rows.push_str("\" width=\"");
+                rows.push_str(&js_number_to_string(tcp_width));
+                rows.push_str("\" height=\"");
+                rows.push_str(&js_number_to_string(ROW_H - 8.0));
+                rows.push_str("\" fill=\"");
+                rows.push_str(COLOR_TCP);
+                rows.push_str("\"><title>TCP: ");
+                rows.push_str(&format_ms(connect_end - connect_start));
+                rows.push_str("</title></rect>");
+            }
+        }
+
+        if secure_start > 0.0 && connect_end > secure_start {
+            rows.push_str("<rect x=\"");
+            rows.push_str(&js_number_to_string(to_x(secure_start)));
+            rows.push_str("\" y=\"");
+            rows.push_str(&js_number_to_string(y + 4.0));
+            rows.push_str("\" width=\"");
+            rows.push_str(&js_number_to_string(f64::max(
+                1.0,
+                to_x(connect_end) - to_x(secure_start),
+            )));
+            rows.push_str("\" height=\"");
+            rows.push_str(&js_number_to_string(ROW_H - 8.0));
+            rows.push_str("\" fill=\"");
+            rows.push_str(COLOR_SSL);
+            rows.push_str("\"><title>SSL: ");
+            rows.push_str(&format_ms(connect_end - secure_start));
+            rows.push_str("</title></rect>");
+        }
+
+        let request_start = field_number(entry, "requestStart");
+        let response_start = field_number(entry, "responseStart");
+        if request_start > 0.0 && response_start > request_start {
+            rows.push_str("<rect x=\"");
+            rows.push_str(&js_number_to_string(to_x(request_start)));
+            rows.push_str("\" y=\"");
+            rows.push_str(&js_number_to_string(y + 4.0));
+            rows.push_str("\" width=\"");
+            rows.push_str(&js_number_to_string(f64::max(
+                1.0,
+                to_x(response_start) - to_x(request_start),
+            )));
+            rows.push_str("\" height=\"");
+            rows.push_str(&js_number_to_string(ROW_H - 8.0));
+            rows.push_str("\" fill=\"");
+            rows.push_str(COLOR_TTFB);
+            rows.push_str("\"><title>TTFB: ");
+            rows.push_str(&format_ms(response_start - request_start));
+            rows.push_str("</title></rect>");
+        }
+
+        let response_end = field_number(entry, "responseEnd");
+        if response_start > 0.0 && response_end > response_start {
+            rows.push_str("<rect x=\"");
+            rows.push_str(&js_number_to_string(to_x(response_start)));
+            rows.push_str("\" y=\"");
+            rows.push_str(&js_number_to_string(y + 4.0));
+            rows.push_str("\" width=\"");
+            rows.push_str(&js_number_to_string(f64::max(
+                1.0,
+                to_x(response_end) - to_x(response_start),
+            )));
+            rows.push_str("\" height=\"");
+            rows.push_str(&js_number_to_string(ROW_H - 8.0));
+            rows.push_str("\" fill=\"");
+            rows.push_str(COLOR_DOWNLOAD);
+            rows.push_str("\"><title>Download: ");
+            rows.push_str(&format_ms(response_end - response_start));
+            rows.push_str("</title></rect>");
+        }
+
+        let duration = number_or(
+            response_end - field_number(entry, "startTime"),
+            field_number(entry, "duration"),
+        );
+        rows.push_str("<text x=\"");
+        rows.push_str(&js_number_to_string(to_x(number_or(
+            response_end,
+            field_number(entry, "startTime") + duration,
+        )) + 6.0));
+        rows.push_str("\" y=\"");
+        rows.push_str(&js_number_to_string(y + 14.0));
+        rows.push_str("\" fill=\"#888\" font-size=\"10\" font-family=\"monospace\">");
+        rows.push_str(&format_ms(duration));
+        rows.push_str("</text>");
+    }
+
+    let num_ticks = f64::min(10.0, (total_time / 100.0).ceil());
+    let mut grid_lines = String::new();
+    let mut t = 0.0f64;
+    while t <= num_ticks {
+        let tx = BAR_START + (t / num_ticks) * BAR_W;
+        grid_lines.push_str("<line x1=\"");
+        grid_lines.push_str(&js_number_to_string(tx));
+        grid_lines.push_str("\" y1=\"40\" x2=\"");
+        grid_lines.push_str(&js_number_to_string(tx));
+        grid_lines.push_str("\" y2=\"");
+        grid_lines.push_str(&js_number_to_string(chart_height - 10.0));
+        grid_lines.push_str("\" stroke=\"#333\" stroke-width=\"0.5\"/>");
+        grid_lines.push_str("<text x=\"");
+        grid_lines.push_str(&js_number_to_string(tx));
+        grid_lines.push_str(
+            "\" y=\"30\" fill=\"#777\" font-size=\"10\" font-family=\"monospace\" text-anchor=\"middle\">",
+        );
+        grid_lines.push_str(&format_ms((t / num_ticks) * total_time));
+        grid_lines.push_str("</text>");
+        t += 1.0;
+    }
+
+    let mut out = String::new();
+    out.push_str(WF_0);
+    out.push_str(&crate::util::iso8601_now());
+    out.push_str(WF_2);
+    out.push_str(&sorted.len().to_string());
+    out.push_str(WF_4);
+    out.push_str(&format_ms(total_time));
+    out.push_str(WF_6);
+    out.push_str(&compute_recon_stats(timings));
+    out.push_str(WF_8);
+    out.push_str(COLOR_DNS);
+    out.push_str(WF_10);
+    out.push_str(COLOR_TCP);
+    out.push_str(WF_12);
+    out.push_str(COLOR_SSL);
+    out.push_str(WF_14);
+    out.push_str(COLOR_TTFB);
+    out.push_str(WF_16);
+    out.push_str(COLOR_DOWNLOAD);
+    out.push_str(WF_18);
+    out.push_str(&js_number_to_string(TOTAL_W));
+    out.push_str(WF_20);
+    out.push_str(&js_number_to_string(svg_height));
+    out.push_str(WF_22);
+    out.push_str(&js_number_to_string(TOTAL_W));
+    out.push_str(WF_24);
+    out.push_str(&js_number_to_string(TOTAL_W));
+    out.push_str(WF_26);
+    out.push_str(&js_number_to_string(svg_height));
+    out.push_str(WF_28);
+    out.push_str(COLOR_BG);
+    out.push_str(WF_30);
+    out.push_str(&grid_lines);
+    out.push_str(&rows);
+    out.push_str(WF_33);
+    out.push_str(&generate_table(&sorted));
+    out.push_str(WF_35);
+    out.push_str(&serde_json::to_string(&sorted).unwrap_or_default());
+    out.push_str(WF_37);
+    out
+}
+
+/// `generateTable`: the waterfall page's request table.
+pub fn generate_table(timings: &[Value]) -> String {
+    let mut html = String::from(
+        "<table id=\"resTable\"><thead><tr><th>URL</th><th>Type</th><th>Status</th><th>Size</th><th>Time</th><th>DNS</th><th>TCP</th><th>SSL</th><th>TTFB</th><th>Download</th></tr></thead><tbody>",
+    );
+    for entry in timings {
+        let dns = number_or(
+            field_number(entry, "domainLookupEnd") - field_number(entry, "domainLookupStart"),
+            0.0,
+        );
+        let tcp = number_or(
+            field_number(entry, "connectEnd") - field_number(entry, "connectStart"),
+            0.0,
+        );
+        let ssl = if field_number(entry, "secureConnectionStart") > 0.0
+            && field_number(entry, "connectEnd") > 0.0
+        {
+            field_number(entry, "connectEnd") - field_number(entry, "secureConnectionStart")
+        } else {
+            0.0
+        };
+        let ttfb = number_or(
+            field_number(entry, "responseStart") - field_number(entry, "requestStart"),
+            0.0,
+        );
+        let download = number_or(
+            field_number(entry, "responseEnd") - field_number(entry, "responseStart"),
+            0.0,
+        );
+        let status = if field_number(entry, "transferSize") > 0.0
+            || field_number(entry, "encodedBodySize") > 0.0
+        {
+            "OK"
+        } else {
+            "from cache"
+        };
+        let size = format_size(number_or(
+            number_or(
+                field_number(entry, "transferSize"),
+                field_number(entry, "encodedBodySize"),
+            ),
+            number_or(field_number(entry, "decodedBodySize"), 0.0),
+        ));
+        let name = field_str(entry, "name");
+        html.push_str(
+            "<tr><td style=\"max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\" title=\"",
+        );
+        html.push_str(&escape_attr(&Value::String(name.clone())));
+        html.push_str("\">");
+        html.push_str(&escape_html(&name));
+        html.push_str("</td><td>");
+        let initiator = {
+            let value = field_str(entry, "initiatorType");
+            if value.is_empty() {
+                "other".to_string()
+            } else {
+                value
+            }
+        };
+        html.push_str(&escape_html(&initiator));
+        html.push_str("</td><td>");
+        html.push_str(status);
+        html.push_str("</td><td>");
+        html.push_str(&size);
+        html.push_str("</td><td>");
+        html.push_str(&format_ms(number_or(field_number(entry, "duration"), 0.0)));
+        html.push_str("</td><td>");
+        html.push_str(&if dns > 0.0 { format_ms(dns) } else { "-".to_string() });
+        html.push_str("</td><td>");
+        html.push_str(&if tcp > 0.0 { format_ms(tcp) } else { "-".to_string() });
+        html.push_str("</td><td>");
+        html.push_str(&if ssl > 0.0 { format_ms(ssl) } else { "-".to_string() });
+        html.push_str("</td><td>");
+        html.push_str(&if ttfb > 0.0 { format_ms(ttfb) } else { "-".to_string() });
+        html.push_str("</td><td>");
+        html.push_str(&if download > 0.0 {
+            format_ms(download)
+        } else {
+            "-".to_string()
+        });
+        html.push_str("</td></tr>");
+    }
+    html.push_str("</tbody></table>");
+    html
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::panel::text::js_number_value;
     use serde_json::json;
 
     fn fixture() -> Value {
@@ -295,6 +684,147 @@ mod tests {
                 "console length {index}"
             );
         }
+    }
+
+    /// Mirrors the oracle's `timing()` helper: every field is present, the
+    /// ones a case does not override stay zero.
+    fn timing_case() -> Value {
+        let defaults = |name: &str, initiator: &str, start: f64, duration: f64| {
+            json!({
+                "name": name,
+                "initiatorType": initiator,
+                "startTime": js_number_value(start),
+                "domainLookupStart": 0,
+                "domainLookupEnd": 0,
+                "connectStart": 0,
+                "connectEnd": 0,
+                "secureConnectionStart": 0,
+                "requestStart": 0,
+                "responseStart": 0,
+                "responseEnd": 0,
+                "duration": js_number_value(duration),
+                "transferSize": 0,
+                "encodedBodySize": 0,
+                "decodedBodySize": 0,
+            })
+        };
+        let mut first = defaults("https://demo.test/static/app.js?v=3", "script", 0.0, 118.5);
+        for (key, value) in [
+            ("domainLookupStart", 0.4),
+            ("domainLookupEnd", 3.2),
+            ("connectStart", 3.2),
+            ("connectEnd", 14.6),
+            ("secureConnectionStart", 6.1),
+            ("requestStart", 15.0),
+            ("responseStart", 42.75),
+            ("responseEnd", 118.5),
+            ("transferSize", 20480.0),
+            ("encodedBodySize", 19000.0),
+            ("decodedBodySize", 51000.0),
+        ] {
+            first[key] = js_number_value(value);
+        }
+        let mut second = defaults(
+            "https://cdn.other.test/lib/vendor.css",
+            "link",
+            12.25,
+            77.75,
+        );
+        for (key, value) in [
+            ("connectStart", 12.25),
+            ("connectEnd", 30.0),
+            ("requestStart", 31.0),
+            ("responseStart", 55.5),
+            ("responseEnd", 90.0),
+            ("decodedBodySize", 1200.0),
+        ] {
+            second[key] = js_number_value(value);
+        }
+        let mut third = defaults("https://demo.test/api/session", "fetch", 40.0, 220.0);
+        for (key, value) in [
+            ("requestStart", 41.0),
+            ("responseStart", 180.25),
+            ("responseEnd", 260.0),
+            ("transferSize", 512.0),
+            ("encodedBodySize", 512.0),
+            ("decodedBodySize", 900.0),
+        ] {
+            third[key] = js_number_value(value);
+        }
+        let mut fourth = defaults("https://demo.test/img/logo.png", "img", 300.0, 640.5);
+        for (key, value) in [
+            ("requestStart", 301.0),
+            ("responseStart", 305.0),
+            ("responseEnd", 940.5),
+            ("transferSize", 8192.0),
+            ("encodedBodySize", 8192.0),
+            ("decodedBodySize", 8192.0),
+        ] {
+            fourth[key] = js_number_value(value);
+        }
+        let fifth = defaults("https://demo.test/beacon", "other", 950.0, 12.0);
+        Value::Array(vec![first, second, third, fourth, fifth])
+    }
+
+    /// The waterfall page stamps the current time; the oracle captured its
+    /// own, so both sides are normalized before comparison.
+    fn strip_timestamps(text: &str) -> String {
+        static STAMP: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+            regex::Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z").unwrap()
+        });
+        STAMP.replace_all(text, "<timestamp>").to_string()
+    }
+
+    /// Reports the first diverging byte instead of dumping two long documents.
+    fn assert_same_document(got: &str, want: &str, label: &str) {
+        if got == want {
+            return;
+        }
+        let at = got
+            .char_indices()
+            .zip(want.chars())
+            .find(|((_, left), right)| left != right)
+            .map(|((offset, _), _)| offset)
+            .unwrap_or_else(|| got.len().min(want.len()));
+        let start = at.saturating_sub(70);
+        panic!(
+            "{label} diverges at byte {at} (got {} bytes, want {} bytes)\n  got: {:?}\n want: {:?}",
+            got.len(),
+            want.len(),
+            &got[start..(at + 70).min(got.len())],
+            &want[start..(at + 70).min(want.len())],
+        );
+    }
+
+    #[test]
+    fn waterfall_and_table_match_oracle() {
+        let fx = fixture();
+        let exp = &fx["expected"];
+        let timings = timing_case();
+        let list = timings.as_array().unwrap();
+
+        assert_same_document(
+            &strip_timestamps(&generate_waterfall_html(list)),
+            &strip_timestamps(exp["generateWaterfallHTML"].as_str().unwrap()),
+            "waterfall",
+        );
+        assert_eq!(
+            generate_waterfall_html(&[]),
+            exp["generateWaterfallHTMLEmpty"].as_str().unwrap(),
+            "waterfall empty"
+        );
+
+        let mut sorted = list.clone();
+        sorted.sort_by(|a, b| {
+            field_number(a, "startTime")
+                .partial_cmp(&field_number(b, "startTime"))
+                .unwrap()
+        });
+        assert_same_document(
+            &generate_table(&sorted),
+            exp["generateTable"].as_str().unwrap(),
+            "table",
+        );
     }
 
     #[test]
