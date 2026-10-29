@@ -192,5 +192,27 @@
     "note": "not captured"
    }
   ]
+ },
+ "sourceCensus": {
+  "_note": "Not a runtime oracle: the engine bridge is unavailable in the harness, so the file list of finalizeZipWithRecon is censused from the source text, in source order.",
+  "finalizeZipReconPaths": [
+   "_recon/localStorage.json",
+   "_recon/sessionStorage.json",
+   "_recon/cookies.json",
+   "_recon/page.json",
+   "_recon/stack-profile.json",
+   "_recon/framework-signals.json",
+   "_recon/capture-strategy.json",
+   "_recon/capture-status.json",
+   "_recon/timings.json",
+   "_recon/waterfall.html",
+   "_recon/xhr.json",
+   "_recon/fetch.json",
+   "_recon/websockets.json",
+   "_recon/sse.json",
+   "_recon/mutations.json",
+   "_recon/graphql-operations.json",
+   "_recon/dom-snapshot.html"
+  ]
  }
 }

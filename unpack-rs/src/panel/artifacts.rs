@@ -154,15 +154,15 @@ pub fn merge_unpack_reports(script_report: &mut Value, runtime_report: &Value) {
 }
 
 /// `parseCookies`.
-pub fn parse_cookies(cookie_str: &str) -> BTreeMap<String, String> {
-    let mut result: BTreeMap<String, String> = BTreeMap::new();
+pub fn parse_cookies(cookie_str: &str) -> serde_json::Map<String, Value> {
+    let mut result: serde_json::Map<String, Value> = serde_json::Map::new();
     for pair in cookie_str.split(';') {
         let Some(at) = pair.find('=') else {
             continue;
         };
         result.insert(
             pair[..at].trim().to_string(),
-            pair[at + 1..].trim().to_string(),
+            Value::String(pair[at + 1..].trim().to_string()),
         );
     }
     result
@@ -552,6 +552,14 @@ mod tests {
                 want[index],
                 "parseCookies {index}"
             );
+            // Insertion order is part of the port: the object is serialized
+            // into _recon/cookies.json as written.
+            let got_keys: Vec<String> = parse_cookies(input).keys().cloned().collect();
+            let want_keys: Vec<String> = want[index]
+                .as_object()
+                .map(|map| map.keys().cloned().collect())
+                .unwrap_or_default();
+            assert_eq!(got_keys, want_keys, "parseCookies order {index}");
         }
 
         let inline_inputs = [json!({"a": "<b>&", "c": ["</script>"]}), Value::Null];

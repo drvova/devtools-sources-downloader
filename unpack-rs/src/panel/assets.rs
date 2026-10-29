@@ -379,6 +379,49 @@ pub struct ScriptInput {
     pub content: Value,
 }
 
+/// `Object.keys(value).length`: the own-key count the panel's guards test.
+/// Arrays and strings report their length, everything else zero.
+pub fn keys_len(value: &Value) -> usize {
+    match value {
+        Value::Object(map) => map.len(),
+        Value::Array(items) => items.len(),
+        Value::String(text) => text.chars().count(),
+        _ => 0,
+    }
+}
+
+/// The panel's script inputs as the unpack engine's assets: string content is
+/// a text asset, an array of byte values is a binary one.
+pub fn assets_from_inputs(inputs: &[ScriptInput]) -> Vec<crate::pipeline::Asset> {
+    use crate::pipeline::Asset;
+    inputs
+        .iter()
+        .map(|input| {
+            let url = input.url.clone().unwrap_or_default();
+            match &input.content {
+                Value::String(text) => Asset::Text {
+                    url,
+                    content: text.clone(),
+                    zip_path: None,
+                },
+                Value::Array(values) if !values.is_empty() => Asset::Bytes {
+                    url,
+                    bytes: values
+                        .iter()
+                        .map(|value| value.as_u64().unwrap_or(0) as u8)
+                        .collect(),
+                    zip_path: None,
+                },
+                _ => Asset::Text {
+                    url,
+                    content: String::new(),
+                    zip_path: None,
+                },
+            }
+        })
+        .collect()
+}
+
 /// `buildTimingLookup`: full URL and query-stripped URL, first writer wins.
 pub fn build_timing_lookup(timings: &[Timing]) -> BTreeMap<String, Timing> {
     let mut lookup: BTreeMap<String, Timing> = BTreeMap::new();

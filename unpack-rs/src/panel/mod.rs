@@ -16,6 +16,7 @@ pub mod analysis;
 pub mod artifacts;
 pub mod assets;
 pub mod boundary;
+pub mod export;
 pub mod graph;
 pub mod model;
 pub mod report;

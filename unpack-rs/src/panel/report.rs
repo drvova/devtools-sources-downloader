@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 use crate::jsnumber::js_number_to_string;
 use crate::panel::artifacts::{compute_recon_stats, escape_attr, escape_xml, serialize_inline_json};
 use crate::panel::analysis::build_semantic_analysis;
-use crate::panel::assets::{field_number, field_str, js_truthy, ScriptInput};
+use crate::panel::assets::{field_number, field_str, js_truthy, keys_len, ScriptInput};
 use crate::panel::text::{format_ms, format_size, sanitize_path_part};
 
 use crate::panel::assets::value_text;
@@ -671,18 +671,6 @@ pub fn export_framework_artifacts(
     framework_state: Option<&Value>,
 ) {
     let Some(state) = framework_state else { return };
-    let object_len = |value: Option<&Value>| {
-        value
-            .and_then(|v| v.as_object())
-            .map(|o| o.len())
-            .unwrap_or(0)
-    };
-    let array_len = |value: Option<&Value>| {
-        value
-            .and_then(|v| v.as_array())
-            .map(|a| a.len())
-            .unwrap_or(0)
-    };
     let pretty = |value: &Value| serde_json::to_string_pretty(value).unwrap_or_default();
     let files: [(&str, &str); 7] = [
         ("_framework/summary.json", "summary"),
@@ -695,12 +683,7 @@ pub fn export_framework_artifacts(
     ];
     for (path, key) in files {
         let value = state.get(key);
-        let count = if matches!(value, Some(Value::Array(_))) {
-            array_len(value)
-        } else {
-            object_len(value)
-        };
-        if count == 0 {
+        if value.map(keys_len).unwrap_or(0) == 0 {
             continue;
         }
         if let Some(value) = value {
