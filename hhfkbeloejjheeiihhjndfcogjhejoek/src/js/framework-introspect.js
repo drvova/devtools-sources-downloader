@@ -9,13 +9,10 @@
         return String(value || '').toLowerCase();
     }
 
-    function addUnique(list, value) {
-        value = String(value || '').trim();
-        if (value && list.indexOf(value) < 0) list.push(value);
-    }
-
     function shouldRedactKey(key) {
-        return /token|secret|password|passwd|cookie|authorization|bearer|jwt|session/i.test(String(key || ''));
+        return /token|secret|password|passwd|cookie|authorization|bearer|jwt|session/i.test(
+            String(key || ''),
+        );
     }
 
     function limitString(value) {
@@ -42,13 +39,14 @@
         var out;
         if (Array.isArray(value)) {
             out = [];
-            for (var i = 0; i < value.length && i < 8; i++) out.push(safeValue(value[i], depth - 1, seen, ''));
+            for (var i = 0; i < value.length && i < 8; i++)
+                out.push(safeValue(value[i], depth - 1, seen, ''));
             if (value.length > 8) out.push('[+' + (value.length - 8) + ' more]');
             seen.pop();
             return out;
         }
         out = {};
-        var keys = [];
+        var keys;
         try {
             keys = Object.keys(value);
         } catch (_) {
@@ -79,9 +77,11 @@
             source: source,
             tag: lower(element.tagName || 'div'),
             id: element.id || '',
-            classes: element.className ? String(element.className).split(/\s+/).filter(Boolean).slice(0, 8) : [],
+            classes: element.className
+                ? String(element.className).split(/\s+/).filter(Boolean).slice(0, 8)
+                : [],
             childCount: element.children ? element.children.length : 0,
-            textSample: limitString(element.textContent || '')
+            textSample: limitString(element.textContent || ''),
         };
     }
 
@@ -119,10 +119,13 @@
             search: location.search || '',
             hash: location.hash || '',
             url: location.href || '',
-            queryKeys: []
+            queryKeys: [],
         };
         try {
-            state.queryKeys = Array.from(new URLSearchParams(location.search || '').keys()).slice(0, MAX_KEYS);
+            state.queryKeys = Array.from(new URLSearchParams(location.search || '').keys()).slice(
+                0,
+                MAX_KEYS,
+            );
         } catch (_) {}
         if (window.__NEXT_DATA__) {
             state.framework = 'Next.js';
@@ -157,7 +160,7 @@
             keyCount: safeKeys(stateValue).length,
             keys: safeKeys(stateValue),
             preview: safeValue(stateValue, 2, [], id),
-            meta: meta || {}
+            meta: meta || {},
         });
     }
 
@@ -176,31 +179,64 @@
             ['__STORE__', 'store'],
             ['zustandStore', 'zustand'],
             ['__ZUSTAND_STORE__', 'zustand'],
-            ['queryClientStore', 'store']
+            ['queryClientStore', 'store'],
         ];
         for (var i = 0; i < candidates.length; i++) {
             var name = candidates[i][0];
             var value = window[name];
             if (!value) continue;
-            if (typeof value.getState === 'function') push(name, candidates[i][1], 'window.' + name, value.getState(), { hasDispatch: typeof value.dispatch === 'function' });
-            else if (typeof value.state === 'object') push(name, candidates[i][1], 'window.' + name + '.state', value.state, {});
+            if (typeof value.getState === 'function')
+                push(name, candidates[i][1], 'window.' + name, value.getState(), {
+                    hasDispatch: typeof value.dispatch === 'function',
+                });
+            else if (typeof value.state === 'object')
+                push(name, candidates[i][1], 'window.' + name + '.state', value.state, {});
         }
-        if (window.__NUXT__ && window.__NUXT__.state) push('__NUXT__.state', 'nuxt-state', 'window.__NUXT__.state', window.__NUXT__.state, {});
-        if (window.__INITIAL_STATE__) push('__INITIAL_STATE__', 'initial-state', 'window.__INITIAL_STATE__', window.__INITIAL_STATE__, {});
-        if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps) push('__NEXT_DATA__.props.pageProps', 'next-page-props', 'window.__NEXT_DATA__.props.pageProps', window.__NEXT_DATA__.props.pageProps, {});
+        if (window.__NUXT__ && window.__NUXT__.state)
+            push(
+                '__NUXT__.state',
+                'nuxt-state',
+                'window.__NUXT__.state',
+                window.__NUXT__.state,
+                {},
+            );
+        if (window.__INITIAL_STATE__)
+            push(
+                '__INITIAL_STATE__',
+                'initial-state',
+                'window.__INITIAL_STATE__',
+                window.__INITIAL_STATE__,
+                {},
+            );
+        if (
+            window.__NEXT_DATA__ &&
+            window.__NEXT_DATA__.props &&
+            window.__NEXT_DATA__.props.pageProps
+        )
+            push(
+                '__NEXT_DATA__.props.pageProps',
+                'next-page-props',
+                'window.__NEXT_DATA__.props.pageProps',
+                window.__NEXT_DATA__.props.pageProps,
+                {},
+            );
         return stores.slice(0, MAX_ITEMS);
     }
 
     function collectQueryCaches() {
         var queries = [];
-        if (window.__APOLLO_CLIENT__ && window.__APOLLO_CLIENT__.cache && typeof window.__APOLLO_CLIENT__.cache.extract === 'function') {
+        if (
+            window.__APOLLO_CLIENT__ &&
+            window.__APOLLO_CLIENT__.cache &&
+            typeof window.__APOLLO_CLIENT__.cache.extract === 'function'
+        ) {
             var apolloCache = window.__APOLLO_CLIENT__.cache.extract();
             queries.push({
                 kind: 'apollo-cache',
                 source: 'window.__APOLLO_CLIENT__.cache.extract()',
                 keyCount: safeKeys(apolloCache).length,
                 keys: safeKeys(apolloCache),
-                preview: safeValue(apolloCache, 2, [], 'apolloCache')
+                preview: safeValue(apolloCache, 2, [], 'apolloCache'),
             });
         }
         if (window.__APOLLO_STATE__) {
@@ -209,10 +245,11 @@
                 source: 'window.__APOLLO_STATE__',
                 keyCount: safeKeys(window.__APOLLO_STATE__).length,
                 keys: safeKeys(window.__APOLLO_STATE__),
-                preview: safeValue(window.__APOLLO_STATE__, 2, [], 'apolloState')
+                preview: safeValue(window.__APOLLO_STATE__, 2, [], 'apolloState'),
             });
         }
-        var queryClient = window.__REACT_QUERY_CLIENT__ || window.queryClient || window.__QUERY_CLIENT__ || null;
+        var queryClient =
+            window.__REACT_QUERY_CLIENT__ || window.queryClient || window.__QUERY_CLIENT__ || null;
         if (queryClient && typeof queryClient.getQueryCache === 'function') {
             var queryItems = [];
             try {
@@ -220,18 +257,37 @@
             } catch (_) {}
             queries.push({
                 kind: 'tanstack-query',
-                source: queryClient === window.queryClient ? 'window.queryClient' : (queryClient === window.__QUERY_CLIENT__ ? 'window.__QUERY_CLIENT__' : 'window.__REACT_QUERY_CLIENT__'),
+                source:
+                    queryClient === window.queryClient
+                        ? 'window.queryClient'
+                        : queryClient === window.__QUERY_CLIENT__
+                          ? 'window.__QUERY_CLIENT__'
+                          : 'window.__REACT_QUERY_CLIENT__',
                 queryCount: queryItems.length,
                 keys: queryItems.slice(0, MAX_ITEMS).map(function (item) {
-                    return safeValue(item && item.queryKey ? item.queryKey : item && item.queryHash ? item.queryHash : '', 1, [], 'queryKey');
+                    return safeValue(
+                        item && item.queryKey
+                            ? item.queryKey
+                            : item && item.queryHash
+                              ? item.queryHash
+                              : '',
+                        1,
+                        [],
+                        'queryKey',
+                    );
                 }),
-                preview: safeValue(queryItems.slice(0, 6).map(function (item) {
-                    return {
-                        hash: item && item.queryHash ? item.queryHash : '',
-                        key: item && item.queryKey ? item.queryKey : '',
-                        status: item && item.state ? item.state.status : ''
-                    };
-                }), 2, [], 'queries')
+                preview: safeValue(
+                    queryItems.slice(0, 6).map(function (item) {
+                        return {
+                            hash: item && item.queryHash ? item.queryHash : '',
+                            key: item && item.queryKey ? item.queryKey : '',
+                            status: item && item.state ? item.state.status : '',
+                        };
+                    }),
+                    2,
+                    [],
+                    'queries',
+                ),
             });
         }
         if (window.__SWR_DATA__) {
@@ -240,7 +296,7 @@
                 source: 'window.__SWR_DATA__',
                 keyCount: safeKeys(window.__SWR_DATA__).length,
                 keys: safeKeys(window.__SWR_DATA__),
-                preview: safeValue(window.__SWR_DATA__, 2, [], 'swr')
+                preview: safeValue(window.__SWR_DATA__, 2, [], 'swr'),
             });
         }
         return queries.slice(0, MAX_ITEMS);
@@ -254,11 +310,16 @@
                 source: 'window.__NEXT_DATA__',
                 keys: safeKeys(window.__NEXT_DATA__),
                 route: window.__NEXT_DATA__.page || '',
-                preview: safeValue({
-                    page: window.__NEXT_DATA__.page,
-                    query: window.__NEXT_DATA__.query,
-                    props: window.__NEXT_DATA__.props
-                }, 2, [], 'nextData')
+                preview: safeValue(
+                    {
+                        page: window.__NEXT_DATA__.page,
+                        query: window.__NEXT_DATA__.query,
+                        props: window.__NEXT_DATA__.props,
+                    },
+                    2,
+                    [],
+                    'nextData',
+                ),
             });
         }
         if (window.__NUXT__) {
@@ -267,7 +328,7 @@
                 source: 'window.__NUXT__',
                 keys: safeKeys(window.__NUXT__),
                 route: window.__NUXT__.routePath || window.__NUXT__.path || '',
-                preview: safeValue(window.__NUXT__, 2, [], 'nuxt')
+                preview: safeValue(window.__NUXT__, 2, [], 'nuxt'),
             });
         }
         if (window.__remixContext) {
@@ -276,7 +337,7 @@
                 source: 'window.__remixContext',
                 keys: safeKeys(window.__remixContext),
                 route: location.pathname || '',
-                preview: safeValue(window.__remixContext, 2, [], 'remix')
+                preview: safeValue(window.__remixContext, 2, [], 'remix'),
             });
         }
         if (window.__INITIAL_STATE__) {
@@ -284,7 +345,7 @@
                 kind: 'initial-state',
                 source: 'window.__INITIAL_STATE__',
                 keys: safeKeys(window.__INITIAL_STATE__),
-                preview: safeValue(window.__INITIAL_STATE__, 2, [], 'initialState')
+                preview: safeValue(window.__INITIAL_STATE__, 2, [], 'initialState'),
             });
         }
         return hydration.slice(0, MAX_ITEMS);
@@ -298,7 +359,7 @@
                 source: 'window.__NEXTAUTH',
                 status: window.__NEXTAUTH.status || '',
                 keys: safeKeys(window.__NEXTAUTH),
-                preview: safeValue(window.__NEXTAUTH, 2, [], 'nextauth')
+                preview: safeValue(window.__NEXTAUTH, 2, [], 'nextauth'),
             });
         }
         if (window.__clerk || window.Clerk) {
@@ -308,16 +369,21 @@
                 source: window.__clerk ? 'window.__clerk' : 'window.Clerk',
                 status: clerk && clerk.status ? clerk.status : '',
                 keys: safeKeys(clerk),
-                preview: safeValue(clerk, 1, [], 'clerk')
+                preview: safeValue(clerk, 1, [], 'clerk'),
             });
         }
-        if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps && window.__NEXT_DATA__.props.pageProps.session) {
+        if (
+            window.__NEXT_DATA__ &&
+            window.__NEXT_DATA__.props &&
+            window.__NEXT_DATA__.props.pageProps &&
+            window.__NEXT_DATA__.props.pageProps.session
+        ) {
             auth.push({
                 kind: 'session-payload',
                 source: 'window.__NEXT_DATA__.props.pageProps.session',
                 status: 'present',
                 keys: safeKeys(window.__NEXT_DATA__.props.pageProps.session),
-                preview: safeValue(window.__NEXT_DATA__.props.pageProps.session, 2, [], 'session')
+                preview: safeValue(window.__NEXT_DATA__.props.pageProps.session, 2, [], 'session'),
             });
         }
         return auth.slice(0, MAX_ITEMS);
@@ -333,17 +399,22 @@
             page: {
                 title: document.title || '',
                 url: location.href || '',
-                origin: location.origin || ''
+                origin: location.origin || '',
             },
-            profile: captureStatus.profile || (stackProfile.strategy && stackProfile.strategy.profile) || 'generic-app',
+            profile:
+                captureStatus.profile ||
+                (stackProfile.strategy && stackProfile.strategy.profile) ||
+                'generic-app',
             strategy: captureStatus.strategy || stackProfile.strategy || null,
-            technologies: Array.isArray(stackProfile.technologies) ? stackProfile.technologies.slice(0, 12) : [],
+            technologies: Array.isArray(stackProfile.technologies)
+                ? stackProfile.technologies.slice(0, 12)
+                : [],
             roots: collectFrameworkRoots(),
             router: collectRouterState(),
             stores: collectStoreSnapshots(),
             queries: collectQueryCaches(),
             hydration: collectHydrationPayloads(),
-            auth: collectAuthState()
+            auth: collectAuthState(),
         };
         state.summary = {
             rootCount: state.roots.length,
@@ -351,8 +422,13 @@
             queryCount: state.queries.length,
             hydrationCount: state.hydration.length,
             authCount: state.auth.length,
-            routerFramework: state.router && state.router.framework ? state.router.framework : 'generic',
-            detectedTechnologies: state.technologies.map(function (item) { return item && item.name ? item.name : ''; }).filter(Boolean)
+            routerFramework:
+                state.router && state.router.framework ? state.router.framework : 'generic',
+            detectedTechnologies: state.technologies
+                .map(function (item) {
+                    return item && item.name ? item.name : '';
+                })
+                .filter(Boolean),
         };
         return state;
     }
@@ -365,7 +441,7 @@
     window.__FRAMEWORK_INTROSPECTOR__ = {
         version: '1.0.0',
         collect: collectFrameworkState,
-        refresh: refreshFrameworkState
+        refresh: refreshFrameworkState,
     };
 
     refreshFrameworkState({ reason: 'boot' });

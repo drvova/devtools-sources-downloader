@@ -13,18 +13,17 @@
 // source fragment 'hi from cache' framed as 52 62 <hash> 0d000000 and the
 // script name 'evalmachine.<anonymous>' as 52 63 <hash> 17000000.
 
-const V8_MAGIC_FAMILY = 0xC0DE0000;
-const V8_MAGIC_MASK = 0xFFFF0000;
+const V8_MAGIC_FAMILY = 0xc0de0000;
 const V8_MIN_EXT_REFS = 1;
 const V8_MAX_EXT_REFS = 0x4000;
 
 // Full magics observed per node line; the low half drifts across subminors
 // (v24.19.0 writes 0x0689), so a miss falls back to the family + payload fit.
 const V8_KNOWN_MAGICS = {
-    0xC0DE0563: 'node18',
-    0xC0DE05CC: 'node20',
-    0xC0DE0628: 'node22',
-    0xC0DE0688: 'node24'
+    0xc0de0563: 'node18',
+    0xc0de05cc: 'node20',
+    0xc0de0628: 'node22',
+    0xc0de0688: 'node24',
 };
 
 const V11_HEADER_SIZE = 24; // node18/20: version_hash, source_hash, flag_hash, payload_length, checksum
@@ -46,8 +45,8 @@ export function detectV8CodeCache(bytes) {
     // The & operator yields a SIGNED int32 (bit31 set on the 0xC0DE family),
     // so compare the family via an unsigned shift, never via & against the
     // positive literal.
-    if ((magic >>> 16) !== (V8_MAGIC_FAMILY >>> 16)) return false;
-    var extRefs = magic & 0xFFFF;
+    if (magic >>> 16 !== V8_MAGIC_FAMILY >>> 16) return false;
+    var extRefs = magic & 0xffff;
     return extRefs >= V8_MIN_EXT_REFS && extRefs <= V8_MAX_EXT_REFS;
 }
 
@@ -77,14 +76,20 @@ export function parseV8CodeCache(bytes) {
         tool: 'v8-code-cache',
         magic: magic,
         magicHex: '0x' + magic.toString(16),
-        runtime: known || ('unknown build (' + V8_MAGIC_FAMILY.toString(16) + ' family, ' + (magic & 0xFFFF) + ' external refs)'),
+        runtime:
+            known ||
+            'unknown build (' +
+                V8_MAGIC_FAMILY.toString(16) +
+                ' family, ' +
+                (magic & 0xffff) +
+                ' external refs)',
         format: format,
         versionHash: u32(bytes, 4),
         sourceHash: u32(bytes, 8),
         flagHash: u32(bytes, 12),
         payloadOffset: payloadOffset,
         payloadLength: payloadLength,
-        strings: extractV8Strings(bytes, payloadOffset, payloadOffset + payloadLength)
+        strings: extractV8Strings(bytes, payloadOffset, payloadOffset + payloadLength),
     };
 }
 
@@ -95,7 +100,7 @@ export function extractV8Strings(bytes, from, to) {
     var out = [];
     var seen = {};
     var end = Math.min(to !== undefined ? to : bytes.length, bytes.length);
-    for (var i = (from || 0); i + 10 <= end; i++) {
+    for (var i = from || 0; i + 10 <= end; i++) {
         if (bytes[i] !== 0x52) continue;
         var map = bytes[i + 1];
         if (map !== 0x61 && map !== 0x62 && map !== 0x63) continue;
@@ -107,7 +112,10 @@ export function extractV8Strings(bytes, from, to) {
         var chars = '';
         for (var c = 0; c < length; c++) {
             var b = bytes[charAt + c];
-            if (b < 0x20 || b >= 0x7f) { printable = false; break; }
+            if (b < 0x20 || b >= 0x7f) {
+                printable = false;
+                break;
+            }
             chars += String.fromCharCode(b);
         }
         if (!printable) continue;
@@ -125,7 +133,11 @@ export function extractV8Strings(bytes, from, to) {
 // null when the platform has none — a refusal, never a silent skip.
 export async function inflateBrotli(bytes, inflateImpl) {
     if (typeof inflateImpl === 'function') {
-        try { return await inflateImpl(bytes); } catch (_) { return null; }
+        try {
+            return await inflateImpl(bytes);
+        } catch (_) {
+            return null;
+        }
     }
     if (typeof DecompressionStream !== 'function') return null;
     try {
@@ -145,9 +157,12 @@ export async function inflateBrotli(bytes, inflateImpl) {
         for (var i = 0; i < chunks.length; i++) total += chunks[i].length;
         var out = new Uint8Array(total);
         var at = 0;
-        for (var j = 0; j < chunks.length; j++) { out.set(chunks[j], at); at += chunks[j].length; }
+        for (var j = 0; j < chunks.length; j++) {
+            out.set(chunks[j], at);
+            at += chunks[j].length;
+        }
         return out.length ? out : null;
-    } catch (err) {
+    } catch (_) {
         return null;
     }
 }
@@ -166,6 +181,6 @@ export async function parseSealedV8(bytes, options) {
         tool: 'jsc-sealed-v8',
         detail: 'brotli-sealed V8 code cache',
         inflatedBytes: inflated.length,
-        cache: parsed
+        cache: parsed,
     };
 }

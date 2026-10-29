@@ -1,23 +1,25 @@
 {
-  "name": "devtools-sources-downloader",
-  "version": "0.1.0",
-  "private": true,
-  "description": "DevTools extension - download inspected page sources with debug mode",
-  "scripts": {
-    "build": "webpack --mode production && node scripts/sync.js",
-    "dev": "webpack --mode development --devtool source-map && node scripts/sync.js",
-    "test": "node test/unpack.test.mjs",
-    "test:e2e": "node test/browser-e2e.mjs",
-    "verify": "npm test && npm run build && npm run test:e2e"
-  },
-  "dependencies": {
-    "file-saver": "^2.0.5",
-    "jszip": "^3.10.1"
-  },
-  "devDependencies": {
-    "copy-webpack-plugin": "^12.0.2",
-    "js-beautify": "^2.0.3",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1"
-  }
+    "name": "devtools-sources-downloader",
+    "version": "0.1.0",
+    "private": true,
+    "description": "DevTools extension - download inspected page sources with debug mode",
+    "scripts": {
+        "build": "rs build && node scripts/sync.cjs",
+        "dev": "set NODE_ENV=development&& rs build --source-map && node scripts/sync.cjs",
+        "watch": "rs build --watch --source-map",
+        "test": "rs test",
+        "test:e2e": "node test/browser-e2e.mjs",
+        "lint": "rs lint",
+        "format": "rs fmt",
+        "check": "rs check",
+        "verify": "npm test && npm run build && npm run test:e2e"
+    },
+    "dependencies": {
+        "file-saver": "^2.0.5",
+        "jszip": "^3.10.1"
+    },
+    "devDependencies": {
+        "js-beautify": "^2.0.3",
+        "rstack": "^0.8.6"
+    }
 }

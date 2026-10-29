@@ -16,17 +16,17 @@ so the build output is the single source of truth and the two copies cannot drif
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `npm run build` | production webpack build + mirror into the root layout |
-| `npm run dev` | development build (unminified, source maps) + mirror |
-| `npm test` | unit tests for the unpack engine (`test/unpack.test.mjs`) |
+| Command            | What it does                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `npm run build`    | production webpack build + mirror into the root layout                                |
+| `npm run dev`      | development build (unminified, source maps) + mirror                                  |
+| `npm test`         | unit tests for the unpack engine (`test/unpack.test.mjs`)                             |
 | `npm run test:e2e` | loads the built bundle in a real browser, clicks Download All, reads the produced zip |
-| `npm run verify` | unit tests + build + end-to-end (run this before committing) |
+| `npm run verify`   | unit tests + build + end-to-end (run this before committing)                          |
 
 `test:e2e` drives a Chromium browser over the DevTools protocol with a stubbed
 `chrome.devtools` API; it needs Chrome or Edge installed (`test/browser-e2e.mjs` lists
-the paths it looks in), and it uses the *built* artifacts, so build first.
+the paths it looks in), and it uses the _built_ artifacts, so build first.
 
 ## Export package
 
@@ -41,15 +41,15 @@ _unpack*/index.json  per-asset report: layers, module counts, recovered sources,
 
 Per asset, `_unpack/<slug>/` holds:
 
-| Path | Content |
-| --- | --- |
-| `00-original.js` | the asset exactly as captured (only when a layer was peeled) |
+| Path                  | Content                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `00-original.js`      | the asset exactly as captured (only when a layer was peeled)                                                 |
 | `layers/NN-<tool>.js` | the output of layer `NN` (`eval-unwrap`, `base64`, `hex-escape`, `unescape`, `charcode`, `reverse`, `rot13`) |
-| `modules/` | modules split out of webpack bundles, named from `//# sourceURL` |
-| `10-beautified.js` | beautified output when the recovered source is still minified |
-| `10-source.js` | the recovered source as-is when it is already readable |
-| `source-map.json` | the source map, inline or fetched from the referenced URL |
-| `sources/` | `sourcesContent` entries from the map, i.e. the original files |
+| `modules/`            | modules split out of webpack bundles, named from `//# sourceURL`                                             |
+| `10-beautified.js`    | beautified output when the recovered source is still minified                                                |
+| `10-source.js`        | the recovered source as-is when it is already readable                                                       |
+| `source-map.json`     | the source map, inline or fetched from the referenced URL                                                    |
+| `sources/`            | `sourcesContent` entries from the map, i.e. the original files                                               |
 
 ## Unpack engine
 

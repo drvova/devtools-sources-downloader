@@ -50,7 +50,10 @@ function detectJsfuck(source) {
     }
     const purity = counted > 0 ? hits / counted : 0;
     if (purity < 0.95 || hits < 12) {
-        return { detected: false, reason: `purity ${(purity * 100).toFixed(1)}% (${hits} charset bytes)` };
+        return {
+            detected: false,
+            reason: `purity ${(purity * 100).toFixed(1)}% (${hits} charset bytes)`,
+        };
     }
     const chain = longestOperatorChain(trimmed);
     if (chain > 4096) {
@@ -182,7 +185,9 @@ function interpretJsfuck(source) {
     }
 
     function unwrap(v) {
-        return v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, '__jsfuckRaw') ? v.__jsfuckRaw : v;
+        return v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, '__jsfuckRaw')
+            ? v.__jsfuckRaw
+            : v;
     }
 
     function unwrapToPrimitive(v) {
@@ -256,7 +261,7 @@ function interpretJsfuck(source) {
             return undefined;
         }
         if (target && typeof target === 'object' && target.__jsfuckFn) {
-            return callFromSource(target, realArgs);
+            return callFromSource(target);
         }
         if (typeof target === 'function') {
             const thisArg = receiver === undefined ? undefined : unwrap(receiver);
@@ -271,7 +276,7 @@ function interpretJsfuck(source) {
         return { __jsfuckFn: true, body };
     }
 
-    function callFromSource(fnObj, args) {
+    function callFromSource(fnObj) {
         const body = fnObj.body;
         // Canonical bodies produced by the encoder: "return <builtin name>",
         // "return/<pattern>/<flags>", "return\"<payload>\"", "return this",
@@ -301,20 +306,23 @@ function interpretJsfuck(source) {
     }
 
     function unescapeLiteral(raw) {
-        return raw.replace(/\\(?:(u[0-9a-fA-F]{4})|(x[0-9a-fA-F]{2})|([0-7]{1,3})|(\r|\n)|(.))/g, (all, u, x, oct, nl, ch) => {
-            if (u) return String.fromCharCode(parseInt(u.slice(1), 16));
-            if (x) return String.fromCharCode(parseInt(x.slice(1), 16));
-            if (oct) return String.fromCharCode(parseInt(oct, 8));
-            if (nl) return '';
-            if (ch === 'n') return '\n';
-            if (ch === 'r') return '\r';
-            if (ch === 't') return '\t';
-            if (ch === 'b') return '\b';
-            if (ch === 'f') return '\f';
-            if (ch === 'v') return '\v';
-            if (ch === '0') return '\0';
-            return ch;
-        });
+        return raw.replace(
+            /\\(?:(u[0-9a-fA-F]{4})|(x[0-9a-fA-F]{2})|([0-7]{1,3})|(\r|\n)|(.))/g,
+            (all, u, x, oct, nl, ch) => {
+                if (u) return String.fromCharCode(parseInt(u.slice(1), 16));
+                if (x) return String.fromCharCode(parseInt(x.slice(1), 16));
+                if (oct) return String.fromCharCode(parseInt(oct, 8));
+                if (nl) return '';
+                if (ch === 'n') return '\n';
+                if (ch === 'r') return '\r';
+                if (ch === 't') return '\t';
+                if (ch === 'b') return '\b';
+                if (ch === 'f') return '\f';
+                if (ch === 'v') return '\v';
+                if (ch === '0') return '\0';
+                return ch;
+            },
+        );
     }
 
     const value = parseExpression(0);

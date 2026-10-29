@@ -4,7 +4,7 @@
     var TRACKER = {
         resources: {},
         loaded: [],
-        unloaded: []
+        unloaded: [],
     };
     window.__RESOURCE_TRACKER__ = TRACKER;
 
@@ -14,7 +14,7 @@
         websockets: [],
         sse: [],
         mutations: [],
-        runtime: []
+        runtime: [],
     };
     window.__RECON__ = RECON;
 
@@ -38,7 +38,7 @@
             captureFrameworkState: false,
             captureGraphQLOps: false,
             prioritizeSourceMaps: false,
-            reasons: ['Generic adaptive profile']
+            reasons: ['Generic adaptive profile'],
         };
     }
 
@@ -60,7 +60,7 @@
         lastMutationAt: 0,
         lastRuntimeAt: 0,
         lastSocketAt: 0,
-        lastWorkerAt: 0
+        lastWorkerAt: 0,
     };
     window.__STACK_SIGNALS__ = SIGNALS;
 
@@ -74,7 +74,7 @@
         reasonText: 'Booting adaptive capture profiler...',
         strategy: defaultStrategy(),
         signals: {},
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
     };
     window.__CAPTURE_STATUS__ = CAPTURE_STATUS;
     window.__STACK_PROFILE__ = {
@@ -85,7 +85,7 @@
         confidence: 0,
         evidence: { technologies: {}, traits: {}, globals: [], endpoints: [] },
         strategy: CAPTURE_STATUS.strategy,
-        summary: 'Booting profiler'
+        summary: 'Booting profiler',
     };
 
     var profileRefreshTimer = null;
@@ -128,7 +128,7 @@
     function getMetaContent(name) {
         try {
             var el = document.querySelector('meta[name="' + name + '"]');
-            return el ? (el.content || '') : '';
+            return el ? el.content || '' : '';
         } catch (_) {
             return '';
         }
@@ -155,7 +155,10 @@
         if (lower(url).indexOf('graphql') >= 0) return true;
         if (!body) return false;
         if (typeof body === 'string') {
-            return /(?:^|\b)(query|mutation|subscription)\b/.test(body) || body.indexOf('operationName') >= 0;
+            return (
+                /(?:^|\b)(query|mutation|subscription)\b/.test(body) ||
+                body.indexOf('operationName') >= 0
+            );
         }
         return typeof body === 'object' && (body.query || body.operationName || body.extensions);
     }
@@ -166,7 +169,8 @@
         for (var i = 0; i < lists.length; i++) {
             for (var j = 0; j < lists[i].length; j++) {
                 var entry = lists[i][j] || {};
-                if (looksLikeGraphQL(entry.url, entry.requestBody)) addUnique(endpoints, entry.url || 'graphql');
+                if (looksLikeGraphQL(entry.url, entry.requestBody))
+                    addUnique(endpoints, entry.url || 'graphql');
             }
         }
         return endpoints.slice(0, 20);
@@ -189,10 +193,13 @@
             apolloClient: !!window.__APOLLO_CLIENT__,
             apolloState: !!window.__APOLLO_STATE__,
             relay: !!window.__RELAY_DEVTOOLS_HOOK__,
-            serviceWorkerController: !!(navigator.serviceWorker && navigator.serviceWorker.controller)
+            serviceWorkerController: !!(
+                navigator.serviceWorker && navigator.serviceWorker.controller
+            ),
         };
         var detected = [];
-        for (var key in flags) if (Object.prototype.hasOwnProperty.call(flags, key) && flags[key]) detected.push(key);
+        for (var key in flags)
+            if (Object.prototype.hasOwnProperty.call(flags, key) && flags[key]) detected.push(key);
         flags.detected = detected;
         return flags;
     }
@@ -225,7 +232,7 @@
             lastMutationAt: SIGNALS.lastMutationAt,
             lastRuntimeAt: SIGNALS.lastRuntimeAt,
             lastSocketAt: SIGNALS.lastSocketAt,
-            lastWorkerAt: SIGNALS.lastWorkerAt
+            lastWorkerAt: SIGNALS.lastWorkerAt,
         };
     }
 
@@ -234,7 +241,7 @@
         window.__FRAMEWORK_STATE__ = FRAMEWORK_INTROSPECTOR.refresh({
             reason: trigger || 'capture-refresh',
             stackProfile: window.__STACK_PROFILE__ || null,
-            captureStatus: CAPTURE_STATUS
+            captureStatus: CAPTURE_STATUS,
         });
     }
 
@@ -251,12 +258,18 @@
                 hasNuxtRoot: !!document.getElementById('__nuxt'),
                 hasVueApp: !!document.querySelector('[data-v-app],[data-vue-meta-server-rendered]'),
                 hasNgVersion: !!document.querySelector('[ng-version]'),
-                hasSvelteData: !!document.querySelector('[data-sveltekit-preload-data],[data-svelte-h]'),
+                hasSvelteData: !!document.querySelector(
+                    '[data-sveltekit-preload-data],[data-svelte-h]',
+                ),
                 hasAstroIsland: !!document.querySelector('astro-island'),
-                hasRemixData: !!document.querySelector('[data-remix-run],script[type="application/remix-data"]'),
-                hasShopify: !!document.querySelector('[id^="shopify-section"],[data-shopify],meta[name="shopify-checkout-api-token"]'),
+                hasRemixData: !!document.querySelector(
+                    '[data-remix-run],script[type="application/remix-data"]',
+                ),
+                hasShopify: !!document.querySelector(
+                    '[id^="shopify-section"],[data-shopify],meta[name="shopify-checkout-api-token"]',
+                ),
                 scriptCount: document.scripts ? document.scripts.length : 0,
-                mutationCount: RECON.mutations.length
+                mutationCount: RECON.mutations.length,
             },
             network: {
                 xhrCount: RECON.xhr.length,
@@ -265,26 +278,27 @@
                 graphqlEndpoints: getGraphQLEndpoints(),
                 websocketCount: RECON.websockets.length,
                 sseCount: RECON.sse.length,
-                resourceCount: TRACKER.loaded.length
+                resourceCount: TRACKER.loaded.length,
             },
             runtime: {
                 runtimeCount: RECON.runtime.length,
                 wasmCount: countRuntimeKind('wasm'),
                 workerCount: countRuntimeKinds(['worker', 'shared-worker']),
-                serviceWorkerCount: countRuntimeKind('service-worker')
+                serviceWorkerCount: countRuntimeKind('service-worker'),
             },
             activity: {
                 openSockets: SIGNALS.openSockets + SIGNALS.openSse,
                 workerCount: SIGNALS.workerCount,
                 serviceWorkerCount: SIGNALS.serviceWorkerCount,
-                wasmCount: SIGNALS.wasmCount
-            }
+                wasmCount: SIGNALS.wasmCount,
+            },
         };
         if (STACK_PROFILER && typeof STACK_PROFILER.analyze === 'function') {
             window.__STACK_PROFILE__ = STACK_PROFILER.analyze(snapshot);
         }
         var profile = window.__STACK_PROFILE__ || {};
-        CAPTURE_STATUS.profile = profile.strategy && profile.strategy.profile ? profile.strategy.profile : 'generic-app';
+        CAPTURE_STATUS.profile =
+            profile.strategy && profile.strategy.profile ? profile.strategy.profile : 'generic-app';
         CAPTURE_STATUS.confidence = profile.confidence || 0;
         CAPTURE_STATUS.technologies = profile.technologies || [];
         CAPTURE_STATUS.strategy = profile.strategy || CAPTURE_STATUS.strategy || defaultStrategy();
@@ -302,7 +316,7 @@
     }
 
     function isQuiet(lastSeenAt, quietMs, now) {
-        return !lastSeenAt || (now - lastSeenAt) >= quietMs;
+        return !lastSeenAt || now - lastSeenAt >= quietMs;
     }
 
     function finishReady(reason, reasonText) {
@@ -321,7 +335,9 @@
         var strategy = CAPTURE_STATUS.strategy || defaultStrategy();
         var elapsed = now - SIGNALS.startedAt;
         var domReady = document.readyState === 'complete' || elapsed >= strategy.bootDelayMs;
-        var networkQuiet = SIGNALS.activeRequests === 0 && isQuiet(SIGNALS.lastNetworkAt, strategy.networkQuietMs, now);
+        var networkQuiet =
+            SIGNALS.activeRequests === 0 &&
+            isQuiet(SIGNALS.lastNetworkAt, strategy.networkQuietMs, now);
         var mutationQuiet = isQuiet(SIGNALS.lastMutationAt, strategy.mutationQuietMs, now);
         var runtimeQuiet = isQuiet(SIGNALS.lastRuntimeAt, strategy.runtimeQuietMs, now);
         var socketQuiet = isQuiet(SIGNALS.lastSocketAt, strategy.socketQuietMs, now);
@@ -334,23 +350,45 @@
             runtimeQuiet: runtimeQuiet,
             socketQuiet: socketQuiet,
             workerQuiet: workerQuiet,
-            elapsedMs: elapsed
+            elapsedMs: elapsed,
         };
 
         if (window.__RESOURCE_TRACKER_READY__) return;
-        if (elapsed >= strategy.maxCaptureMs) return finishReady('max-capture', 'Adaptive max capture window reached for ' + strategy.profile + '.');
-        if (domReady && networkQuiet && mutationQuiet && runtimeQuiet && socketQuiet && workerQuiet) {
-            return finishReady('quiet-window', 'Adaptive quiet window satisfied for ' + strategy.profile + '.');
+        if (elapsed >= strategy.maxCaptureMs)
+            return finishReady(
+                'max-capture',
+                'Adaptive max capture window reached for ' + strategy.profile + '.',
+            );
+        if (
+            domReady &&
+            networkQuiet &&
+            mutationQuiet &&
+            runtimeQuiet &&
+            socketQuiet &&
+            workerQuiet
+        ) {
+            return finishReady(
+                'quiet-window',
+                'Adaptive quiet window satisfied for ' + strategy.profile + '.',
+            );
         }
 
         var waitingOn = [];
         if (!domReady) waitingOn.push('document readiness');
-        if (!networkQuiet) waitingOn.push(SIGNALS.activeRequests > 0 ? SIGNALS.activeRequests + ' network request(s)' : 'network quiet window');
+        if (!networkQuiet)
+            waitingOn.push(
+                SIGNALS.activeRequests > 0
+                    ? SIGNALS.activeRequests + ' network request(s)'
+                    : 'network quiet window',
+            );
         if (!mutationQuiet) waitingOn.push('DOM mutations');
         if (!runtimeQuiet) waitingOn.push('runtime code activity');
         if (!socketQuiet) waitingOn.push('socket activity');
         if (!workerQuiet) waitingOn.push('worker activity');
-        updateCaptureStatus(trigger || 'capturing', 'Adaptive capture waiting on ' + waitingOn.slice(0, 3).join(', ') + '.');
+        updateCaptureStatus(
+            trigger || 'capturing',
+            'Adaptive capture waiting on ' + waitingOn.slice(0, 3).join(', ') + '.',
+        );
     }
 
     var MAX_MUTATIONS = 500;
@@ -383,18 +421,27 @@
 
     function captureRuntime(kind, payload) {
         if (RECON.runtime.length >= MAX_RUNTIME_ITEMS) return null;
-        var entry = assign({
-            id: kind + '-' + String(RECON.runtime.length + 1),
-            kind: kind,
-            timestamp: Date.now()
-        }, payload || {});
+        var entry = assign(
+            {
+                id: kind + '-' + String(RECON.runtime.length + 1),
+                kind: kind,
+                timestamp: Date.now(),
+            },
+            payload || {},
+        );
         RECON.runtime.push(entry);
         SIGNALS.runtimeCount = RECON.runtime.length;
         SIGNALS.wasmCount = countRuntimeKind('wasm');
         SIGNALS.workerCount = countRuntimeKinds(['worker', 'shared-worker']);
         SIGNALS.serviceWorkerCount = countRuntimeKind('service-worker');
         touchSignal('runtime');
-        if (kind === 'worker' || kind === 'shared-worker' || kind === 'service-worker' || kind === 'wasm') touchSignal('worker');
+        if (
+            kind === 'worker' ||
+            kind === 'shared-worker' ||
+            kind === 'service-worker' ||
+            kind === 'wasm'
+        )
+            touchSignal('worker');
         scheduleProfileRefresh('runtime-' + kind);
         return entry;
     }
@@ -415,8 +462,16 @@
             bufferCopy.set(bufferBytes);
             return bufferCopy;
         }
-        if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function' && ArrayBuffer.isView(source)) {
-            var viewBytes = new Uint8Array(source.buffer, source.byteOffset || 0, source.byteLength);
+        if (
+            typeof ArrayBuffer !== 'undefined' &&
+            typeof ArrayBuffer.isView === 'function' &&
+            ArrayBuffer.isView(source)
+        ) {
+            var viewBytes = new Uint8Array(
+                source.buffer,
+                source.byteOffset || 0,
+                source.byteLength,
+            );
             var viewCopy = new Uint8Array(viewBytes.length);
             viewCopy.set(viewBytes);
             return viewCopy;
@@ -464,7 +519,9 @@
     }
 
     function isTextMime(mimeType) {
-        return /(?:javascript|ecmascript|typescript|json|text|xml|svg|html|css)/i.test(mimeType || '');
+        return /(?:javascript|ecmascript|typescript|json|text|xml|svg|html|css)/i.test(
+            mimeType || '',
+        );
     }
 
     function limitText(text) {
@@ -472,7 +529,7 @@
         return {
             text: text.slice(0, MAX_RUNTIME_TEXT),
             length: text.length,
-            truncated: text.length > MAX_RUNTIME_TEXT
+            truncated: text.length > MAX_RUNTIME_TEXT,
         };
     }
 
@@ -481,26 +538,38 @@
         return {
             bytes: byteLength > MAX_RUNTIME_BINARY ? bytes.subarray(0, MAX_RUNTIME_BINARY) : bytes,
             length: byteLength,
-            truncated: byteLength > MAX_RUNTIME_BINARY
+            truncated: byteLength > MAX_RUNTIME_BINARY,
         };
     }
 
     function captureTextRuntime(kind, text, meta) {
         var limited = limitText(text);
-        return captureRuntime(kind, assign({
-            text: limited.text,
-            textLength: limited.length,
-            truncated: limited.truncated
-        }, meta || {}));
+        return captureRuntime(
+            kind,
+            assign(
+                {
+                    text: limited.text,
+                    textLength: limited.length,
+                    truncated: limited.truncated,
+                },
+                meta || {},
+            ),
+        );
     }
 
     function captureBinaryRuntime(kind, bytes, meta) {
         var limited = limitBytes(bytes || new Uint8Array(0));
-        return captureRuntime(kind, assign({
-            base64: bytesToBase64(limited.bytes),
-            byteLength: limited.length,
-            truncated: limited.truncated
-        }, meta || {}));
+        return captureRuntime(
+            kind,
+            assign(
+                {
+                    base64: bytesToBase64(limited.bytes),
+                    byteLength: limited.length,
+                    truncated: limited.truncated,
+                },
+                meta || {},
+            ),
+        );
     }
 
     function parseDataUrl(url) {
@@ -511,7 +580,11 @@
             var raw = atob(match[3]);
             var bytes = new Uint8Array(raw.length);
             for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-            return { mimeType: mimeType, bytes: bytes, text: isTextMime(mimeType) || looksLikeText(bytes) ? bytesToText(bytes) : null };
+            return {
+                mimeType: mimeType,
+                bytes: bytes,
+                text: isTextMime(mimeType) || looksLikeText(bytes) ? bytesToText(bytes) : null,
+            };
         }
         var text = decodeURIComponent(match[3]);
         return { mimeType: mimeType, bytes: stringToBytes(text), text: text };
@@ -548,9 +621,10 @@
             mimeType: mimeType,
             size: blob.size || bytes.length,
             source: 'Blob',
-            stack: currentStack()
+            stack: currentStack(),
         };
-        if (normalized.nestedBlobCount) meta.note = 'Contains ' + normalized.nestedBlobCount + ' nested Blob part(s)';
+        if (normalized.nestedBlobCount)
+            meta.note = 'Contains ' + normalized.nestedBlobCount + ' nested Blob part(s)';
         var entry;
         if (!bytes.length) {
             entry = captureRuntime('blob', meta);
@@ -579,12 +653,13 @@
     }
 
     function captureInlineScriptElement(el, source) {
-        if (!el || el.__runtimeScriptCaptured || (el.tagName || '').toLowerCase() !== 'script') return;
+        if (!el || el.__runtimeScriptCaptured || (el.tagName || '').toLowerCase() !== 'script')
+            return;
         el.__runtimeScriptCaptured = true;
         var meta = {
             source: source,
             scriptType: el.type || 'classic',
-            stack: currentStack()
+            stack: currentStack(),
         };
         if (el.src) {
             captureUrlRuntime('script-injection', el.src, meta);
@@ -612,7 +687,7 @@
                             status: 'loaded',
                             size: entry.transferSize || 0,
                             duration: Math.round(entry.duration * 100) / 100,
-                            time: Date.now()
+                            time: Date.now(),
                         };
                         TRACKER.resources[url] = resource;
                         TRACKER.loaded.push(resource);
@@ -654,7 +729,7 @@
                 url: this.__recon_url || '',
                 requestHeaders: this.__recon_reqHeaders || {},
                 requestBody: body || null,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             };
             var origReady = this.onreadystatechange;
             var origError = this.onerror;
@@ -682,7 +757,9 @@
                     entry.status = self.status;
                     entry.statusText = self.statusText;
                     entry.responseHeaders = self.getAllResponseHeaders();
-                    entry.responseBody = self.responseText ? self.responseText.substring(0, 10000) : null;
+                    entry.responseBody = self.responseText
+                        ? self.responseText.substring(0, 10000)
+                        : null;
                     entry.responseSize = self.responseText ? self.responseText.length : 0;
                     finishRequest();
                 }
@@ -701,7 +778,7 @@
     if (typeof fetch !== 'undefined') {
         var _fetch = fetch;
         window.fetch = function (input, init) {
-            var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+            var url = typeof input === 'string' ? input : input && input.url ? input.url : '';
             var method = (init && init.method) || 'GET';
             var headers = init && init.headers ? init.headers : {};
             var body = init && init.body ? init.body : null;
@@ -710,16 +787,19 @@
                 url: url,
                 requestHeaders: headers,
                 requestBody: body,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             };
             var reqHeaders = {};
             if (headers && typeof headers.entries === 'function') {
                 try {
                     var iter = headers.entries();
-                    for (var h = iter.next(); !h.done; h = iter.next()) reqHeaders[h.value[0]] = h.value[1];
+                    for (var h = iter.next(); !h.done; h = iter.next())
+                        reqHeaders[h.value[0]] = h.value[1];
                 } catch (_) {}
             } else if (headers && typeof headers === 'object') {
-                for (var key in headers) if (Object.prototype.hasOwnProperty.call(headers, key)) reqHeaders[key] = headers[key];
+                for (var key in headers)
+                    if (Object.prototype.hasOwnProperty.call(headers, key))
+                        reqHeaders[key] = headers[key];
             }
             entry.requestHeaders = reqHeaders;
 
@@ -727,36 +807,48 @@
             touchSignal('network');
             scheduleProfileRefresh('fetch-start');
 
-            return _fetch.call(this, input, init).then(function (response) {
-                entry.status = response.status;
-                entry.statusText = response.statusText;
-                var respHeaders = {};
-                response.headers.forEach(function (value, key) { respHeaders[key] = value; });
-                entry.responseHeaders = respHeaders;
-                entry.completed = Date.now();
-                response.clone().text().then(function (text) {
-                    entry.responseBody = text ? text.substring(0, 10000) : null;
-                    entry.responseSize = text ? text.length : 0;
-                }).catch(function () {
-                    entry.responseBody = '[binary/stream: ' + (response.headers.get('content-type') || 'unknown') + ']';
+            return _fetch
+                .call(this, input, init)
+                .then(function (response) {
+                    entry.status = response.status;
+                    entry.statusText = response.statusText;
+                    var respHeaders = {};
+                    response.headers.forEach(function (value, key) {
+                        respHeaders[key] = value;
+                    });
+                    entry.responseHeaders = respHeaders;
+                    entry.completed = Date.now();
+                    response
+                        .clone()
+                        .text()
+                        .then(function (text) {
+                            entry.responseBody = text ? text.substring(0, 10000) : null;
+                            entry.responseSize = text ? text.length : 0;
+                        })
+                        .catch(function () {
+                            entry.responseBody =
+                                '[binary/stream: ' +
+                                (response.headers.get('content-type') || 'unknown') +
+                                ']';
+                        });
+                    RECON.fetch.push(entry);
+                    SIGNALS.activeRequests = Math.max(0, SIGNALS.activeRequests - 1);
+                    if (looksLikeGraphQL(entry.url, entry.requestBody)) SIGNALS.graphqlCount++;
+                    touchSignal('network');
+                    scheduleProfileRefresh('fetch-complete');
+                    return response;
+                })
+                .catch(function (err) {
+                    entry.status = 0;
+                    entry.statusText = 'Network Error';
+                    entry.completed = Date.now();
+                    RECON.fetch.push(entry);
+                    SIGNALS.activeRequests = Math.max(0, SIGNALS.activeRequests - 1);
+                    if (looksLikeGraphQL(entry.url, entry.requestBody)) SIGNALS.graphqlCount++;
+                    touchSignal('network');
+                    scheduleProfileRefresh('fetch-error');
+                    throw err;
                 });
-                RECON.fetch.push(entry);
-                SIGNALS.activeRequests = Math.max(0, SIGNALS.activeRequests - 1);
-                if (looksLikeGraphQL(entry.url, entry.requestBody)) SIGNALS.graphqlCount++;
-                touchSignal('network');
-                scheduleProfileRefresh('fetch-complete');
-                return response;
-            }).catch(function (err) {
-                entry.status = 0;
-                entry.statusText = 'Network Error';
-                entry.completed = Date.now();
-                RECON.fetch.push(entry);
-                SIGNALS.activeRequests = Math.max(0, SIGNALS.activeRequests - 1);
-                if (looksLikeGraphQL(entry.url, entry.requestBody)) SIGNALS.graphqlCount++;
-                touchSignal('network');
-                scheduleProfileRefresh('fetch-error');
-                throw err;
-            });
         };
     }
 
@@ -770,16 +862,28 @@
             touchSignal('socket');
             scheduleProfileRefresh('websocket-open');
             instance.send = function (data) {
-                entry.messages.push({ direction: 'out', data: typeof data === 'string' ? data.substring(0, 2000) : '[binary]', timestamp: Date.now() });
+                entry.messages.push({
+                    direction: 'out',
+                    data: typeof data === 'string' ? data.substring(0, 2000) : '[binary]',
+                    timestamp: Date.now(),
+                });
                 touchSignal('socket');
                 return origSend.call(instance, data);
             };
             instance.addEventListener('message', function (event) {
                 var message = event.data;
                 if (typeof message !== 'string') {
-                    try { message = JSON.stringify(message); } catch (_) { message = '[binary]'; }
+                    try {
+                        message = JSON.stringify(message);
+                    } catch (_) {
+                        message = '[binary]';
+                    }
                 }
-                entry.messages.push({ direction: 'in', data: message ? message.substring(0, 2000) : '', timestamp: Date.now() });
+                entry.messages.push({
+                    direction: 'in',
+                    data: message ? message.substring(0, 2000) : '',
+                    timestamp: Date.now(),
+                });
                 touchSignal('socket');
                 scheduleProfileRefresh('websocket-message');
             });
@@ -808,7 +912,11 @@
             touchSignal('socket');
             scheduleProfileRefresh('sse-open');
             instance.addEventListener('message', function (event) {
-                entry.events.push({ type: event.type || 'message', data: event.data ? event.data.substring(0, 2000) : '', timestamp: Date.now() });
+                entry.events.push({
+                    type: event.type || 'message',
+                    data: event.data ? event.data.substring(0, 2000) : '',
+                    timestamp: Date.now(),
+                });
                 touchSignal('socket');
                 scheduleProfileRefresh('sse-message');
             });
@@ -822,7 +930,11 @@
             var addEventListener = instance.addEventListener;
             instance.addEventListener = function (type, listener, options) {
                 if (type && type !== 'message' && type !== 'error' && type !== 'open') {
-                    entry.events.push({ type: type, data: '[custom event listener attached]', timestamp: Date.now() });
+                    entry.events.push({
+                        type: type,
+                        data: '[custom event listener attached]',
+                        timestamp: Date.now(),
+                    });
                 }
                 return addEventListener.call(instance, type, listener, options);
             };
@@ -838,7 +950,8 @@
     if (typeof window.eval === 'function') {
         var _eval = window.eval;
         window.eval = function (code) {
-            if (typeof code === 'string' && code) captureTextRuntime('eval', code, { source: 'window.eval', stack: currentStack() });
+            if (typeof code === 'string' && code)
+                captureTextRuntime('eval', code, { source: 'window.eval', stack: currentStack() });
             return _eval.apply(this, arguments);
         };
     }
@@ -850,11 +963,15 @@
             var params = args.length > 1 ? args.slice(0, -1).map(String) : [];
             var body = args.length ? String(args[args.length - 1]) : '';
             if (body) {
-                captureTextRuntime('function', 'function anonymous(' + params.join(', ') + ') {\n' + body + '\n}', {
-                    params: params,
-                    source: 'Function',
-                    stack: currentStack()
-                });
+                captureTextRuntime(
+                    'function',
+                    'function anonymous(' + params.join(', ') + ') {\n' + body + '\n}',
+                    {
+                        params: params,
+                        source: 'Function',
+                        stack: currentStack(),
+                    },
+                );
             }
             return NativeFunction.apply(this, args);
         };
@@ -888,7 +1005,7 @@
         window.Worker = function (url, options) {
             captureUrlRuntime('worker', url, {
                 workerType: options && options.type ? options.type : 'classic',
-                stack: currentStack()
+                stack: currentStack(),
             });
             touchSignal('worker');
             scheduleProfileRefresh('worker');
@@ -903,7 +1020,9 @@
             captureUrlRuntime('shared-worker', url, { stack: currentStack() });
             touchSignal('worker');
             scheduleProfileRefresh('shared-worker');
-            return arguments.length > 1 ? new NativeSharedWorker(url, nameOrOptions) : new NativeSharedWorker(url);
+            return arguments.length > 1
+                ? new NativeSharedWorker(url, nameOrOptions)
+                : new NativeSharedWorker(url);
         };
         window.SharedWorker.prototype = NativeSharedWorker.prototype;
     }
@@ -914,7 +1033,7 @@
             captureUrlRuntime('service-worker', url, {
                 scope: options && options.scope ? options.scope : '',
                 updateViaCache: options && options.updateViaCache ? options.updateViaCache : '',
-                stack: currentStack()
+                stack: currentStack(),
             });
             touchSignal('worker');
             scheduleProfileRefresh('service-worker');
@@ -929,19 +1048,43 @@
                 return;
             }
             if (typeof source.arrayBuffer === 'function') {
-                source.arrayBuffer().then(function (buffer) {
-                    captureBinaryRuntime('wasm', cloneBytes(buffer), assign({ mimeType: 'application/wasm' }, meta || {}));
-                }).catch(function (err) {
-                    captureRuntime('wasm', assign({ note: 'Failed to read WebAssembly source: ' + (err && err.message ? err.message : String(err)) }, meta || {}));
-                });
+                source
+                    .arrayBuffer()
+                    .then(function (buffer) {
+                        captureBinaryRuntime(
+                            'wasm',
+                            cloneBytes(buffer),
+                            assign({ mimeType: 'application/wasm' }, meta || {}),
+                        );
+                    })
+                    .catch(function (err) {
+                        captureRuntime(
+                            'wasm',
+                            assign(
+                                {
+                                    note:
+                                        'Failed to read WebAssembly source: ' +
+                                        (err && err.message ? err.message : String(err)),
+                                },
+                                meta || {},
+                            ),
+                        );
+                    });
                 return;
             }
             var bytes = cloneBytes(source);
             if (bytes.length) {
-                captureBinaryRuntime('wasm', bytes, assign({ mimeType: 'application/wasm' }, meta || {}));
+                captureBinaryRuntime(
+                    'wasm',
+                    bytes,
+                    assign({ mimeType: 'application/wasm' }, meta || {}),
+                );
                 return;
             }
-            captureRuntime('wasm', assign({ note: 'Unsupported WebAssembly source type' }, meta || {}));
+            captureRuntime(
+                'wasm',
+                assign({ note: 'Unsupported WebAssembly source type' }, meta || {}),
+            );
         }
 
         function captureWasmResponse(response, meta) {
@@ -949,20 +1092,47 @@
                 captureRuntime('wasm', assign({ note: 'Missing streaming response' }, meta || {}));
                 return;
             }
-            response.clone().arrayBuffer().then(function (buffer) {
-                captureBinaryRuntime('wasm', cloneBytes(buffer), assign({
-                    url: response.url || '',
-                    mimeType: response.headers && typeof response.headers.get === 'function' ? (response.headers.get('content-type') || 'application/wasm') : 'application/wasm'
-                }, meta || {}));
-            }).catch(function (err) {
-                captureRuntime('wasm', assign({ note: 'Failed to clone streaming WebAssembly response: ' + (err && err.message ? err.message : String(err)) }, meta || {}));
-            });
+            response
+                .clone()
+                .arrayBuffer()
+                .then(function (buffer) {
+                    captureBinaryRuntime(
+                        'wasm',
+                        cloneBytes(buffer),
+                        assign(
+                            {
+                                url: response.url || '',
+                                mimeType:
+                                    response.headers && typeof response.headers.get === 'function'
+                                        ? response.headers.get('content-type') || 'application/wasm'
+                                        : 'application/wasm',
+                            },
+                            meta || {},
+                        ),
+                    );
+                })
+                .catch(function (err) {
+                    captureRuntime(
+                        'wasm',
+                        assign(
+                            {
+                                note:
+                                    'Failed to clone streaming WebAssembly response: ' +
+                                    (err && err.message ? err.message : String(err)),
+                            },
+                            meta || {},
+                        ),
+                    );
+                });
         }
 
         if (typeof WebAssembly.instantiate === 'function') {
             var _wasmInstantiate = WebAssembly.instantiate;
-            WebAssembly.instantiate = function (source, imports) {
-                captureWasmSource(source, { source: 'WebAssembly.instantiate', stack: currentStack() });
+            WebAssembly.instantiate = function (source, _imports) {
+                captureWasmSource(source, {
+                    source: 'WebAssembly.instantiate',
+                    stack: currentStack(),
+                });
                 return _wasmInstantiate.apply(this, arguments);
             };
         }
@@ -975,9 +1145,12 @@
         }
         if (typeof WebAssembly.instantiateStreaming === 'function') {
             var _wasmInstantiateStreaming = WebAssembly.instantiateStreaming;
-            WebAssembly.instantiateStreaming = function (source, imports) {
+            WebAssembly.instantiateStreaming = function (source, _imports) {
                 Promise.resolve(source).then(function (response) {
-                    captureWasmResponse(response, { source: 'WebAssembly.instantiateStreaming', stack: currentStack() });
+                    captureWasmResponse(response, {
+                        source: 'WebAssembly.instantiateStreaming',
+                        stack: currentStack(),
+                    });
                 });
                 return _wasmInstantiateStreaming.apply(this, arguments);
             };
@@ -986,7 +1159,10 @@
             var _wasmCompileStreaming = WebAssembly.compileStreaming;
             WebAssembly.compileStreaming = function (source) {
                 Promise.resolve(source).then(function (response) {
-                    captureWasmResponse(response, { source: 'WebAssembly.compileStreaming', stack: currentStack() });
+                    captureWasmResponse(response, {
+                        source: 'WebAssembly.compileStreaming',
+                        stack: currentStack(),
+                    });
                 });
                 return _wasmCompileStreaming.apply(this, arguments);
             };
@@ -1002,8 +1178,11 @@
             removedNodes: mutation.removedNodes ? getNodeList(mutation.removedNodes, 3) : [],
             attributeName: mutation.attributeName || null,
             oldValue: mutation.oldValue ? mutation.oldValue.substring(0, 200) : null,
-            textContent: mutation.type === 'characterData' ? (mutation.target.textContent || '').substring(0, 200) : null,
-            timestamp: Date.now()
+            textContent:
+                mutation.type === 'characterData'
+                    ? (mutation.target.textContent || '').substring(0, 200)
+                    : null,
+            timestamp: Date.now(),
         });
         SIGNALS.mutationCount = RECON.mutations.length;
         touchSignal('mutation');
@@ -1020,7 +1199,10 @@
         if (node.nodeType === 8) return '#comment';
         var tag = (node.tagName || '').toLowerCase();
         var id = node.id ? '#' + node.id : '';
-        var cls = node.className && typeof node.className === 'string' ? '.' + node.className.trim().split(/\s+/)[0] : '';
+        var cls =
+            node.className && typeof node.className === 'string'
+                ? '.' + node.className.trim().split(/\s+/)[0]
+                : '';
         return tag + id + cls || 'element';
     }
 
@@ -1041,7 +1223,7 @@
                 subtree: true,
                 attributes: true,
                 attributeOldValue: true,
-                characterData: true
+                characterData: true,
             });
         } catch (_) {}
     }
@@ -1055,7 +1237,11 @@
             return 'inline-script:' + (text || 'empty');
         }
         if (tag === 'link' && el.rel === 'stylesheet' && el.href) return el.href;
-        if (tag === 'style') return 'inline-style:' + ((el.textContent || '').substring(0, 40).replace(/\s+/g, ' ') || 'empty');
+        if (tag === 'style')
+            return (
+                'inline-style:' +
+                ((el.textContent || '').substring(0, 40).replace(/\s+/g, ' ') || 'empty')
+            );
         if (tag === 'img') return el.src || el.getAttribute('data-src') || null;
         if (tag === 'video') return el.src || null;
         if (tag === 'audio') return el.src || null;
@@ -1081,7 +1267,7 @@
                 source: source,
                 status: 'loaded',
                 size: 0,
-                time: Date.now()
+                time: Date.now(),
             };
             TRACKER.resources[url] = resource;
             TRACKER.loaded.push(resource);

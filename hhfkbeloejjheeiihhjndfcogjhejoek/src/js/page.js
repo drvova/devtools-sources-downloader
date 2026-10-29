@@ -1,6 +1,12 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { unpackAssetsIntoZip, beautifyJs, looksMinified, looksBinaryScript, decodeBase64ToBytes } from './unpack.js';
+import {
+    unpackAssetsIntoZip,
+    beautifyJs,
+    looksMinified,
+    looksBinaryScript,
+    decodeBase64ToBytes,
+} from './unpack.js';
 
 var reloadDebugBtn = document.getElementById('reloadDebugBtn');
 var downloadBtn = document.getElementById('downloadBtn');
@@ -28,7 +34,6 @@ var pollingTimer = null;
 var isPolling = false;
 var onPollComplete = null;
 var latestTracker = null;
-var latestSite = null;
 var latestStackProfile = null;
 var latestCaptureStatus = null;
 
@@ -49,7 +54,6 @@ function clearActivity() {
 }
 
 function renderPageOrigin(site) {
-    latestSite = site || null;
     if (!site) {
         pageOriginEl.textContent = 'Awaiting inspected page';
         pageOriginEl.title = '';
@@ -69,10 +73,12 @@ function renderStackProfile(profile, captureStatus) {
 
     var labels = [];
     if (activeProfile && activeProfile.technologies && activeProfile.technologies.length) {
-        for (var i = 0; i < activeProfile.technologies.length && i < 5; i++) labels.push(activeProfile.technologies[i].name);
+        for (var i = 0; i < activeProfile.technologies.length && i < 5; i++)
+            labels.push(activeProfile.technologies[i].name);
     }
     if (!labels.length && activeProfile && activeProfile.traits) {
-        for (var j = 0; j < activeProfile.traits.length && j < 3; j++) labels.push(activeProfile.traits[j]);
+        for (var j = 0; j < activeProfile.traits.length && j < 3; j++)
+            labels.push(activeProfile.traits[j]);
     }
     if (!labels.length) labels.push('Detecting stack');
 
@@ -83,16 +89,29 @@ function renderStackProfile(profile, captureStatus) {
         stackBadges.appendChild(badge);
     }
 
-    captureProfileEl.textContent = activeStatus && activeStatus.profile ? activeStatus.profile : (activeProfile && activeProfile.strategy ? activeProfile.strategy.profile : 'generic-app');
-    captureConfidenceEl.textContent = activeProfile && activeProfile.confidence ? activeProfile.confidence + '%' : '--';
+    captureProfileEl.textContent =
+        activeStatus && activeStatus.profile
+            ? activeStatus.profile
+            : activeProfile && activeProfile.strategy
+              ? activeProfile.strategy.profile
+              : 'generic-app';
+    captureConfidenceEl.textContent =
+        activeProfile && activeProfile.confidence ? activeProfile.confidence + '%' : '--';
     captureReasonEl.textContent = describeCaptureReason(activeStatus, activeProfile);
 }
 
 function describeCaptureReason(status, profile) {
     if (status && status.reasonText) return status.reasonText;
     if (status && status.ready) return 'Adaptive capture window satisfied. Export can proceed.';
-    if (profile && profile.strategy && profile.strategy.reasons && profile.strategy.reasons.length) {
-        return 'Adaptive mode: ' + profile.strategy.profile + '. ' + profile.strategy.reasons[0] + '.';
+    if (
+        profile &&
+        profile.strategy &&
+        profile.strategy.reasons &&
+        profile.strategy.reasons.length
+    ) {
+        return (
+            'Adaptive mode: ' + profile.strategy.profile + '. ' + profile.strategy.reasons[0] + '.'
+        );
     }
     return 'Profiler idle until capture starts.';
 }
@@ -137,13 +156,19 @@ function injectAndReload(buttonLabel, onComplete) {
 
     Promise.all([
         fetchTextAsset(chrome.runtime.getURL('js/stack-profile.js'), 'stack-profile.js'),
-        fetchTextAsset(chrome.runtime.getURL('js/framework-introspect.js'), 'framework-introspect.js'),
-        fetchTextAsset(chrome.runtime.getURL('js/injected.js'), 'injected.js')
+        fetchTextAsset(
+            chrome.runtime.getURL('js/framework-introspect.js'),
+            'framework-introspect.js',
+        ),
+        fetchTextAsset(chrome.runtime.getURL('js/injected.js'), 'injected.js'),
     ])
         .then(function (scripts) {
             var code = scripts.join('\n;\n');
             chrome.devtools.inspectedWindow.reload({ injectedScript: code, ignoreCache: true });
-            setActivity('info', 'Waiting for the inspected page to settle so capture stays site-agnostic...');
+            setActivity(
+                'info',
+                'Waiting for the inspected page to settle so capture stays site-agnostic...',
+            );
             startPolling();
         })
         .catch(function (err) {
@@ -153,7 +178,11 @@ function injectAndReload(buttonLabel, onComplete) {
             reloadDebugBtn.textContent = 'Force Reload + Debug';
             downloadBtn.textContent = 'Download All';
             isPolling = false;
-            setActivity('danger', 'Failed to load injected assets: ' + (err && err.message ? err.message : String(err)));
+            setActivity(
+                'danger',
+                'Failed to load injected assets: ' +
+                    (err && err.message ? err.message : String(err)),
+            );
         });
 }
 
@@ -180,14 +209,16 @@ function startPolling() {
                 try {
                     var payload = JSON.parse(result);
                     if (payload.site) renderPageOrigin(payload.site);
-                    if (payload.stackProfile || payload.captureStatus) renderStackProfile(payload.stackProfile, payload.captureStatus);
+                    if (payload.stackProfile || payload.captureStatus)
+                        renderStackProfile(payload.stackProfile, payload.captureStatus);
                     if (payload.data) renderResults(payload.data);
-                    if (!payload.ready && payload.captureStatus && payload.captureStatus.reasonText) setActivity('info', payload.captureStatus.reasonText);
+                    if (!payload.ready && payload.captureStatus && payload.captureStatus.reasonText)
+                        setActivity('info', payload.captureStatus.reasonText);
                     if (payload.ready || attempts >= maxAttempts) stopPolling();
                 } catch (_) {
                     if (attempts >= maxAttempts) stopPolling();
                 }
-            }
+            },
         );
     }, 500);
 }
@@ -210,7 +241,8 @@ function stopPolling() {
     }
     reloadDebugBtn.disabled = false;
     downloadBtn.disabled = false;
-    if (latestTracker) setActivity('success', 'Capture ready. Filter the live view or export everything.');
+    if (latestTracker)
+        setActivity('success', 'Capture ready. Filter the live view or export everything.');
     else clearActivity();
 }
 
@@ -254,7 +286,8 @@ function getTrackerItems(tracker) {
     var loaded = tracker.loaded || [];
     var unloaded = tracker.unloaded || [];
     for (var i = 0; i < loaded.length; i++) items.push(normalizeResource(loaded[i], 'loaded', i));
-    for (var j = 0; j < unloaded.length; j++) items.push(normalizeResource(unloaded[j], 'unloaded', loaded.length + j));
+    for (var j = 0; j < unloaded.length; j++)
+        items.push(normalizeResource(unloaded[j], 'unloaded', loaded.length + j));
     return items;
 }
 
@@ -267,12 +300,14 @@ function normalizeResource(resource, status, index) {
         url: String(resource.url || '?'),
         size: Number(resource.size) || 0,
         time: getResourceTime(resource),
-        order: index
+        order: index,
     };
 }
 
 function getResourceTime(resource) {
-    var value = resource && (resource.time || resource.timestamp || resource.seenAt || resource.startTime || 0);
+    var value =
+        resource &&
+        (resource.time || resource.timestamp || resource.seenAt || resource.startTime || 0);
     value = Number(value);
     return isFinite(value) ? value : 0;
 }
@@ -306,7 +341,9 @@ function matchesResourceFilters(item) {
 
     var search = (resourceSearch.value || '').trim().toLowerCase();
     if (!search) return true;
-    return [item.status, item.type, item.source, item.url].join(' ').toLowerCase().indexOf(search) >= 0;
+    return (
+        [item.status, item.type, item.source, item.url].join(' ').toLowerCase().indexOf(search) >= 0
+    );
 }
 
 function compareResources(left, right) {
@@ -329,7 +366,8 @@ function appendResourceRow(r) {
     var statusTd = document.createElement('td');
     statusTd.setAttribute('data-label', 'Status');
     var dot = document.createElement('span');
-    dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;';
+    dot.style.cssText =
+        'display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;';
     dot.style.backgroundColor = r.status === 'loaded' ? '#48c774' : '#f14668';
     statusTd.appendChild(dot);
     statusTd.appendChild(document.createTextNode(r.status));
@@ -361,7 +399,7 @@ function hashString(text) {
     var hash = 0;
     text = String(text || '');
     for (var i = 0; i < text.length; i++) {
-        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash = (hash << 5) - hash + text.charCodeAt(i);
         hash |= 0;
     }
     return Math.abs(hash).toString(16);
@@ -426,7 +464,8 @@ function sanitizeFilename(url) {
         var offset = 0;
         if (rawParts.length > 1 && /^[a-z][a-z0-9+.-]*:$/i.test(rawParts[0])) {
             var looseProtocol = rawParts[0].slice(0, -1).toLowerCase();
-            if (looseProtocol !== 'http' && looseProtocol !== 'https') cleaned.push(sanitizePathPart(looseProtocol, 'scheme'));
+            if (looseProtocol !== 'http' && looseProtocol !== 'https')
+                cleaned.push(sanitizePathPart(looseProtocol, 'scheme'));
             cleaned.push(sanitizePathPart(safeDecodeURIComponent(rawParts[1]), 'host'));
             offset = 2;
         }
@@ -452,7 +491,11 @@ function sanitizeFilename(url) {
     if (!segments.length) segments.push('unknown');
 
     var name = segments.join('/');
-    if (parsed.search || parsed.hash) name = appendPathSuffix(name, '__' + hashString((parsed.search || '') + (parsed.hash || '')).substring(0, 8));
+    if (parsed.search || parsed.hash)
+        name = appendPathSuffix(
+            name,
+            '__' + hashString((parsed.search || '') + (parsed.hash || '')).substring(0, 8),
+        );
     return name;
 }
 
@@ -464,7 +507,7 @@ function formatSize(bytes) {
 }
 
 function sanitizePageTitle(title) {
-    return ((title || 'page').replace(/[\\/:*?"<>|]/g, '_').substring(0, 100)) || 'page';
+    return (title || 'page').replace(/[\\/:*?"<>|]/g, '_').substring(0, 100) || 'page';
 }
 
 function formatMs(ms) {
@@ -493,11 +536,17 @@ function doDownload() {
         for (var i = 0; i < resources.length; i++) {
             (function (resource) {
                 resource.getContent(function (content, encoding) {
-                    zip.file(sanitizeFilename(resource.url), content, { base64: encoding === 'base64' });
+                    zip.file(sanitizeFilename(resource.url), content, {
+                        base64: encoding === 'base64',
+                    });
                     var urlLo = resource.url.toLowerCase();
                     var binaryBytes = null;
                     if (encoding === 'base64' && content && content.length <= 8 * 1024 * 1024) {
-                        try { binaryBytes = decodeBase64ToBytes(content); } catch (_) { binaryBytes = null; }
+                        try {
+                            binaryBytes = decodeBase64ToBytes(content);
+                        } catch (_) {
+                            binaryBytes = null;
+                        }
                     }
                     if (looksBinaryScript(resource.url, binaryBytes)) {
                         // Cached bytecode (V8 code cache, JSC bytecode, sealed
@@ -506,20 +555,24 @@ function doDownload() {
                         // it as opaque text.
                         var routedBytes = binaryBytes;
                         if (!routedBytes) {
-                            try { routedBytes = decodeBase64ToBytes(content); } catch (_) { routedBytes = null; }
+                            try {
+                                routedBytes = decodeBase64ToBytes(content);
+                            } catch (_) {
+                                routedBytes = null;
+                            }
                         }
                         if (routedBytes) {
                             jsAssets.push({
                                 url: resource.url,
                                 zipPath: sanitizeFilename(resource.url),
-                                bytes: routedBytes
+                                bytes: routedBytes,
                             });
                         }
                     } else if (/\.(?:js|mjs)(?:\?|$)/.test(urlLo) || /\.js$/.test(urlLo)) {
                         jsAssets.push({
                             url: resource.url,
                             zipPath: sanitizeFilename(resource.url),
-                            content: encoding === 'base64' ? atob(content) : content
+                            content: encoding === 'base64' ? atob(content) : content,
                         });
                     }
                     pending--;
@@ -537,13 +590,16 @@ function doDownload() {
                         if (pageData.html) {
                             pageSnapshot.html = pageData.html;
                             pageSnapshot.title = pageData.title || 'page';
-                            zip.file(sanitizePageTitle(pageSnapshot.title) + '.html', pageSnapshot.html);
+                            zip.file(
+                                sanitizePageTitle(pageSnapshot.title) + '.html',
+                                pageSnapshot.html,
+                            );
                         }
                     } catch (_) {}
                 }
                 pending--;
                 checkDone();
-            }
+            },
         );
     });
 }
@@ -551,7 +607,8 @@ function doDownload() {
 function collectReconAndFinalize(zip, jsAssets, pageSnapshot) {
     downloadBtn.textContent = 'Collecting recon data...';
     setActivity('info', 'Collecting recon data from the inspected page...');
-    var reconEval = '(function(){\n' +
+    var reconEval =
+        '(function(){\n' +
         'var ls={},ss={};\n' +
         'try{for(var k in localStorage)ls[k]=localStorage[k];}catch(_){}\n' +
         'try{for(var k in sessionStorage)ss[k]=sessionStorage[k];}catch(_){}\n' +
@@ -585,16 +642,34 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
     var runtimeEntries = [];
 
     if (reconData) {
-        if (reconData.ls && Object.keys(reconData.ls).length) zip.file('_recon/localStorage.json', JSON.stringify(reconData.ls, null, 2));
-        if (reconData.ss && Object.keys(reconData.ss).length) zip.file('_recon/sessionStorage.json', JSON.stringify(reconData.ss, null, 2));
-        if (reconData.cookies && reconData.cookies.trim()) zip.file('_recon/cookies.json', JSON.stringify(parseCookies(reconData.cookies), null, 2));
+        if (reconData.ls && Object.keys(reconData.ls).length)
+            zip.file('_recon/localStorage.json', JSON.stringify(reconData.ls, null, 2));
+        if (reconData.ss && Object.keys(reconData.ss).length)
+            zip.file('_recon/sessionStorage.json', JSON.stringify(reconData.ss, null, 2));
+        if (reconData.cookies && reconData.cookies.trim())
+            zip.file(
+                '_recon/cookies.json',
+                JSON.stringify(parseCookies(reconData.cookies), null, 2),
+            );
         if (reconData.page) zip.file('_recon/page.json', JSON.stringify(reconData.page, null, 2));
         if (reconData.stackProfile) {
             zip.file('_recon/stack-profile.json', JSON.stringify(reconData.stackProfile, null, 2));
-            if (reconData.stackProfile.evidence) zip.file('_recon/framework-signals.json', JSON.stringify(reconData.stackProfile.evidence, null, 2));
-            if (reconData.stackProfile.strategy) zip.file('_recon/capture-strategy.json', JSON.stringify(reconData.stackProfile.strategy, null, 2));
+            if (reconData.stackProfile.evidence)
+                zip.file(
+                    '_recon/framework-signals.json',
+                    JSON.stringify(reconData.stackProfile.evidence, null, 2),
+                );
+            if (reconData.stackProfile.strategy)
+                zip.file(
+                    '_recon/capture-strategy.json',
+                    JSON.stringify(reconData.stackProfile.strategy, null, 2),
+                );
         }
-        if (reconData.captureStatus) zip.file('_recon/capture-status.json', JSON.stringify(reconData.captureStatus, null, 2));
+        if (reconData.captureStatus)
+            zip.file(
+                '_recon/capture-status.json',
+                JSON.stringify(reconData.captureStatus, null, 2),
+            );
         if (reconData.frameworkState) exportFrameworkArtifacts(zip, reconData.frameworkState);
         if (reconData.timings && reconData.timings.length) {
             zip.file('_recon/timings.json', JSON.stringify(reconData.timings, null, 2));
@@ -603,55 +678,96 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
         var r = reconData.recon;
         if (r) {
             if (r.xhr && r.xhr.length) zip.file('_recon/xhr.json', JSON.stringify(r.xhr, null, 2));
-            if (r.fetch && r.fetch.length) zip.file('_recon/fetch.json', JSON.stringify(r.fetch, null, 2));
-            if (r.websockets && r.websockets.length) zip.file('_recon/websockets.json', JSON.stringify(r.websockets, null, 2));
+            if (r.fetch && r.fetch.length)
+                zip.file('_recon/fetch.json', JSON.stringify(r.fetch, null, 2));
+            if (r.websockets && r.websockets.length)
+                zip.file('_recon/websockets.json', JSON.stringify(r.websockets, null, 2));
             if (r.sse && r.sse.length) zip.file('_recon/sse.json', JSON.stringify(r.sse, null, 2));
-            if (r.mutations && r.mutations.length) zip.file('_recon/mutations.json', JSON.stringify(r.mutations, null, 2));
-            if (reconData.stackProfile && reconData.stackProfile.strategy && reconData.stackProfile.strategy.captureGraphQLOps) {
+            if (r.mutations && r.mutations.length)
+                zip.file('_recon/mutations.json', JSON.stringify(r.mutations, null, 2));
+            if (
+                reconData.stackProfile &&
+                reconData.stackProfile.strategy &&
+                reconData.stackProfile.strategy.captureGraphQLOps
+            ) {
                 var graphqlOps = collectGraphQLOperations(r);
-                if (graphqlOps.length) zip.file('_recon/graphql-operations.json', JSON.stringify(graphqlOps, null, 2));
+                if (graphqlOps.length)
+                    zip.file('_recon/graphql-operations.json', JSON.stringify(graphqlOps, null, 2));
             }
             if (r.runtime && r.runtime.length) runtimeEntries = r.runtime;
         }
     }
     if (pageSnapshot && pageSnapshot.html) {
-        zip.file('_recon/dom-snapshot.html', generateDOMSnapshotHTML(pageSnapshot.html, reconData && reconData.page ? reconData.page : { title: pageSnapshot.title || 'page' }));
+        zip.file(
+            '_recon/dom-snapshot.html',
+            generateDOMSnapshotHTML(
+                pageSnapshot.html,
+                reconData && reconData.page
+                    ? reconData.page
+                    : { title: pageSnapshot.title || 'page' },
+            ),
+        );
     }
 
     collectRuntimePayloads(runtimeEntries, function (runtimePayloads) {
         var runtimeManifest = exportRuntimeArtifacts(zip, runtimePayloads);
         setActivity('info', 'Reconstructing modules, flows, workspaces, and journeys...');
         exportSemanticAnalysis(zip, jsAssets, reconData, runtimePayloads, runtimeManifest);
-        setActivity('info', 'Unpacking JavaScript: source maps, bundles, and obfuscation layers...');
+        setActivity(
+            'info',
+            'Unpacking JavaScript: source maps, bundles, and obfuscation layers...',
+        );
         var runtimeJsAssets = buildRuntimeUnpackAssets(runtimePayloads, runtimeManifest);
         unpackAssetsIntoZip(zip, jsAssets, {
             fetchText: fetchSourceMapText,
             onProgress: function (done, total) {
                 setActivity('info', 'Unpacking JavaScript ' + done + '/' + total + '...');
-            }
-        }).then(function (scriptReport) {
-            return unpackAssetsIntoZip(zip, runtimeJsAssets, {
-                pathPrefix: '_unpack-runtime',
-                fetchText: fetchSourceMapText,
-                onProgress: function (done, total) {
-                    setActivity('info', 'Unpacking runtime payloads ' + done + '/' + total + '...');
-                }
-            }).then(function (runtimeReport) {
-                return mergeUnpackReports(scriptReport, runtimeReport);
-            });
-        }).then(function (unpackReport) {
-            zip.generateAsync({ type: 'blob' }).then(function (zipContent) {
-                saveAs(zipContent, 'sources.zip');
+            },
+        })
+            .then(function (scriptReport) {
+                return unpackAssetsIntoZip(zip, runtimeJsAssets, {
+                    pathPrefix: '_unpack-runtime',
+                    fetchText: fetchSourceMapText,
+                    onProgress: function (done, total) {
+                        setActivity(
+                            'info',
+                            'Unpacking runtime payloads ' + done + '/' + total + '...',
+                        );
+                    },
+                }).then(function (runtimeReport) {
+                    return mergeUnpackReports(scriptReport, runtimeReport);
+                });
+            })
+            .then(function (unpackReport) {
+                zip.generateAsync({ type: 'blob' }).then(function (zipContent) {
+                    saveAs(zipContent, 'sources.zip');
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = 'Download All';
+                    var totals = unpackReport.totals;
+                    setActivity(
+                        'success',
+                        'Export ready. Unpacked ' +
+                            totals.unpacked +
+                            ' of ' +
+                            totals.assets +
+                            ' scripts (' +
+                            totals.beautified +
+                            ' beautified, ' +
+                            totals.sources +
+                            ' original sources, ' +
+                            totals.modules +
+                            ' bundle modules).',
+                    );
+                });
+            })
+            .catch(function (err) {
                 downloadBtn.disabled = false;
                 downloadBtn.textContent = 'Download All';
-                var totals = unpackReport.totals;
-                setActivity('success', 'Export ready. Unpacked ' + totals.unpacked + ' of ' + totals.assets + ' scripts (' + totals.beautified + ' beautified, ' + totals.sources + ' original sources, ' + totals.modules + ' bundle modules).');
+                setActivity(
+                    'danger',
+                    'Unpacking failed: ' + (err && err.message ? err.message : String(err)),
+                );
             });
-        }).catch(function (err) {
-            downloadBtn.disabled = false;
-            downloadBtn.textContent = 'Download All';
-            setActivity('danger', 'Unpacking failed: ' + (err && err.message ? err.message : String(err)));
-        });
     });
 }
 
@@ -666,12 +782,15 @@ function buildRuntimeUnpackAssets(runtimePayloads, runtimeManifest) {
         if (runtimeExtension(entry) !== 'js') continue;
         var rawFile = '';
         for (var m = 0; m < manifest.length; m++) {
-            if (manifest[m].id === entry.id) { rawFile = manifest[m].file || ''; break; }
+            if (manifest[m].id === entry.id) {
+                rawFile = manifest[m].file || '';
+                break;
+            }
         }
         assets.push({
             url: entry.url || entry.label || entry.id,
             content: entry.text,
-            zipPath: rawFile
+            zipPath: rawFile,
         });
     }
     return assets;
@@ -701,13 +820,23 @@ function parseCookies(cookieStr) {
 
 function exportFrameworkArtifacts(zip, frameworkState) {
     if (!frameworkState) return;
-    if (frameworkState.summary && Object.keys(frameworkState.summary).length) zip.file('_framework/summary.json', JSON.stringify(frameworkState.summary, null, 2));
-    if (frameworkState.router && Object.keys(frameworkState.router).length) zip.file('_framework/router-state.json', JSON.stringify(frameworkState.router, null, 2));
-    if (frameworkState.roots && frameworkState.roots.length) zip.file('_framework/framework-roots.json', JSON.stringify(frameworkState.roots, null, 2));
-    if (frameworkState.stores && frameworkState.stores.length) zip.file('_framework/store-snapshots.json', JSON.stringify(frameworkState.stores, null, 2));
-    if (frameworkState.queries && frameworkState.queries.length) zip.file('_framework/query-caches.json', JSON.stringify(frameworkState.queries, null, 2));
-    if (frameworkState.hydration && frameworkState.hydration.length) zip.file('_framework/hydration-payloads.json', JSON.stringify(frameworkState.hydration, null, 2));
-    if (frameworkState.auth && frameworkState.auth.length) zip.file('_framework/auth-state.json', JSON.stringify(frameworkState.auth, null, 2));
+    if (frameworkState.summary && Object.keys(frameworkState.summary).length)
+        zip.file('_framework/summary.json', JSON.stringify(frameworkState.summary, null, 2));
+    if (frameworkState.router && Object.keys(frameworkState.router).length)
+        zip.file('_framework/router-state.json', JSON.stringify(frameworkState.router, null, 2));
+    if (frameworkState.roots && frameworkState.roots.length)
+        zip.file('_framework/framework-roots.json', JSON.stringify(frameworkState.roots, null, 2));
+    if (frameworkState.stores && frameworkState.stores.length)
+        zip.file('_framework/store-snapshots.json', JSON.stringify(frameworkState.stores, null, 2));
+    if (frameworkState.queries && frameworkState.queries.length)
+        zip.file('_framework/query-caches.json', JSON.stringify(frameworkState.queries, null, 2));
+    if (frameworkState.hydration && frameworkState.hydration.length)
+        zip.file(
+            '_framework/hydration-payloads.json',
+            JSON.stringify(frameworkState.hydration, null, 2),
+        );
+    if (frameworkState.auth && frameworkState.auth.length)
+        zip.file('_framework/auth-state.json', JSON.stringify(frameworkState.auth, null, 2));
 }
 
 function collectRuntimePayloads(runtimeEntries, onComplete) {
@@ -719,7 +848,8 @@ function collectRuntimePayloads(runtimeEntries, onComplete) {
     var cursor = 0;
 
     function step() {
-        while (cursor < entries.length && !entries[cursor].hasText && !entries[cursor].hasBase64) cursor++;
+        while (cursor < entries.length && !entries[cursor].hasText && !entries[cursor].hasBase64)
+            cursor++;
         if (cursor >= entries.length) {
             onComplete(entries);
             return;
@@ -738,7 +868,12 @@ function collectRuntimePayloads(runtimeEntries, onComplete) {
 }
 
 function fetchRuntimePayload(index, onComplete) {
-    var expr = '(function(){var list=window.__RECON__&&window.__RECON__.runtime;if(!list||!list[' + index + ']) return null;var item=list[' + index + '];return JSON.stringify({text:typeof item.text==="string"?item.text:null,base64:typeof item.base64==="string"?item.base64:null});})()';
+    var expr =
+        '(function(){var list=window.__RECON__&&window.__RECON__.runtime;if(!list||!list[' +
+        index +
+        ']) return null;var item=list[' +
+        index +
+        '];return JSON.stringify({text:typeof item.text==="string"?item.text:null,base64:typeof item.base64==="string"?item.base64:null});})()';
     chrome.devtools.inspectedWindow.eval(expr, function (result, error) {
         if (!result || error) {
             onComplete(null);
@@ -760,7 +895,14 @@ function exportRuntimeArtifacts(zip, runtimeEntries) {
         var manifestEntry = {};
         for (var key in entry) {
             if (!Object.prototype.hasOwnProperty.call(entry, key)) continue;
-            if (key === 'index' || key === 'text' || key === 'base64' || key === 'hasText' || key === 'hasBase64') continue;
+            if (
+                key === 'index' ||
+                key === 'text' ||
+                key === 'base64' ||
+                key === 'hasText' ||
+                key === 'hasBase64'
+            )
+                continue;
             manifestEntry[key] = entry[key];
         }
         if (typeof entry.text === 'string' || typeof entry.base64 === 'string') {
@@ -777,7 +919,14 @@ function exportRuntimeArtifacts(zip, runtimeEntries) {
 function buildRuntimePath(entry, counters) {
     var folder = runtimeFolderName(entry.kind);
     counters[folder] = (counters[folder] || 0) + 1;
-    return '_runtime/' + folder + '/' + ('0000' + counters[folder]).slice(-4) + '.' + runtimeExtension(entry);
+    return (
+        '_runtime/' +
+        folder +
+        '/' +
+        ('0000' + counters[folder]).slice(-4) +
+        '.' +
+        runtimeExtension(entry)
+    );
 }
 
 function runtimeFolderName(kind) {
@@ -802,7 +951,15 @@ function runtimeExtension(entry) {
     if (/svg/i.test(mimeType)) return 'svg';
     if (/xml/i.test(mimeType)) return 'xml';
     if (/text/i.test(mimeType)) return 'txt';
-    if (entry.kind === 'eval' || entry.kind === 'function' || entry.kind === 'worker' || entry.kind === 'shared-worker' || entry.kind === 'service-worker' || entry.kind === 'script-injection') return 'js';
+    if (
+        entry.kind === 'eval' ||
+        entry.kind === 'function' ||
+        entry.kind === 'worker' ||
+        entry.kind === 'shared-worker' ||
+        entry.kind === 'service-worker' ||
+        entry.kind === 'script-injection'
+    )
+        return 'js';
     return typeof entry.base64 === 'string' ? 'bin' : 'txt';
 }
 
@@ -810,17 +967,29 @@ function exportSemanticAnalysis(zip, jsAssets, reconData, runtimeEntries, runtim
     var analysis = buildSemanticAnalysis(jsAssets, reconData, runtimeEntries, runtimeManifest);
     exportReadableArtifacts(zip, analysis);
     zip.file('_analysis/chunk-map.json', JSON.stringify(analysis.chunkMap, null, 2));
-    zip.file('_analysis/cross-boundary-flows.json', JSON.stringify(analysis.crossBoundaryFlows, null, 2));
+    zip.file(
+        '_analysis/cross-boundary-flows.json',
+        JSON.stringify(analysis.crossBoundaryFlows, null, 2),
+    );
     zip.file('_analysis/module-graph.json', JSON.stringify(analysis.moduleGraph, null, 2));
     zip.file('_analysis/startup-chain.json', JSON.stringify(analysis.startupChain, null, 2));
     zip.file('_analysis/runtime-origins.json', JSON.stringify(analysis.runtimeOrigins, null, 2));
     zip.file('_analysis/boundary-labels.json', JSON.stringify(analysis.boundaryLabels, null, 2));
-    zip.file('_analysis/framework-runtime.json', JSON.stringify(analysis.frameworkRuntime, null, 2));
-    zip.file('_analysis/interesting-entrypoints.json', JSON.stringify(analysis.interestingEntrypoints, null, 2));
+    zip.file(
+        '_analysis/framework-runtime.json',
+        JSON.stringify(analysis.frameworkRuntime, null, 2),
+    );
+    zip.file(
+        '_analysis/interesting-entrypoints.json',
+        JSON.stringify(analysis.interestingEntrypoints, null, 2),
+    );
     zip.file('_analysis/index.html', generateInvestigationIndexHTML(analysis.investigation));
     for (var i = 0; i < analysis.investigation.workspaces.length; i++) {
         var workspace = analysis.investigation.workspaces[i];
-        zip.file('_analysis/workspaces/' + workspace.id + '.json', JSON.stringify(workspace, null, 2));
+        zip.file(
+            '_analysis/workspaces/' + workspace.id + '.json',
+            JSON.stringify(workspace, null, 2),
+        );
     }
     for (var j = 0; j < analysis.investigation.journeys.length; j++) {
         var journey = analysis.investigation.journeys[j];
@@ -834,45 +1003,58 @@ function buildSemanticAnalysis(jsAssets, reconData, runtimeEntries, runtimeManif
     var boundaryLabels = buildBoundaryLabels(reconData, assets, runtimeOrigins);
     var crossBoundaryFlows = buildCrossBoundaryFlows(reconData, assets, runtimeOrigins);
     var interestingEntrypoints = collectInterestingEntrypoints(assets, runtimeOrigins);
-    var frameworkState = buildFrameworkStateSummary(reconData && reconData.frameworkState ? reconData.frameworkState : null);
+    var frameworkState = buildFrameworkStateSummary(
+        reconData && reconData.frameworkState ? reconData.frameworkState : null,
+    );
     var analysis = {
         assets: assets,
         runtimeRecords: runtimeOrigins,
         chunkMap: {
             generatedAt: new Date().toISOString(),
             summary: buildChunkSummary(assets),
-            items: assets.map(stripChunkAsset)
+            items: assets.map(stripChunkAsset),
         },
         moduleGraph: buildModuleGraph(reconData, assets, runtimeOrigins),
         startupChain: buildStartupChain(reconData, assets, runtimeOrigins),
         runtimeOrigins: {
             generatedAt: new Date().toISOString(),
             summary: buildRuntimeSummary(runtimeOrigins),
-            items: runtimeOrigins.map(stripRuntimeEntry)
+            items: runtimeOrigins.map(stripRuntimeEntry),
         },
         boundaryLabels: boundaryLabels,
         crossBoundaryFlows: crossBoundaryFlows,
         frameworkState: frameworkState,
-        frameworkRuntime: buildFrameworkRuntimeSummary(reconData, assets, runtimeOrigins, interestingEntrypoints, boundaryLabels, crossBoundaryFlows),
-        interestingEntrypoints: interestingEntrypoints
+        frameworkRuntime: buildFrameworkRuntimeSummary(
+            reconData,
+            assets,
+            runtimeOrigins,
+            interestingEntrypoints,
+            boundaryLabels,
+            crossBoundaryFlows,
+        ),
+        interestingEntrypoints: interestingEntrypoints,
     };
     analysis.investigation = buildInvestigationWorkspace(analysis);
-    analysis.frameworkRuntime.availableWorkspaces = analysis.investigation.workspaces.map(function (workspace) {
-        return {
-            id: workspace.id,
-            title: workspace.title,
-            itemCount: workspace.summary.totalItems,
-            transitionCount: workspace.summary.transitionCount
-        };
-    });
-    analysis.frameworkRuntime.availableJourneys = analysis.investigation.journeys.map(function (journey) {
-        return {
-            id: journey.id,
-            title: journey.title,
-            eventCount: journey.summary.eventCount,
-            transitionCount: journey.summary.transitionCount
-        };
-    });
+    analysis.frameworkRuntime.availableWorkspaces = analysis.investigation.workspaces.map(
+        function (workspace) {
+            return {
+                id: workspace.id,
+                title: workspace.title,
+                itemCount: workspace.summary.totalItems,
+                transitionCount: workspace.summary.transitionCount,
+            };
+        },
+    );
+    analysis.frameworkRuntime.availableJourneys = analysis.investigation.journeys.map(
+        function (journey) {
+            return {
+                id: journey.id,
+                title: journey.title,
+                eventCount: journey.summary.eventCount,
+                transitionCount: journey.summary.transitionCount,
+            };
+        },
+    );
     return analysis;
 }
 
@@ -904,13 +1086,18 @@ function prepareScriptAssets(jsAssets, reconData) {
     var assets = [];
     for (var i = 0; i < jsAssets.length; i++) {
         var item = jsAssets[i] || {};
-        var url = String(item.url || ('inline/script-' + (i + 1) + '.js'));
+        var url = String(item.url || 'inline/script-' + (i + 1) + '.js');
         var content = typeof item.content === 'string' ? item.content : '';
         var scanText = content.length > 200000 ? content.substring(0, 200000) : content;
-        var timing = timingLookup[normalizeUrlKey(url)] || timingLookup[stripUrlVariant(url)] || null;
+        var timing =
+            timingLookup[normalizeUrlKey(url)] || timingLookup[stripUrlVariant(url)] || null;
         var imports = extractImportSpecifiers(scanText);
         var entry = {
-            id: 'chunk-' + sanitizePathPart(getBareFileName(url) || ('script-' + (i + 1)), 'script') + '-' + hashString(url).substring(0, 8),
+            id:
+                'chunk-' +
+                sanitizePathPart(getBareFileName(url) || 'script-' + (i + 1), 'script') +
+                '-' +
+                hashString(url).substring(0, 8),
             url: url,
             file: sanitizeFilename(url),
             size: content.length,
@@ -922,16 +1109,22 @@ function prepareScriptAssets(jsAssets, reconData) {
                 importCount: imports.length,
                 dynamicImports: countMatches(scanText, /\bimport\s*\(/g),
                 requires: countMatches(scanText, /\brequire\s*\(\s*["'`]/g),
-                exports: countMatches(scanText, /\bexport\s+(?:default|const|function|class|\{)/g)
+                exports: countMatches(scanText, /\bexport\s+(?:default|const|function|class|\{)/g),
             },
             bundler: detectBundlerName(url, scanText),
             frameworkHints: detectFrameworkHints(url, scanText, stackProfile),
             routeHints: extractRouteHintsFromUrl(url),
             startupSignals: detectStartupSignals(url, scanText),
             sourceMapEmbedded: /sourceMappingURL\s*=\s*data:/i.test(scanText),
-            content: content
+            content: content,
         };
-        entry.classification = classifyScriptAsset(url, scanText, entry.bundler, entry.frameworkHints, entry.startupSignals);
+        entry.classification = classifyScriptAsset(
+            url,
+            scanText,
+            entry.bundler,
+            entry.frameworkHints,
+            entry.startupSignals,
+        );
         entry.score = scoreScriptAsset(entry);
         assets.push(entry);
     }
@@ -940,16 +1133,27 @@ function prepareScriptAssets(jsAssets, reconData) {
 
 function detectBundlerName(url, content) {
     var sample = (String(url || '') + '\n' + String(content || '')).toLowerCase();
-    if (sample.indexOf('__webpack_require__') >= 0 || sample.indexOf('webpackchunk') >= 0 || sample.indexOf('/_next/static/chunks/') >= 0) return 'webpack';
+    if (
+        sample.indexOf('__webpack_require__') >= 0 ||
+        sample.indexOf('webpackchunk') >= 0 ||
+        sample.indexOf('/_next/static/chunks/') >= 0
+    )
+        return 'webpack';
     if (sample.indexOf('parcelrequire') >= 0) return 'parcel';
-    if (sample.indexOf('import.meta.hot') >= 0 || sample.indexOf('/@vite/') >= 0 || sample.indexOf('__vite__') >= 0) return 'vite';
+    if (
+        sample.indexOf('import.meta.hot') >= 0 ||
+        sample.indexOf('/@vite/') >= 0 ||
+        sample.indexOf('__vite__') >= 0
+    )
+        return 'vite';
     return 'unknown';
 }
 
 function detectFrameworkHints(url, content, stackProfile) {
     var sample = (String(url || '') + '\n' + String(content || '')).toLowerCase();
     var hints = [];
-    if (sample.indexOf('__next_data__') >= 0 || sample.indexOf('/_next/') >= 0) hints.push('Next.js');
+    if (sample.indexOf('__next_data__') >= 0 || sample.indexOf('/_next/') >= 0)
+        hints.push('Next.js');
     if (sample.indexOf('reactdom') >= 0 || sample.indexOf('react') >= 0) hints.push('React');
     if (sample.indexOf('__nuxt') >= 0) hints.push('Nuxt');
     if (sample.indexOf('__vue') >= 0 || sample.indexOf('createapp(') >= 0) hints.push('Vue');
@@ -969,15 +1173,33 @@ function detectFrameworkHints(url, content, stackProfile) {
 function detectStartupSignals(url, content) {
     var sample = (String(url || '') + '\n' + String(content || '')).toLowerCase();
     var signals = [];
-    if (sample.indexOf('hydrateroot') >= 0 || sample.indexOf('reactdom.hydrate') >= 0 || sample.indexOf('__next_data__') >= 0) signals.push('hydration');
+    if (
+        sample.indexOf('hydrateroot') >= 0 ||
+        sample.indexOf('reactdom.hydrate') >= 0 ||
+        sample.indexOf('__next_data__') >= 0
+    )
+        signals.push('hydration');
     if (sample.indexOf('serviceworker.register') >= 0) signals.push('service-worker-register');
-    if (sample.indexOf('new worker(') >= 0 || sample.indexOf('sharedworker(') >= 0) signals.push('worker-bootstrap');
+    if (sample.indexOf('new worker(') >= 0 || sample.indexOf('sharedworker(') >= 0)
+        signals.push('worker-bootstrap');
     if (sample.indexOf('webassembly') >= 0) signals.push('wasm-bootstrap');
-    if (sample.indexOf('graphql') >= 0 || sample.indexOf('apollo') >= 0 || sample.indexOf('relay') >= 0) signals.push('graphql-client');
+    if (
+        sample.indexOf('graphql') >= 0 ||
+        sample.indexOf('apollo') >= 0 ||
+        sample.indexOf('relay') >= 0
+    )
+        signals.push('graphql-client');
     if (sample.indexOf('import(') >= 0) signals.push('dynamic-import');
     if (sample.indexOf('sourcemappingurl=data:') >= 0) signals.push('inline-source-map');
-    if (sample.indexOf('webpackchunk') >= 0 || sample.indexOf('__webpack_require__.e') >= 0 || sample.indexOf('parcelrequire') >= 0 || sample.indexOf('__vite__') >= 0) signals.push('chunk-loader');
-    if (sample.indexOf('router') >= 0 || sample.indexOf('history.pushstate') >= 0) signals.push('router');
+    if (
+        sample.indexOf('webpackchunk') >= 0 ||
+        sample.indexOf('__webpack_require__.e') >= 0 ||
+        sample.indexOf('parcelrequire') >= 0 ||
+        sample.indexOf('__vite__') >= 0
+    )
+        signals.push('chunk-loader');
+    if (sample.indexOf('router') >= 0 || sample.indexOf('history.pushstate') >= 0)
+        signals.push('router');
     return uniqueStrings(signals);
 }
 
@@ -1002,7 +1224,7 @@ function extractImportSpecifiers(content) {
     var patterns = [
         /\bimport\s*(?:[^"'`]*?from\s*)?["'`]([^"'`]+)["'`]/g,
         /\bimport\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g,
-        /\brequire\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g
+        /\brequire\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g,
     ];
     for (var i = 0; i < patterns.length; i++) {
         patterns[i].lastIndex = 0;
@@ -1024,16 +1246,31 @@ function countMatches(text, pattern) {
 
 function classifyScriptAsset(url, content, bundler, frameworkHints, startupSignals) {
     var sample = (String(url || '') + '\n' + String(content || '')).toLowerCase();
-    if (/runtime|manifest|polyfill|bootstrap/.test(sample) || startupSignals.indexOf('chunk-loader') >= 0) return 'runtime';
+    if (
+        /runtime|manifest|polyfill|bootstrap/.test(sample) ||
+        startupSignals.indexOf('chunk-loader') >= 0
+    )
+        return 'runtime';
     if (/vendor|node_modules|chunk-vendors/.test(sample)) return 'vendor';
-    if (frameworkHints.length && /react|vue|angular|next|nuxt|svelte|astro|remix/i.test(frameworkHints.join(' '))) return 'framework';
+    if (
+        frameworkHints.length &&
+        /react|vue|angular|next|nuxt|svelte|astro|remix/i.test(frameworkHints.join(' '))
+    )
+        return 'framework';
     if (bundler !== 'unknown' && startupSignals.indexOf('hydration') >= 0) return 'app';
     if (startupSignals.length || extractRouteHintsFromUrl(url).length) return 'app';
     return 'app';
 }
 
 function scoreScriptAsset(entry) {
-    var score = entry.classification === 'app' ? 48 : entry.classification === 'runtime' ? 34 : entry.classification === 'framework' ? 24 : 18;
+    var score =
+        entry.classification === 'app'
+            ? 48
+            : entry.classification === 'runtime'
+              ? 34
+              : entry.classification === 'framework'
+                ? 24
+                : 18;
     score += entry.startupSignals.length * 7;
     score += entry.routeHints.length * 4;
     score += Math.min(12, entry.moduleSignals.dynamicImports * 2 + entry.moduleSignals.importCount);
@@ -1045,12 +1282,18 @@ function scoreScriptAsset(entry) {
 function buildChunkSummary(assets) {
     var summary = {
         totalScripts: assets.length,
-        bundlersObserved: uniqueStrings(assets.map(function (item) { return item.bundler; })).filter(function (item) { return item && item !== 'unknown'; }),
+        bundlersObserved: uniqueStrings(
+            assets.map(function (item) {
+                return item.bundler;
+            }),
+        ).filter(function (item) {
+            return item && item !== 'unknown';
+        }),
         classifications: countPropertyValues(assets, 'classification'),
         boundaryLabels: countBoundaryLabels(assets),
         sourceMapEmbedded: 0,
         dynamicImporters: 0,
-        labeledScripts: countTaggedEntries(assets)
+        labeledScripts: countTaggedEntries(assets),
     };
     for (var i = 0; i < assets.length; i++) {
         if (assets[i].sourceMapEmbedded) summary.sourceMapEmbedded++;
@@ -1079,20 +1322,25 @@ function stripChunkAsset(asset) {
         imports: asset.imports,
         moduleSignals: asset.moduleSignals,
         sourceMapEmbedded: asset.sourceMapEmbedded,
-        score: asset.score
+        score: asset.score,
     };
 }
 
 function buildRuntimeOrigins(runtimeEntries, runtimeManifest, assets) {
     var manifestById = {};
-    for (var i = 0; i < runtimeManifest.length; i++) manifestById[runtimeManifest[i].id] = runtimeManifest[i];
+    for (var i = 0; i < runtimeManifest.length; i++)
+        manifestById[runtimeManifest[i].id] = runtimeManifest[i];
     var runtimeOrigins = [];
     for (var j = 0; j < runtimeEntries.length; j++) {
         var item = {};
         var source = runtimeEntries[j] || {};
         var manifestItem = manifestById[source.id] || null;
-        if (manifestItem) for (var mk in manifestItem) if (Object.prototype.hasOwnProperty.call(manifestItem, mk)) item[mk] = manifestItem[mk];
-        for (var sk in source) if (Object.prototype.hasOwnProperty.call(source, sk)) item[sk] = source[sk];
+        if (manifestItem)
+            for (var mk in manifestItem)
+                if (Object.prototype.hasOwnProperty.call(manifestItem, mk))
+                    item[mk] = manifestItem[mk];
+        for (var sk in source)
+            if (Object.prototype.hasOwnProperty.call(source, sk)) item[sk] = source[sk];
         item.stackRefs = extractStackRefs(item.stack);
         item.relatedChunks = [];
         var directAsset = findAssetByReference(item.url || item.objectUrl, assets);
@@ -1116,7 +1364,9 @@ function getBareFileName(value) {
 }
 
 function cleanStackReference(value) {
-    value = String(value || '').trim().replace(/[),]+$/, '');
+    value = String(value || '')
+        .trim()
+        .replace(/[),]+$/, '');
     return value.replace(/:\d+:\d+$/, '').replace(/:\d+$/, '');
 }
 
@@ -1124,7 +1374,8 @@ function extractStackRefs(stack) {
     var refs = [];
     var match;
     var pattern = /(https?:\/\/[^\s)]+|blob:[^\s)]+)/g;
-    while ((match = pattern.exec(String(stack || ''))) && refs.length < 12) refs.push(cleanStackReference(match[1]));
+    while ((match = pattern.exec(String(stack || ''))) && refs.length < 12)
+        refs.push(cleanStackReference(match[1]));
     return uniqueStrings(refs);
 }
 
@@ -1135,7 +1386,13 @@ function findAssetByReference(reference, assets) {
     var bare = stripUrlVariant(cleaned);
     var file = getBareFileName(cleaned);
     for (var i = 0; i < assets.length; i++) {
-        if (assets[i].url === cleaned || normalizeUrlKey(assets[i].url) === full || stripUrlVariant(assets[i].url) === bare || getBareFileName(assets[i].url) === file) return assets[i];
+        if (
+            assets[i].url === cleaned ||
+            normalizeUrlKey(assets[i].url) === full ||
+            stripUrlVariant(assets[i].url) === bare ||
+            getBareFileName(assets[i].url) === file
+        )
+            return assets[i];
     }
     return null;
 }
@@ -1143,7 +1400,12 @@ function findAssetByReference(reference, assets) {
 function determineRuntimeOriginType(entry) {
     if (entry.blobId) return 'blob-derived';
     if (entry.kind === 'script-injection') return 'inline-script';
-    if (entry.kind === 'worker' || entry.kind === 'shared-worker' || entry.kind === 'service-worker') return 'worker-bootstrap';
+    if (
+        entry.kind === 'worker' ||
+        entry.kind === 'shared-worker' ||
+        entry.kind === 'service-worker'
+    )
+        return 'worker-bootstrap';
     if (entry.kind === 'wasm') return 'wasm-module';
     if (entry.relatedChunks && entry.relatedChunks.length) return 'bundle-linked';
     if (entry.url && /^blob:/i.test(entry.url)) return 'object-url';
@@ -1152,7 +1414,14 @@ function determineRuntimeOriginType(entry) {
 }
 
 function scoreRuntimeEntry(entry) {
-    var score = entry.kind === 'eval' || entry.kind === 'function' ? 46 : entry.kind === 'wasm' ? 42 : entry.kind === 'script-injection' ? 38 : 28;
+    var score =
+        entry.kind === 'eval' || entry.kind === 'function'
+            ? 46
+            : entry.kind === 'wasm'
+              ? 42
+              : entry.kind === 'script-injection'
+                ? 38
+                : 28;
     if (entry.relatedChunks && entry.relatedChunks.length) score += entry.relatedChunks.length * 8;
     if (entry.blobId) score += 10;
     if (typeof entry.text === 'string') score += 6;
@@ -1177,7 +1446,7 @@ function stripRuntimeEntry(entry) {
         size: entry.size || 0,
         truncated: !!entry.truncated,
         note: entry.note || '',
-        score: entry.score || 0
+        score: entry.score || 0,
     };
 }
 
@@ -1187,8 +1456,10 @@ function buildRuntimeSummary(runtimeOrigins) {
         kinds: countPropertyValues(runtimeOrigins, 'kind'),
         originTypes: countPropertyValues(runtimeOrigins, 'originType'),
         boundaryLabels: countBoundaryLabels(runtimeOrigins),
-        linkedToChunks: runtimeOrigins.filter(function (item) { return item.relatedChunks && item.relatedChunks.length; }).length,
-        labeledEntries: countTaggedEntries(runtimeOrigins)
+        linkedToChunks: runtimeOrigins.filter(function (item) {
+            return item.relatedChunks && item.relatedChunks.length;
+        }).length,
+        labeledEntries: countTaggedEntries(runtimeOrigins),
     };
 }
 
@@ -1212,16 +1483,28 @@ function buildModuleGraph(reconData, assets, runtimeOrigins) {
         edgeMap[key] = edge;
         edges.push(edge);
     }
-    addNode('page', 'page', reconData && reconData.page && reconData.page.url ? reconData.page.url : 'page');
+    addNode(
+        'page',
+        'page',
+        reconData && reconData.page && reconData.page.url ? reconData.page.url : 'page',
+    );
     for (var i = 0; i < assets.length; i++) {
-        addNode(assets[i].id, 'chunk', getBareFileName(assets[i].url), { classification: assets[i].classification, bundler: assets[i].bundler, primaryBoundary: assets[i].primaryBoundary || '' });
+        addNode(assets[i].id, 'chunk', getBareFileName(assets[i].url), {
+            classification: assets[i].classification,
+            bundler: assets[i].bundler,
+            primaryBoundary: assets[i].primaryBoundary || '',
+        });
         addEdge('page', assets[i].id, 'resource', { startTime: assets[i].startTime });
         for (var j = 0; j < assets[i].imports.length; j++) {
             var specifier = assets[i].imports[j];
             var targetAsset = findAssetByReference(specifier, assets);
-            if (targetAsset && targetAsset.id !== assets[i].id) addEdge(assets[i].id, targetAsset.id, 'imports', { specifier: specifier });
+            if (targetAsset && targetAsset.id !== assets[i].id)
+                addEdge(assets[i].id, targetAsset.id, 'imports', { specifier: specifier });
             else {
-                var depId = (specifier.indexOf('.') === 0 || specifier.indexOf('/') >= 0 ? 'ref:' : 'pkg:') + specifier;
+                var depId =
+                    (specifier.indexOf('.') === 0 || specifier.indexOf('/') >= 0
+                        ? 'ref:'
+                        : 'pkg:') + specifier;
                 addNode(depId, depId.indexOf('pkg:') === 0 ? 'package' : 'reference', specifier);
                 addEdge(assets[i].id, depId, 'imports', { specifier: specifier });
             }
@@ -1229,23 +1512,42 @@ function buildModuleGraph(reconData, assets, runtimeOrigins) {
     }
     for (var r = 0; r < runtimeOrigins.length; r++) {
         var runtimeId = 'runtime:' + runtimeOrigins[r].id;
-        addNode(runtimeId, 'runtime', runtimeOrigins[r].kind, { originType: runtimeOrigins[r].originType, file: runtimeOrigins[r].file || '', primaryBoundary: runtimeOrigins[r].primaryBoundary || '' });
+        addNode(runtimeId, 'runtime', runtimeOrigins[r].kind, {
+            originType: runtimeOrigins[r].originType,
+            file: runtimeOrigins[r].file || '',
+            primaryBoundary: runtimeOrigins[r].primaryBoundary || '',
+        });
         if (runtimeOrigins[r].relatedChunks && runtimeOrigins[r].relatedChunks.length) {
-            for (var c = 0; c < runtimeOrigins[r].relatedChunks.length; c++) addEdge(runtimeOrigins[r].relatedChunks[c], runtimeId, runtimeOrigins[r].originType);
-        } else if (runtimeOrigins[r].blobId) addEdge('runtime:' + runtimeOrigins[r].blobId, runtimeId, 'spawns');
+            for (var c = 0; c < runtimeOrigins[r].relatedChunks.length; c++)
+                addEdge(
+                    runtimeOrigins[r].relatedChunks[c],
+                    runtimeId,
+                    runtimeOrigins[r].originType,
+                );
+        } else if (runtimeOrigins[r].blobId)
+            addEdge('runtime:' + runtimeOrigins[r].blobId, runtimeId, 'spawns');
         else addEdge('page', runtimeId, runtimeOrigins[r].originType);
     }
     var graphqlOps = reconData && reconData.recon ? collectGraphQLOperations(reconData.recon) : [];
-    var endpoints = uniqueStrings(graphqlOps.map(function (item) { return item.url; })).slice(0, 12);
+    var endpoints = uniqueStrings(
+        graphqlOps.map(function (item) {
+            return item.url;
+        }),
+    ).slice(0, 12);
     for (var e = 0; e < endpoints.length; e++) {
         addNode('endpoint:' + endpoints[e], 'endpoint', endpoints[e]);
         addEdge('page', 'endpoint:' + endpoints[e], 'graphql');
     }
     return {
         generatedAt: new Date().toISOString(),
-        summary: { nodes: nodes.length, edges: edges.length, runtimeNodes: runtimeOrigins.length, chunkNodes: assets.length },
+        summary: {
+            nodes: nodes.length,
+            edges: edges.length,
+            runtimeNodes: runtimeOrigins.length,
+            chunkNodes: assets.length,
+        },
         nodes: nodes,
-        edges: edges
+        edges: edges,
     };
 }
 
@@ -1253,61 +1555,136 @@ function collectNetworkOperations(recon) {
     var operations = [];
     var groups = [
         { type: 'xhr', items: recon && recon.xhr ? recon.xhr : [] },
-        { type: 'fetch', items: recon && recon.fetch ? recon.fetch : [] }
+        { type: 'fetch', items: recon && recon.fetch ? recon.fetch : [] },
     ];
     for (var i = 0; i < groups.length; i++) {
         for (var j = 0; j < groups[i].items.length; j++) {
             var item = groups[i].items[j] || {};
-            operations.push({ type: groups[i].type, url: item.url || '', method: item.method || 'GET', status: item.status || 0, timestamp: item.timestamp || 0, requestBody: item.requestBody || '', requestHeaders: item.requestHeaders || {}, responseHeaders: item.responseHeaders || '', responsePreview: item.responseText || item.responseBodyExcerpt || item.responsePreview || '' });
+            operations.push({
+                type: groups[i].type,
+                url: item.url || '',
+                method: item.method || 'GET',
+                status: item.status || 0,
+                timestamp: item.timestamp || 0,
+                requestBody: item.requestBody || '',
+                requestHeaders: item.requestHeaders || {},
+                responseHeaders: item.responseHeaders || '',
+                responsePreview:
+                    item.responseText || item.responseBodyExcerpt || item.responsePreview || '',
+            });
         }
     }
-    operations.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+    operations.sort(function (a, b) {
+        return (a.timestamp || 0) - (b.timestamp || 0);
+    });
     return operations;
 }
 
 function buildStartupChain(reconData, assets, runtimeOrigins) {
-    var networkOps = collectNetworkOperations(reconData && reconData.recon ? reconData.recon : null);
+    var networkOps = collectNetworkOperations(
+        reconData && reconData.recon ? reconData.recon : null,
+    );
     var graphqlOps = reconData && reconData.recon ? collectGraphQLOperations(reconData.recon) : [];
-    var scripts = assets.slice().sort(function (a, b) { return (a.startTime || 0) - (b.startTime || 0); }).slice(0, 40).map(function (item) {
-        return { id: item.id, url: item.url, classification: item.classification, primaryBoundary: item.primaryBoundary || '', startTime: item.startTime, duration: item.duration, startupSignals: item.startupSignals };
-    });
-    var runtime = runtimeOrigins.slice().sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); }).slice(0, 40).map(function (item) {
-        return { id: item.id, kind: item.kind, originType: item.originType, primaryBoundary: item.primaryBoundary || '', timestamp: item.timestamp || 0, relatedChunks: item.relatedChunks || [], file: item.file || '' };
-    });
+    var scripts = assets
+        .slice()
+        .sort(function (a, b) {
+            return (a.startTime || 0) - (b.startTime || 0);
+        })
+        .slice(0, 40)
+        .map(function (item) {
+            return {
+                id: item.id,
+                url: item.url,
+                classification: item.classification,
+                primaryBoundary: item.primaryBoundary || '',
+                startTime: item.startTime,
+                duration: item.duration,
+                startupSignals: item.startupSignals,
+            };
+        });
+    var runtime = runtimeOrigins
+        .slice()
+        .sort(function (a, b) {
+            return (a.timestamp || 0) - (b.timestamp || 0);
+        })
+        .slice(0, 40)
+        .map(function (item) {
+            return {
+                id: item.id,
+                kind: item.kind,
+                originType: item.originType,
+                primaryBoundary: item.primaryBoundary || '',
+                timestamp: item.timestamp || 0,
+                relatedChunks: item.relatedChunks || [],
+                file: item.file || '',
+            };
+        });
     return {
         generatedAt: new Date().toISOString(),
-        profile: reconData && reconData.captureStatus && reconData.captureStatus.profile ? reconData.captureStatus.profile : reconData && reconData.stackProfile && reconData.stackProfile.strategy ? reconData.stackProfile.strategy.profile : 'generic-app',
+        profile:
+            reconData && reconData.captureStatus && reconData.captureStatus.profile
+                ? reconData.captureStatus.profile
+                : reconData && reconData.stackProfile && reconData.stackProfile.strategy
+                  ? reconData.stackProfile.strategy.profile
+                  : 'generic-app',
         scripts: scripts,
         runtime: runtime,
         data: networkOps.slice(0, 40),
         graphql: graphqlOps.slice(0, 20),
-        summary: { scripts: assets.length, runtime: runtimeOrigins.length, dataRequests: networkOps.length, graphqlOperations: graphqlOps.length }
+        summary: {
+            scripts: assets.length,
+            runtime: runtimeOrigins.length,
+            dataRequests: networkOps.length,
+            graphqlOperations: graphqlOps.length,
+        },
     };
 }
 
-function buildFrameworkRuntimeSummary(reconData, assets, runtimeOrigins, interestingEntrypoints, boundaryLabels, crossBoundaryFlows) {
+function buildFrameworkRuntimeSummary(
+    reconData,
+    assets,
+    runtimeOrigins,
+    interestingEntrypoints,
+    boundaryLabels,
+    crossBoundaryFlows,
+) {
     var stackProfile = reconData && reconData.stackProfile ? reconData.stackProfile : {};
     var captureStatus = reconData && reconData.captureStatus ? reconData.captureStatus : {};
     var graphqlOps = reconData && reconData.recon ? collectGraphQLOperations(reconData.recon) : [];
-    var frameworkState = buildFrameworkStateSummary(reconData && reconData.frameworkState ? reconData.frameworkState : null);
+    var frameworkState = buildFrameworkStateSummary(
+        reconData && reconData.frameworkState ? reconData.frameworkState : null,
+    );
     return {
         generatedAt: new Date().toISOString(),
         page: reconData && reconData.page ? reconData.page : {},
-        profile: captureStatus.profile || (stackProfile.strategy && stackProfile.strategy.profile) || 'generic-app',
+        profile:
+            captureStatus.profile ||
+            (stackProfile.strategy && stackProfile.strategy.profile) ||
+            'generic-app',
         confidence: stackProfile.confidence || captureStatus.confidence || 0,
         technologies: stackProfile.technologies || [],
         traits: stackProfile.traits || [],
         strategy: stackProfile.strategy || null,
         captureReason: captureStatus.reasonText || '',
         assetClasses: countPropertyValues(assets, 'classification'),
-        bundlersObserved: uniqueStrings(assets.map(function (item) { return item.bundler; })).filter(function (item) { return item && item !== 'unknown'; }),
+        bundlersObserved: uniqueStrings(
+            assets.map(function (item) {
+                return item.bundler;
+            }),
+        ).filter(function (item) {
+            return item && item !== 'unknown';
+        }),
         boundaries: boundaryLabels ? boundaryLabels.summary : null,
         runtimeKinds: countPropertyValues(runtimeOrigins, 'kind'),
-        graphQLEndpoints: uniqueStrings(graphqlOps.map(function (item) { return item.url; })).slice(0, 20),
+        graphQLEndpoints: uniqueStrings(
+            graphqlOps.map(function (item) {
+                return item.url;
+            }),
+        ).slice(0, 20),
         topBoundaryFlows: crossBoundaryFlows ? crossBoundaryFlows.topTransitions.slice(0, 8) : [],
         likelyEntrypoints: interestingEntrypoints.slice(0, 6),
         frameworkState: frameworkState,
-        signals: captureStatus.signals || null
+        signals: captureStatus.signals || null,
     };
 }
 
@@ -1315,59 +1692,117 @@ function buildFrameworkStateSummary(frameworkState) {
     if (!frameworkState) return null;
     var router = frameworkState.router || {};
     var summary = frameworkState.summary || {};
-    var technologies = Array.isArray(frameworkState.technologies) ? frameworkState.technologies : [];
+    var technologies = Array.isArray(frameworkState.technologies)
+        ? frameworkState.technologies
+        : [];
     return {
         profile: frameworkState.profile || 'generic-app',
         generatedAt: frameworkState.generatedAt || '',
         reason: frameworkState.reason || '',
-        rootCount: frameworkState.roots && frameworkState.roots.length ? frameworkState.roots.length : 0,
-        storeCount: frameworkState.stores && frameworkState.stores.length ? frameworkState.stores.length : 0,
-        queryCount: frameworkState.queries && frameworkState.queries.length ? frameworkState.queries.length : 0,
-        hydrationCount: frameworkState.hydration && frameworkState.hydration.length ? frameworkState.hydration.length : 0,
-        authCount: frameworkState.auth && frameworkState.auth.length ? frameworkState.auth.length : 0,
+        rootCount:
+            frameworkState.roots && frameworkState.roots.length ? frameworkState.roots.length : 0,
+        storeCount:
+            frameworkState.stores && frameworkState.stores.length
+                ? frameworkState.stores.length
+                : 0,
+        queryCount:
+            frameworkState.queries && frameworkState.queries.length
+                ? frameworkState.queries.length
+                : 0,
+        hydrationCount:
+            frameworkState.hydration && frameworkState.hydration.length
+                ? frameworkState.hydration.length
+                : 0,
+        authCount:
+            frameworkState.auth && frameworkState.auth.length ? frameworkState.auth.length : 0,
         routerFramework: router.framework || summary.routerFramework || 'generic',
         route: router.route || router.pathname || '',
         routerSource: router.source || '',
         queryKeyCount: router.queryKeys && router.queryKeys.length ? router.queryKeys.length : 0,
-        detectedTechnologies: uniqueStrings(technologies.map(function (item) { return item && item.name ? item.name : ''; }).concat(summary.detectedTechnologies || [])).filter(Boolean),
+        detectedTechnologies: uniqueStrings(
+            technologies
+                .map(function (item) {
+                    return item && item.name ? item.name : '';
+                })
+                .concat(summary.detectedTechnologies || []),
+        ).filter(Boolean),
         roots: frameworkState.roots || [],
         stores: frameworkState.stores || [],
         queries: frameworkState.queries || [],
         hydration: frameworkState.hydration || [],
         auth: frameworkState.auth || [],
-        relatedArtifacts: collectFrameworkArtifactPaths(frameworkState)
+        relatedArtifacts: collectFrameworkArtifactPaths(frameworkState),
     };
 }
 
 function collectFrameworkArtifactPaths(frameworkState) {
     if (!frameworkState) return [];
     var artifacts = [];
-    if (frameworkState.summary && Object.keys(frameworkState.summary).length) artifacts.push('_framework/summary.json');
-    if (frameworkState.router && Object.keys(frameworkState.router).length) artifacts.push('_framework/router-state.json');
-    if (frameworkState.roots && frameworkState.roots.length) artifacts.push('_framework/framework-roots.json');
-    if (frameworkState.stores && frameworkState.stores.length) artifacts.push('_framework/store-snapshots.json');
-    if (frameworkState.queries && frameworkState.queries.length) artifacts.push('_framework/query-caches.json');
-    if (frameworkState.hydration && frameworkState.hydration.length) artifacts.push('_framework/hydration-payloads.json');
-    if (frameworkState.auth && frameworkState.auth.length) artifacts.push('_framework/auth-state.json');
+    if (frameworkState.summary && Object.keys(frameworkState.summary).length)
+        artifacts.push('_framework/summary.json');
+    if (frameworkState.router && Object.keys(frameworkState.router).length)
+        artifacts.push('_framework/router-state.json');
+    if (frameworkState.roots && frameworkState.roots.length)
+        artifacts.push('_framework/framework-roots.json');
+    if (frameworkState.stores && frameworkState.stores.length)
+        artifacts.push('_framework/store-snapshots.json');
+    if (frameworkState.queries && frameworkState.queries.length)
+        artifacts.push('_framework/query-caches.json');
+    if (frameworkState.hydration && frameworkState.hydration.length)
+        artifacts.push('_framework/hydration-payloads.json');
+    if (frameworkState.auth && frameworkState.auth.length)
+        artifacts.push('_framework/auth-state.json');
     return artifacts;
 }
 
 function buildBoundaryLabels(reconData, assets, runtimeOrigins) {
     var assetMap = {};
     for (var i = 0; i < assets.length; i++) assetMap[assets[i].id] = assets[i];
-    for (var j = 0; j < assets.length; j++) applyBoundaryLabels(assets[j], inferBoundaryLabels(assets[j], false, assetMap));
-    for (var r = 0; r < runtimeOrigins.length; r++) applyBoundaryLabels(runtimeOrigins[r], inferBoundaryLabels(runtimeOrigins[r], true, assetMap));
+    for (var j = 0; j < assets.length; j++)
+        applyBoundaryLabels(assets[j], inferBoundaryLabels(assets[j], false, assetMap));
+    for (var r = 0; r < runtimeOrigins.length; r++)
+        applyBoundaryLabels(
+            runtimeOrigins[r],
+            inferBoundaryLabels(runtimeOrigins[r], true, assetMap),
+        );
     return {
         generatedAt: new Date().toISOString(),
-        categories: ['bootstrap', 'router', 'state', 'data', 'auth', 'analytics', 'editor', 'vendor'],
+        categories: [
+            'bootstrap',
+            'router',
+            'state',
+            'data',
+            'auth',
+            'analytics',
+            'editor',
+            'vendor',
+        ],
         summary: {
             chunkLabels: countBoundaryLabels(assets),
             runtimeLabels: countBoundaryLabels(runtimeOrigins),
             taggedChunks: countTaggedEntries(assets),
-            taggedRuntime: countTaggedEntries(runtimeOrigins)
+            taggedRuntime: countTaggedEntries(runtimeOrigins),
         },
-        chunks: assets.filter(function (item) { return item.boundaryLabels && item.boundaryLabels.length; }).sort(function (a, b) { return (b.score || 0) - (a.score || 0); }).map(function (item) { return stripBoundaryEntry(item, 'chunk'); }),
-        runtime: runtimeOrigins.filter(function (item) { return item.boundaryLabels && item.boundaryLabels.length; }).sort(function (a, b) { return (b.score || 0) - (a.score || 0); }).map(function (item) { return stripBoundaryEntry(item, 'runtime'); })
+        chunks: assets
+            .filter(function (item) {
+                return item.boundaryLabels && item.boundaryLabels.length;
+            })
+            .sort(function (a, b) {
+                return (b.score || 0) - (a.score || 0);
+            })
+            .map(function (item) {
+                return stripBoundaryEntry(item, 'chunk');
+            }),
+        runtime: runtimeOrigins
+            .filter(function (item) {
+                return item.boundaryLabels && item.boundaryLabels.length;
+            })
+            .sort(function (a, b) {
+                return (b.score || 0) - (a.score || 0);
+            })
+            .map(function (item) {
+                return stripBoundaryEntry(item, 'runtime');
+            }),
     };
 }
 
@@ -1385,8 +1820,23 @@ function buildCrossBoundaryFlows(reconData, assets, runtimeOrigins) {
             var targetAsset = findAssetByReference(fromAsset.imports[j], assets);
             if (!targetAsset || targetAsset.id === fromAsset.id) continue;
             var toEvent = eventMap['chunk:' + targetAsset.id];
-            if (!toEvent || !fromEvent.primaryBoundary || !toEvent.primaryBoundary || fromEvent.primaryBoundary === toEvent.primaryBoundary) continue;
-            addBoundaryFlow(flows, flowMap, fromEvent, toEvent, 'imports-boundary', 46 + countSharedValues(fromEvent.boundaryLabels, toEvent.boundaryLabels) * 3, 'chunk imports a differently labeled dependency', Math.max(0, (toEvent.approxTime || 0) - (fromEvent.approxTime || 0)));
+            if (
+                !toEvent ||
+                !fromEvent.primaryBoundary ||
+                !toEvent.primaryBoundary ||
+                fromEvent.primaryBoundary === toEvent.primaryBoundary
+            )
+                continue;
+            addBoundaryFlow(
+                flows,
+                flowMap,
+                fromEvent,
+                toEvent,
+                'imports-boundary',
+                46 + countSharedValues(fromEvent.boundaryLabels, toEvent.boundaryLabels) * 3,
+                'chunk imports a differently labeled dependency',
+                Math.max(0, (toEvent.approxTime || 0) - (fromEvent.approxTime || 0)),
+            );
         }
     }
 
@@ -1397,22 +1847,57 @@ function buildCrossBoundaryFlows(reconData, assets, runtimeOrigins) {
         for (var c = 0; c < (runtime.relatedChunks || []).length; c++) {
             var chunkEvent = eventMap['chunk:' + runtime.relatedChunks[c]];
             if (!chunkEvent) continue;
-            addBoundaryFlow(flows, flowMap, chunkEvent, runtimeEvent, 'materializes-runtime', 68 + countSharedValues(chunkEvent.boundaryLabels, runtimeEvent.boundaryLabels) * 2, 'runtime artifact links back to its originating chunk', Math.max(0, (runtimeEvent.approxTime || 0) - (chunkEvent.approxTime || 0)));
+            addBoundaryFlow(
+                flows,
+                flowMap,
+                chunkEvent,
+                runtimeEvent,
+                'materializes-runtime',
+                68 + countSharedValues(chunkEvent.boundaryLabels, runtimeEvent.boundaryLabels) * 2,
+                'runtime artifact links back to its originating chunk',
+                Math.max(0, (runtimeEvent.approxTime || 0) - (chunkEvent.approxTime || 0)),
+            );
         }
         if (runtime.blobId) {
             var parentRuntime = eventMap['runtime:' + runtime.blobId];
-            if (parentRuntime) addBoundaryFlow(flows, flowMap, parentRuntime, runtimeEvent, 'spawns-runtime', 64, 'blob ancestry connects these runtime artifacts', Math.max(0, (runtimeEvent.approxTime || 0) - (parentRuntime.approxTime || 0)));
+            if (parentRuntime)
+                addBoundaryFlow(
+                    flows,
+                    flowMap,
+                    parentRuntime,
+                    runtimeEvent,
+                    'spawns-runtime',
+                    64,
+                    'blob ancestry connects these runtime artifacts',
+                    Math.max(0, (runtimeEvent.approxTime || 0) - (parentRuntime.approxTime || 0)),
+                );
         }
     }
 
-    var timedEvents = flowData.events.filter(function (item) { return item.primaryBoundary; }).slice().sort(function (a, b) { return (a.approxTime || 0) - (b.approxTime || 0); });
+    var timedEvents = flowData.events
+        .filter(function (item) {
+            return item.primaryBoundary;
+        })
+        .slice()
+        .sort(function (a, b) {
+            return (a.approxTime || 0) - (b.approxTime || 0);
+        });
     for (var a = 0; a < timedEvents.length; a++) {
         for (var b = a + 1; b < timedEvents.length && b < a + 5; b++) {
             var deltaMs = (timedEvents[b].approxTime || 0) - (timedEvents[a].approxTime || 0);
             if (deltaMs <= 0 || deltaMs > 4000) break;
             var score = scoreFlowTransition(timedEvents[a], timedEvents[b], deltaMs);
             if (score < 34) continue;
-            addBoundaryFlow(flows, flowMap, timedEvents[a], timedEvents[b], inferFlowRelation(timedEvents[a], timedEvents[b]), score, describeFlowTransition(timedEvents[a], timedEvents[b], deltaMs), deltaMs);
+            addBoundaryFlow(
+                flows,
+                flowMap,
+                timedEvents[a],
+                timedEvents[b],
+                inferFlowRelation(timedEvents[a], timedEvents[b]),
+                score,
+                describeFlowTransition(timedEvents[a], timedEvents[b], deltaMs),
+                deltaMs,
+            );
         }
     }
 
@@ -1421,16 +1906,27 @@ function buildCrossBoundaryFlows(reconData, assets, runtimeOrigins) {
         generatedAt: new Date().toISOString(),
         summary: {
             totalFlows: flows.length,
-            crossBoundaryFlows: flows.filter(function (item) { return item.crossBoundary; }).length,
-            structuralFlows: flows.filter(function (item) { return !item.crossBoundary; }).length,
-            labeledEvents: flowData.events.filter(function (item) { return item.primaryBoundary; }).length,
+            crossBoundaryFlows: flows.filter(function (item) {
+                return item.crossBoundary;
+            }).length,
+            structuralFlows: flows.filter(function (item) {
+                return !item.crossBoundary;
+            }).length,
+            labeledEvents: flowData.events.filter(function (item) {
+                return item.primaryBoundary;
+            }).length,
             eventKinds: countPropertyValues(flowData.events, 'kind'),
-            relations: countPropertyValues(flows, 'relation')
+            relations: countPropertyValues(flows, 'relation'),
         },
         topTransitions: topTransitions,
         chains: buildBoundaryChains(flows),
-        events: flowData.events.filter(function (item) { return item.primaryBoundary; }).slice(0, 120).map(stripFlowEvent),
-        transitions: flows.slice(0, 180).map(stripFlowTransition)
+        events: flowData.events
+            .filter(function (item) {
+                return item.primaryBoundary;
+            })
+            .slice(0, 120)
+            .map(stripFlowEvent),
+        transitions: flows.slice(0, 180).map(stripFlowTransition),
     };
 }
 
@@ -1440,8 +1936,10 @@ function collectFlowEvents(reconData, assets, runtimeOrigins) {
     var assetHorizon = 0;
     var networkOps = buildNetworkFlowEvents(reconData && reconData.recon ? reconData.recon : null);
     var absoluteTimes = [];
-    for (var i = 0; i < runtimeOrigins.length; i++) if (runtimeOrigins[i].timestamp > 0) absoluteTimes.push(runtimeOrigins[i].timestamp);
-    for (var j = 0; j < networkOps.length; j++) if (networkOps[j].timestamp > 0) absoluteTimes.push(networkOps[j].timestamp);
+    for (var i = 0; i < runtimeOrigins.length; i++)
+        if (runtimeOrigins[i].timestamp > 0) absoluteTimes.push(runtimeOrigins[i].timestamp);
+    for (var j = 0; j < networkOps.length; j++)
+        if (networkOps[j].timestamp > 0) absoluteTimes.push(networkOps[j].timestamp);
     var absoluteBase = absoluteTimes.length ? Math.min.apply(Math, absoluteTimes) : 0;
 
     for (var a = 0; a < assets.length; a++) {
@@ -1456,7 +1954,10 @@ function collectFlowEvents(reconData, assets, runtimeOrigins) {
     var absoluteOffset = assetHorizon + 50;
     for (var r = 0; r < runtimeOrigins.length; r++) {
         var runtime = runtimeOrigins[r];
-        var runtimeTime = runtime.timestamp > 0 && absoluteBase ? absoluteOffset + (runtime.timestamp - absoluteBase) : absoluteOffset + r * 25;
+        var runtimeTime =
+            runtime.timestamp > 0 && absoluteBase
+                ? absoluteOffset + (runtime.timestamp - absoluteBase)
+                : absoluteOffset + r * 25;
         var runtimeEvent = buildFlowEvent('runtime', runtime.id, runtime, runtimeTime);
         events.push(runtimeEvent);
         eventMap[runtimeEvent.id] = runtimeEvent;
@@ -1464,13 +1965,18 @@ function collectFlowEvents(reconData, assets, runtimeOrigins) {
 
     for (var n = 0; n < networkOps.length; n++) {
         var operation = networkOps[n];
-        var operationTime = operation.timestamp > 0 && absoluteBase ? absoluteOffset + (operation.timestamp - absoluteBase) : absoluteOffset + (runtimeOrigins.length + n) * 25;
+        var operationTime =
+            operation.timestamp > 0 && absoluteBase
+                ? absoluteOffset + (operation.timestamp - absoluteBase)
+                : absoluteOffset + (runtimeOrigins.length + n) * 25;
         var networkEvent = buildFlowEvent('network', operation.id, operation, operationTime);
         events.push(networkEvent);
         eventMap[networkEvent.id] = networkEvent;
     }
 
-    events.sort(function (left, right) { return (left.approxTime || 0) - (right.approxTime || 0); });
+    events.sort(function (left, right) {
+        return (left.approxTime || 0) - (right.approxTime || 0);
+    });
     return { events: events, eventMap: eventMap };
 }
 
@@ -1478,7 +1984,10 @@ function buildNetworkFlowEvents(recon) {
     var operations = collectNetworkOperations(recon);
     for (var i = 0; i < operations.length; i++) {
         operations[i].id = operations[i].type + '-' + ('0000' + (i + 1)).slice(-4);
-        operations[i].label = (operations[i].method || 'GET') + ' ' + (getBareFileName(operations[i].url) || operations[i].type || operations[i].id);
+        operations[i].label =
+            (operations[i].method || 'GET') +
+            ' ' +
+            (getBareFileName(operations[i].url) || operations[i].type || operations[i].id);
         applyBoundaryLabels(operations[i], inferNetworkBoundaryLabels(operations[i]));
     }
     return operations;
@@ -1487,28 +1996,122 @@ function buildNetworkFlowEvents(recon) {
 function inferNetworkBoundaryLabels(entry) {
     var sample = buildNetworkBoundarySample(entry);
     var matches = [];
-    if (/auth0|next-auth|firebase\/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|token|refresh|clerk|okta|passport/.test(sample)) pushBoundaryLabel(matches, 'auth', 28, 'network activity contains authentication or session signals');
-    if (/google-analytics|googletagmanager|gtag|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadog|sentry|analytics|\/collect\b|\/track\b|\/capture\b/.test(sample)) pushBoundaryLabel(matches, 'analytics', 26, 'network activity contains analytics or telemetry signals');
-    if (/graphql|apollo|relay|axios|tanstack|react-query|swr|trpc|\/api\/|jsonrpc|rpc|query=|mutation=|xmlhttprequest|fetch/.test(sample) || looksLikeGraphQLBody(entry.requestBody)) pushBoundaryLabel(matches, 'data', 24, 'network activity contains data-fetching or API signals');
-    if (/_next\/data\/|prefetch|router|route|navigate|navigation|redirect=|callbackurl=/.test(sample)) pushBoundaryLabel(matches, 'router', 18, 'network activity contains routing or navigation signals');
-    if (/draft|editor|document|content|prosemirror|tiptap|quill|slate|monaco|codemirror/.test(sample)) pushBoundaryLabel(matches, 'editor', 18, 'network activity contains editor or content workflow signals');
-    if (/persist|rehydrate|redux|zustand|state/.test(sample)) pushBoundaryLabel(matches, 'state', 14, 'network activity contains state synchronization signals');
+    if (
+        /auth0|next-auth|firebase\/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|token|refresh|clerk|okta|passport/.test(
+            sample,
+        )
+    )
+        pushBoundaryLabel(
+            matches,
+            'auth',
+            28,
+            'network activity contains authentication or session signals',
+        );
+    if (
+        /google-analytics|googletagmanager|gtag|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadog|sentry|analytics|\/collect\b|\/track\b|\/capture\b/.test(
+            sample,
+        )
+    )
+        pushBoundaryLabel(
+            matches,
+            'analytics',
+            26,
+            'network activity contains analytics or telemetry signals',
+        );
+    if (
+        /graphql|apollo|relay|axios|tanstack|react-query|swr|trpc|\/api\/|jsonrpc|rpc|query=|mutation=|xmlhttprequest|fetch/.test(
+            sample,
+        ) ||
+        looksLikeGraphQLBody(entry.requestBody)
+    )
+        pushBoundaryLabel(
+            matches,
+            'data',
+            24,
+            'network activity contains data-fetching or API signals',
+        );
+    if (
+        /_next\/data\/|prefetch|router|route|navigate|navigation|redirect=|callbackurl=/.test(
+            sample,
+        )
+    )
+        pushBoundaryLabel(
+            matches,
+            'router',
+            18,
+            'network activity contains routing or navigation signals',
+        );
+    if (
+        /draft|editor|document|content|prosemirror|tiptap|quill|slate|monaco|codemirror/.test(
+            sample,
+        )
+    )
+        pushBoundaryLabel(
+            matches,
+            'editor',
+            18,
+            'network activity contains editor or content workflow signals',
+        );
+    if (/persist|rehydrate|redux|zustand|state/.test(sample))
+        pushBoundaryLabel(
+            matches,
+            'state',
+            14,
+            'network activity contains state synchronization signals',
+        );
     return matches;
 }
 
 function buildNetworkBoundarySample(entry) {
-    return [entry.type || '', entry.url || '', entry.method || '', stringifyLooseValue(entry.requestBody), stringifyLooseValue(entry.requestHeaders), stringifyLooseValue(entry.responseHeaders), stringifyLooseValue(entry.responsePreview)].join('\n').toLowerCase();
+    return [
+        entry.type || '',
+        entry.url || '',
+        entry.method || '',
+        stringifyLooseValue(entry.requestBody),
+        stringifyLooseValue(entry.requestHeaders),
+        stringifyLooseValue(entry.responseHeaders),
+        stringifyLooseValue(entry.responsePreview),
+    ]
+        .join('\n')
+        .toLowerCase();
 }
 
 function stringifyLooseValue(value) {
     if (typeof value === 'string') return value;
     if (value == null) return '';
-    try { return JSON.stringify(value); }
-    catch (_) { return String(value); }
+    try {
+        return JSON.stringify(value);
+    } catch (_) {
+        return String(value);
+    }
 }
 
 function buildFlowEvent(kind, recordId, entry, approxTime) {
-    return { id: kind + ':' + recordId, recordId: recordId, kind: kind, label: entry.label || getBareFileName(entry.file || entry.url || entry.objectUrl || entry.id || entry.kind || recordId) || recordId, primaryBoundary: entry.primaryBoundary || '', boundaryLabels: entry.boundaryLabels || [], approxTime: approxTime || 0, timestamp: entry.timestamp || 0, url: entry.url || entry.objectUrl || '', file: entry.file || '', method: entry.method || '', status: entry.status || 0, classification: entry.classification || '', originType: entry.originType || '', relatedChunks: entry.relatedChunks || [], blobId: entry.blobId || null, source: entry.source || entry.type || '', boundaryReasons: entry.boundaryReasons || [] };
+    return {
+        id: kind + ':' + recordId,
+        recordId: recordId,
+        kind: kind,
+        label:
+            entry.label ||
+            getBareFileName(
+                entry.file || entry.url || entry.objectUrl || entry.id || entry.kind || recordId,
+            ) ||
+            recordId,
+        primaryBoundary: entry.primaryBoundary || '',
+        boundaryLabels: entry.boundaryLabels || [],
+        approxTime: approxTime || 0,
+        timestamp: entry.timestamp || 0,
+        url: entry.url || entry.objectUrl || '',
+        file: entry.file || '',
+        method: entry.method || '',
+        status: entry.status || 0,
+        classification: entry.classification || '',
+        originType: entry.originType || '',
+        relatedChunks: entry.relatedChunks || [],
+        blobId: entry.blobId || null,
+        source: entry.source || entry.type || '',
+        boundaryReasons: entry.boundaryReasons || [],
+    };
 }
 
 function inferFlowRelation(fromEvent, toEvent) {
@@ -1520,45 +2123,130 @@ function inferFlowRelation(fromEvent, toEvent) {
     return 'sequence';
 }
 
-function addBoundaryFlow(flows, flowMap, fromEvent, toEvent, relation, confidence, evidence, deltaMs) {
+function addBoundaryFlow(
+    flows,
+    flowMap,
+    fromEvent,
+    toEvent,
+    relation,
+    confidence,
+    evidence,
+    deltaMs,
+) {
     if (!fromEvent || !toEvent || fromEvent.id === toEvent.id) return;
     if (!fromEvent.primaryBoundary || !toEvent.primaryBoundary) return;
     var crossBoundary = fromEvent.primaryBoundary !== toEvent.primaryBoundary;
-    if (!crossBoundary && relation !== 'materializes-runtime' && relation !== 'spawns-runtime') return;
-    var key = [fromEvent.id, toEvent.id, relation, fromEvent.primaryBoundary, toEvent.primaryBoundary].join('|');
+    if (!crossBoundary && relation !== 'materializes-runtime' && relation !== 'spawns-runtime')
+        return;
+    var key = [
+        fromEvent.id,
+        toEvent.id,
+        relation,
+        fromEvent.primaryBoundary,
+        toEvent.primaryBoundary,
+    ].join('|');
     if (flowMap[key]) return;
     flowMap[key] = true;
-    flows.push({ id: 'flow-' + ('0000' + (flows.length + 1)).slice(-4), relation: relation, crossBoundary: crossBoundary, fromBoundary: fromEvent.primaryBoundary, toBoundary: toEvent.primaryBoundary, confidence: confidence || 0, deltaMs: typeof deltaMs === 'number' ? Math.round(deltaMs) : null, timestamp: toEvent.timestamp || toEvent.approxTime || fromEvent.timestamp || fromEvent.approxTime || 0, evidence: evidence || '', from: stripFlowEvent(fromEvent), to: stripFlowEvent(toEvent) });
+    flows.push({
+        id: 'flow-' + ('0000' + (flows.length + 1)).slice(-4),
+        relation: relation,
+        crossBoundary: crossBoundary,
+        fromBoundary: fromEvent.primaryBoundary,
+        toBoundary: toEvent.primaryBoundary,
+        confidence: confidence || 0,
+        deltaMs: typeof deltaMs === 'number' ? Math.round(deltaMs) : null,
+        timestamp:
+            toEvent.timestamp ||
+            toEvent.approxTime ||
+            fromEvent.timestamp ||
+            fromEvent.approxTime ||
+            0,
+        evidence: evidence || '',
+        from: stripFlowEvent(fromEvent),
+        to: stripFlowEvent(toEvent),
+    });
 }
 
 function scoreFlowTransition(fromEvent, toEvent, deltaMs) {
-    if (!fromEvent || !toEvent || !fromEvent.primaryBoundary || !toEvent.primaryBoundary || fromEvent.id === toEvent.id) return 0;
+    if (
+        !fromEvent ||
+        !toEvent ||
+        !fromEvent.primaryBoundary ||
+        !toEvent.primaryBoundary ||
+        fromEvent.id === toEvent.id
+    )
+        return 0;
     var crossBoundary = fromEvent.primaryBoundary !== toEvent.primaryBoundary;
-    if (!crossBoundary && !(fromEvent.kind === 'chunk' && toEvent.kind === 'runtime') && !(fromEvent.kind === 'runtime' && toEvent.kind === 'runtime')) return 0;
+    if (
+        !crossBoundary &&
+        !(fromEvent.kind === 'chunk' && toEvent.kind === 'runtime') &&
+        !(fromEvent.kind === 'runtime' && toEvent.kind === 'runtime')
+    )
+        return 0;
     var score = 0;
     if (fromEvent.kind === 'chunk' && toEvent.kind === 'chunk') score += 12;
     if (fromEvent.kind === 'runtime' && toEvent.kind === 'network') score += 18;
     if (fromEvent.kind === 'network' && toEvent.kind === 'runtime') score += 18;
     if (fromEvent.kind === 'network' && toEvent.kind === 'network') score += 8;
-    if (fromEvent.primaryBoundary === 'bootstrap' && arrayContainsAny(['router', 'state', 'data', 'auth'], [toEvent.primaryBoundary])) score += 18;
-    if (fromEvent.primaryBoundary === 'auth' && arrayContainsAny(['data', 'router', 'analytics'], [toEvent.primaryBoundary])) score += 22;
-    if (fromEvent.primaryBoundary === 'data' && arrayContainsAny(['router', 'analytics', 'state', 'editor'], [toEvent.primaryBoundary])) score += 20;
-    if (fromEvent.primaryBoundary === 'router' && arrayContainsAny(['data', 'analytics'], [toEvent.primaryBoundary])) score += 16;
-    if (fromEvent.primaryBoundary === 'state' && arrayContainsAny(['data', 'router'], [toEvent.primaryBoundary])) score += 14;
-    if (fromEvent.primaryBoundary === 'editor' && arrayContainsAny(['data', 'state', 'analytics'], [toEvent.primaryBoundary])) score += 14;
-    if (fromEvent.primaryBoundary === 'vendor' && arrayContainsAny(['analytics', 'auth', 'data'], [toEvent.primaryBoundary])) score += 8;
+    if (
+        fromEvent.primaryBoundary === 'bootstrap' &&
+        arrayContainsAny(['router', 'state', 'data', 'auth'], [toEvent.primaryBoundary])
+    )
+        score += 18;
+    if (
+        fromEvent.primaryBoundary === 'auth' &&
+        arrayContainsAny(['data', 'router', 'analytics'], [toEvent.primaryBoundary])
+    )
+        score += 22;
+    if (
+        fromEvent.primaryBoundary === 'data' &&
+        arrayContainsAny(['router', 'analytics', 'state', 'editor'], [toEvent.primaryBoundary])
+    )
+        score += 20;
+    if (
+        fromEvent.primaryBoundary === 'router' &&
+        arrayContainsAny(['data', 'analytics'], [toEvent.primaryBoundary])
+    )
+        score += 16;
+    if (
+        fromEvent.primaryBoundary === 'state' &&
+        arrayContainsAny(['data', 'router'], [toEvent.primaryBoundary])
+    )
+        score += 14;
+    if (
+        fromEvent.primaryBoundary === 'editor' &&
+        arrayContainsAny(['data', 'state', 'analytics'], [toEvent.primaryBoundary])
+    )
+        score += 14;
+    if (
+        fromEvent.primaryBoundary === 'vendor' &&
+        arrayContainsAny(['analytics', 'auth', 'data'], [toEvent.primaryBoundary])
+    )
+        score += 8;
     score += Math.min(10, countSharedValues(fromEvent.boundaryLabels, toEvent.boundaryLabels) * 3);
-    if (typeof deltaMs === 'number' && deltaMs >= 0) score += Math.max(0, 12 - Math.floor(deltaMs / 350));
+    if (typeof deltaMs === 'number' && deltaMs >= 0)
+        score += Math.max(0, 12 - Math.floor(deltaMs / 350));
     return score;
 }
 
 function describeFlowTransition(fromEvent, toEvent, deltaMs) {
-    var lag = typeof deltaMs === 'number' && deltaMs >= 0 ? ' ' + Math.round(deltaMs) + 'ms later' : '';
-    if (fromEvent.kind === 'runtime' && toEvent.kind === 'network') return 'runtime activity was followed by a labeled request' + lag;
-    if (fromEvent.kind === 'network' && toEvent.kind === 'runtime') return 'network activity was followed by a labeled runtime effect' + lag;
-    if (fromEvent.kind === 'network' && toEvent.kind === 'network') return 'one labeled request preceded another labeled request' + lag;
-    if (fromEvent.kind === 'chunk' && toEvent.kind === 'chunk') return 'one labeled chunk imported another labeled chunk' + lag;
-    return fromEvent.primaryBoundary + ' activity led into ' + toEvent.primaryBoundary + ' activity' + lag;
+    var lag =
+        typeof deltaMs === 'number' && deltaMs >= 0 ? ' ' + Math.round(deltaMs) + 'ms later' : '';
+    if (fromEvent.kind === 'runtime' && toEvent.kind === 'network')
+        return 'runtime activity was followed by a labeled request' + lag;
+    if (fromEvent.kind === 'network' && toEvent.kind === 'runtime')
+        return 'network activity was followed by a labeled runtime effect' + lag;
+    if (fromEvent.kind === 'network' && toEvent.kind === 'network')
+        return 'one labeled request preceded another labeled request' + lag;
+    if (fromEvent.kind === 'chunk' && toEvent.kind === 'chunk')
+        return 'one labeled chunk imported another labeled chunk' + lag;
+    return (
+        fromEvent.primaryBoundary +
+        ' activity led into ' +
+        toEvent.primaryBoundary +
+        ' activity' +
+        lag
+    );
 }
 
 function countSharedValues(left, right) {
@@ -1571,62 +2259,144 @@ function summarizeBoundaryTransitions(flows) {
     var grouped = {};
     for (var i = 0; i < flows.length; i++) {
         var key = flows[i].fromBoundary + '->' + flows[i].toBoundary;
-        if (!grouped[key]) grouped[key] = { fromBoundary: flows[i].fromBoundary, toBoundary: flows[i].toBoundary, count: 0, totalConfidence: 0, relations: {} };
+        if (!grouped[key])
+            grouped[key] = {
+                fromBoundary: flows[i].fromBoundary,
+                toBoundary: flows[i].toBoundary,
+                count: 0,
+                totalConfidence: 0,
+                relations: {},
+            };
         grouped[key].count++;
         grouped[key].totalConfidence += flows[i].confidence || 0;
-        grouped[key].relations[flows[i].relation] = (grouped[key].relations[flows[i].relation] || 0) + 1;
+        grouped[key].relations[flows[i].relation] =
+            (grouped[key].relations[flows[i].relation] || 0) + 1;
     }
     var summary = [];
     for (var name in grouped) {
         if (!Object.prototype.hasOwnProperty.call(grouped, name)) continue;
-        summary.push({ path: name, fromBoundary: grouped[name].fromBoundary, toBoundary: grouped[name].toBoundary, count: grouped[name].count, averageConfidence: grouped[name].count ? Math.round(grouped[name].totalConfidence / grouped[name].count) : 0, relations: Object.keys(grouped[name].relations).sort(function (left, right) { return grouped[name].relations[right] - grouped[name].relations[left]; }) });
+        summary.push({
+            path: name,
+            fromBoundary: grouped[name].fromBoundary,
+            toBoundary: grouped[name].toBoundary,
+            count: grouped[name].count,
+            averageConfidence: grouped[name].count
+                ? Math.round(grouped[name].totalConfidence / grouped[name].count)
+                : 0,
+            relations: Object.keys(grouped[name].relations).sort(function (left, right) {
+                return grouped[name].relations[right] - grouped[name].relations[left];
+            }),
+        });
     }
-    summary.sort(function (left, right) { return right.count !== left.count ? right.count - left.count : right.averageConfidence - left.averageConfidence; });
+    summary.sort(function (left, right) {
+        return right.count !== left.count
+            ? right.count - left.count
+            : right.averageConfidence - left.averageConfidence;
+    });
     return summary.slice(0, 24);
 }
 
 function buildBoundaryChains(flows) {
-    var timedFlows = flows.filter(function (item) { return item.crossBoundary && item.timestamp > 0; }).slice().sort(function (left, right) { return left.timestamp - right.timestamp; });
+    var timedFlows = flows
+        .filter(function (item) {
+            return item.crossBoundary && item.timestamp > 0;
+        })
+        .slice()
+        .sort(function (left, right) {
+            return left.timestamp - right.timestamp;
+        });
     var chains = {};
     for (var i = 0; i < timedFlows.length; i++) {
         for (var j = i + 1; j < timedFlows.length && j < i + 5; j++) {
             var delta = timedFlows[j].timestamp - timedFlows[i].timestamp;
             if (delta <= 0 || delta > 6000) break;
             if (timedFlows[i].toBoundary !== timedFlows[j].fromBoundary) continue;
-            var path = [timedFlows[i].fromBoundary, timedFlows[i].toBoundary, timedFlows[j].toBoundary];
+            var path = [
+                timedFlows[i].fromBoundary,
+                timedFlows[i].toBoundary,
+                timedFlows[j].toBoundary,
+            ];
             if (path[0] === path[2]) continue;
             var key = path.join(' -> ');
-            if (!chains[key]) chains[key] = { path: path, count: 0, totalConfidence: 0, examples: [] };
+            if (!chains[key])
+                chains[key] = { path: path, count: 0, totalConfidence: 0, examples: [] };
             chains[key].count++;
-            chains[key].totalConfidence += (timedFlows[i].confidence || 0) + (timedFlows[j].confidence || 0);
-            if (chains[key].examples.length < 3) chains[key].examples.push([timedFlows[i].relation, timedFlows[j].relation]);
+            chains[key].totalConfidence +=
+                (timedFlows[i].confidence || 0) + (timedFlows[j].confidence || 0);
+            if (chains[key].examples.length < 3)
+                chains[key].examples.push([timedFlows[i].relation, timedFlows[j].relation]);
         }
     }
     var items = [];
     for (var name in chains) {
         if (!Object.prototype.hasOwnProperty.call(chains, name)) continue;
-        items.push({ path: chains[name].path, label: name, count: chains[name].count, averageConfidence: chains[name].count ? Math.round(chains[name].totalConfidence / (chains[name].count * 2)) : 0, examples: chains[name].examples });
+        items.push({
+            path: chains[name].path,
+            label: name,
+            count: chains[name].count,
+            averageConfidence: chains[name].count
+                ? Math.round(chains[name].totalConfidence / (chains[name].count * 2))
+                : 0,
+            examples: chains[name].examples,
+        });
     }
-    items.sort(function (left, right) { return right.count !== left.count ? right.count - left.count : right.averageConfidence - left.averageConfidence; });
+    items.sort(function (left, right) {
+        return right.count !== left.count
+            ? right.count - left.count
+            : right.averageConfidence - left.averageConfidence;
+    });
     return items.slice(0, 20);
 }
 
 function stripFlowTransition(flow) {
-    return { id: flow.id, relation: flow.relation, crossBoundary: flow.crossBoundary, fromBoundary: flow.fromBoundary, toBoundary: flow.toBoundary, confidence: flow.confidence, deltaMs: flow.deltaMs, evidence: flow.evidence, from: flow.from, to: flow.to };
+    return {
+        id: flow.id,
+        relation: flow.relation,
+        crossBoundary: flow.crossBoundary,
+        fromBoundary: flow.fromBoundary,
+        toBoundary: flow.toBoundary,
+        confidence: flow.confidence,
+        deltaMs: flow.deltaMs,
+        evidence: flow.evidence,
+        from: flow.from,
+        to: flow.to,
+    };
 }
 
 function stripFlowEvent(event) {
-    return { id: event.id, recordId: event.recordId, kind: event.kind, label: event.label, primaryBoundary: event.primaryBoundary, boundaryLabels: event.boundaryLabels || [], approxTime: Math.round(event.approxTime || 0), timestamp: event.timestamp || 0, url: event.url || '', file: event.file || '', method: event.method || '', status: event.status || 0, classification: event.classification || '', originType: event.originType || '' };
+    return {
+        id: event.id,
+        recordId: event.recordId,
+        kind: event.kind,
+        label: event.label,
+        primaryBoundary: event.primaryBoundary,
+        boundaryLabels: event.boundaryLabels || [],
+        approxTime: Math.round(event.approxTime || 0),
+        timestamp: event.timestamp || 0,
+        url: event.url || '',
+        file: event.file || '',
+        method: event.method || '',
+        status: event.status || 0,
+        classification: event.classification || '',
+        originType: event.originType || '',
+    };
 }
 
 function applyBoundaryLabels(entry, matches) {
-    matches.sort(function (a, b) { return b.score - a.score; });
+    matches.sort(function (a, b) {
+        return b.score - a.score;
+    });
     entry.boundaryDetails = matches.slice(0, 4);
-    entry.boundaryLabels = entry.boundaryDetails.map(function (item) { return item.label; });
+    entry.boundaryLabels = entry.boundaryDetails.map(function (item) {
+        return item.label;
+    });
     entry.primaryBoundary = entry.boundaryLabels[0] || '';
     var reasons = [];
     for (var i = 0; i < entry.boundaryDetails.length; i++) {
-        for (var j = 0; j < entry.boundaryDetails[i].reasons.length; j++) reasons.push(entry.boundaryDetails[i].label + ': ' + entry.boundaryDetails[i].reasons[j]);
+        for (var j = 0; j < entry.boundaryDetails[i].reasons.length; j++)
+            reasons.push(
+                entry.boundaryDetails[i].label + ': ' + entry.boundaryDetails[i].reasons[j],
+            );
     }
     entry.boundaryReasons = uniqueStrings(reasons).slice(0, 8);
     return entry;
@@ -1637,34 +2407,80 @@ function inferBoundaryLabels(entry, isRuntime, assetMap) {
     var matches = [];
     var routeHints = entry.routeHints || [];
     var startupSignals = entry.startupSignals || [];
-    if ((!isRuntime && entry.classification === 'runtime') || /hydration|hydrateroot|reactdom\.hydrate|bootstrap|domcontentloaded|__webpack_require__|webpackchunk|parcelrequire|__vite__/.test(sample) || arrayContainsAny(startupSignals, ['hydration', 'chunk-loader', 'service-worker-register', 'worker-bootstrap', 'wasm-bootstrap']) || (isRuntime && /worker|service-worker/.test(String(entry.kind || '')))) {
+    if (
+        (!isRuntime && entry.classification === 'runtime') ||
+        /hydration|hydrateroot|reactdom\.hydrate|bootstrap|domcontentloaded|__webpack_require__|webpackchunk|parcelrequire|__vite__/.test(
+            sample,
+        ) ||
+        arrayContainsAny(startupSignals, [
+            'hydration',
+            'chunk-loader',
+            'service-worker-register',
+            'worker-bootstrap',
+            'wasm-bootstrap',
+        ]) ||
+        (isRuntime && /worker|service-worker/.test(String(entry.kind || '')))
+    ) {
         pushBoundaryLabel(matches, 'bootstrap', 30, 'bootstraps the page or runtime loader');
     }
-    if (routeHints.length || /router|routes\b|history\.pushstate|next\/router|vue-router|react-router|createbrowserrouter|browserrouter|remix/.test(sample)) {
+    if (
+        routeHints.length ||
+        /router|routes\b|history\.pushstate|next\/router|vue-router|react-router|createbrowserrouter|browserrouter|remix/.test(
+            sample,
+        )
+    ) {
         pushBoundaryLabel(matches, 'router', 24, 'contains route or navigation signals');
     }
-    if (/redux|zustand|mobx|recoil|vuex|pinia|createstore|configurestore|createslice|dispatch\(|subscribe\(|setstate\(/.test(sample)) {
+    if (
+        /redux|zustand|mobx|recoil|vuex|pinia|createstore|configurestore|createslice|dispatch\(|subscribe\(|setstate\(/.test(
+            sample,
+        )
+    ) {
         pushBoundaryLabel(matches, 'state', 24, 'contains state container signals');
     }
-    if (/graphql|apollo|relay|axios|tanstack\/query|react-query|swr|trpc|fetch\(|xmlhttprequest|\/api\/|urql/.test(sample) || arrayContainsAny(startupSignals, ['graphql-client'])) {
+    if (
+        /graphql|apollo|relay|axios|tanstack\/query|react-query|swr|trpc|fetch\(|xmlhttprequest|\/api\/|urql/.test(
+            sample,
+        ) ||
+        arrayContainsAny(startupSignals, ['graphql-client'])
+    ) {
         pushBoundaryLabel(matches, 'data', 24, 'contains data-fetching or API signals');
     }
-    if (/auth0|next-auth|firebase\/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|tokenrefresh|clerk|okta|passport/.test(sample)) {
+    if (
+        /auth0|next-auth|firebase\/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|tokenrefresh|clerk|okta|passport/.test(
+            sample,
+        )
+    ) {
         pushBoundaryLabel(matches, 'auth', 24, 'contains authentication or session signals');
     }
-    if (/gtag|google-analytics|googletagmanager|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadogrum|sentry|analytics\.track|fbq\(/.test(sample)) {
+    if (
+        /gtag|google-analytics|googletagmanager|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadogrum|sentry|analytics\.track|fbq\(/.test(
+            sample,
+        )
+    ) {
         pushBoundaryLabel(matches, 'analytics', 22, 'contains analytics or telemetry signals');
     }
-    if (/monaco|codemirror|tiptap|prosemirror|quill|slate|draftjs|tinymce|ckeditor|editorjs|ace\.edit/.test(sample)) {
+    if (
+        /monaco|codemirror|tiptap|prosemirror|quill|slate|draftjs|tinymce|ckeditor|editorjs|ace\.edit/.test(
+            sample,
+        )
+    ) {
         pushBoundaryLabel(matches, 'editor', 24, 'contains editor/runtime authoring signals');
     }
-    if ((!isRuntime && (entry.classification === 'vendor' || entry.classification === 'framework')) || /node_modules|chunk-vendors|polyfill|core-js|regenerator-runtime|cdn/.test(sample)) {
+    if (
+        (!isRuntime &&
+            (entry.classification === 'vendor' || entry.classification === 'framework')) ||
+        /node_modules|chunk-vendors|polyfill|core-js|regenerator-runtime|cdn/.test(sample)
+    ) {
         pushBoundaryLabel(matches, 'vendor', 20, 'looks like third-party or framework code');
     }
     if (isRuntime && entry.relatedChunks) {
         for (var i = 0; i < entry.relatedChunks.length; i++) {
             var related = assetMap[entry.relatedChunks[i]];
-            if (related && (related.classification === 'vendor' || related.classification === 'framework')) {
+            if (
+                related &&
+                (related.classification === 'vendor' || related.classification === 'framework')
+            ) {
                 pushBoundaryLabel(matches, 'vendor', 16, 'spawned from a vendor/framework chunk');
                 break;
             }
@@ -1674,7 +2490,21 @@ function inferBoundaryLabels(entry, isRuntime, assetMap) {
 }
 
 function buildBoundarySample(entry) {
-    var parts = [entry.url || '', entry.file || '', entry.kind || '', entry.source || '', entry.originType || '', entry.classification || '', (entry.frameworkHints || []).join('\n'), (entry.routeHints || []).join('\n'), (entry.startupSignals || []).join('\n'), (entry.imports || []).join('\n'), entry.note || '', entry.mimeType || '', entry.stack || ''];
+    var parts = [
+        entry.url || '',
+        entry.file || '',
+        entry.kind || '',
+        entry.source || '',
+        entry.originType || '',
+        entry.classification || '',
+        (entry.frameworkHints || []).join('\n'),
+        (entry.routeHints || []).join('\n'),
+        (entry.startupSignals || []).join('\n'),
+        (entry.imports || []).join('\n'),
+        entry.note || '',
+        entry.mimeType || '',
+        entry.stack || '',
+    ];
     if (typeof entry.content === 'string') parts.push(entry.content.substring(0, 120000));
     if (typeof entry.text === 'string') parts.push(entry.text.substring(0, 120000));
     return parts.join('\n').toLowerCase();
@@ -1707,7 +2537,8 @@ function countBoundaryLabels(items) {
 
 function countTaggedEntries(items) {
     var count = 0;
-    for (var i = 0; i < items.length; i++) if (items[i] && items[i].boundaryLabels && items[i].boundaryLabels.length) count++;
+    for (var i = 0; i < items.length; i++)
+        if (items[i] && items[i].boundaryLabels && items[i].boundaryLabels.length) count++;
     return count;
 }
 
@@ -1723,7 +2554,7 @@ function stripBoundaryEntry(entry, kind) {
         boundaryReasons: entry.boundaryReasons || [],
         classification: entry.classification || '',
         originType: entry.originType || '',
-        score: entry.score || 0
+        score: entry.score || 0,
     };
 }
 
@@ -1761,17 +2592,27 @@ function collectInterestingEntrypoints(assets, runtimeOrigins) {
             classification: assets[i].classification,
             primaryBoundary: assets[i].primaryBoundary || '',
             boundaryLabels: assets[i].boundaryLabels || [],
-            why: [assets[i].primaryBoundary, assets[i].classification, assets[i].bundler, assets[i].startupSignals.join(', ')].filter(Boolean).join(' | '),
+            why: [
+                assets[i].primaryBoundary,
+                assets[i].classification,
+                assets[i].bundler,
+                assets[i].startupSignals.join(', '),
+            ]
+                .filter(Boolean)
+                .join(' | '),
             startupSignals: assets[i].startupSignals,
             routeHints: assets[i].routeHints,
-            frameworkHints: assets[i].frameworkHints
+            frameworkHints: assets[i].frameworkHints,
         });
     }
     for (var j = 0; j < runtimeOrigins.length; j++) {
         items.push({
             kind: 'runtime',
             id: runtimeOrigins[j].id,
-            label: getBareFileName(runtimeOrigins[j].file || runtimeOrigins[j].url || runtimeOrigins[j].kind) || runtimeOrigins[j].id,
+            label:
+                getBareFileName(
+                    runtimeOrigins[j].file || runtimeOrigins[j].url || runtimeOrigins[j].kind,
+                ) || runtimeOrigins[j].id,
             file: runtimeOrigins[j].file || '',
             url: runtimeOrigins[j].url || runtimeOrigins[j].objectUrl || '',
             score: runtimeOrigins[j].score,
@@ -1779,50 +2620,102 @@ function collectInterestingEntrypoints(assets, runtimeOrigins) {
             timestamp: runtimeOrigins[j].timestamp || 0,
             primaryBoundary: runtimeOrigins[j].primaryBoundary || '',
             boundaryLabels: runtimeOrigins[j].boundaryLabels || [],
-            why: [runtimeOrigins[j].primaryBoundary, runtimeOrigins[j].kind, runtimeOrigins[j].originType, (runtimeOrigins[j].relatedChunks || []).join(', ')].filter(Boolean).join(' | '),
-            relatedChunks: runtimeOrigins[j].relatedChunks || []
+            why: [
+                runtimeOrigins[j].primaryBoundary,
+                runtimeOrigins[j].kind,
+                runtimeOrigins[j].originType,
+                (runtimeOrigins[j].relatedChunks || []).join(', '),
+            ]
+                .filter(Boolean)
+                .join(' | '),
+            relatedChunks: runtimeOrigins[j].relatedChunks || [],
         });
     }
-    items.sort(function (a, b) { return b.score !== a.score ? b.score - a.score : (a.timestamp || 0) - (b.timestamp || 0); });
+    items.sort(function (a, b) {
+        return b.score !== a.score ? b.score - a.score : (a.timestamp || 0) - (b.timestamp || 0);
+    });
     return items.slice(0, 14);
 }
 
 function buildInvestigationWorkspace(analysis) {
-    var categories = analysis.boundaryLabels && analysis.boundaryLabels.categories ? analysis.boundaryLabels.categories : ['bootstrap', 'router', 'state', 'data', 'auth', 'analytics', 'editor', 'vendor'];
+    var categories =
+        analysis.boundaryLabels && analysis.boundaryLabels.categories
+            ? analysis.boundaryLabels.categories
+            : ['bootstrap', 'router', 'state', 'data', 'auth', 'analytics', 'editor', 'vendor'];
     var workspaces = [];
-    for (var i = 0; i < categories.length; i++) workspaces.push(buildBoundaryWorkspace(categories[i], analysis));
+    for (var i = 0; i < categories.length; i++)
+        workspaces.push(buildBoundaryWorkspace(categories[i], analysis));
     workspaces.push(buildFrameworkStateWorkspace(analysis, workspaces));
     var journeys = buildJourneyViews(analysis, workspaces);
     return {
         generatedAt: new Date().toISOString(),
-        page: analysis.frameworkRuntime && analysis.frameworkRuntime.page ? analysis.frameworkRuntime.page : {},
+        page:
+            analysis.frameworkRuntime && analysis.frameworkRuntime.page
+                ? analysis.frameworkRuntime.page
+                : {},
         profile: {
             name: analysis.frameworkRuntime ? analysis.frameworkRuntime.profile : 'generic-app',
             confidence: analysis.frameworkRuntime ? analysis.frameworkRuntime.confidence : 0,
-            technologies: analysis.frameworkRuntime && analysis.frameworkRuntime.technologies ? analysis.frameworkRuntime.technologies : [],
-            traits: analysis.frameworkRuntime && analysis.frameworkRuntime.traits ? analysis.frameworkRuntime.traits : [],
-            captureReason: analysis.frameworkRuntime ? analysis.frameworkRuntime.captureReason : ''
+            technologies:
+                analysis.frameworkRuntime && analysis.frameworkRuntime.technologies
+                    ? analysis.frameworkRuntime.technologies
+                    : [],
+            traits:
+                analysis.frameworkRuntime && analysis.frameworkRuntime.traits
+                    ? analysis.frameworkRuntime.traits
+                    : [],
+            captureReason: analysis.frameworkRuntime ? analysis.frameworkRuntime.captureReason : '',
         },
         summary: {
             workspaceCount: workspaces.length,
             journeyCount: journeys.length,
-            topBoundaryFlows: analysis.crossBoundaryFlows ? analysis.crossBoundaryFlows.topTransitions.slice(0, 10) : [],
+            topBoundaryFlows: analysis.crossBoundaryFlows
+                ? analysis.crossBoundaryFlows.topTransitions.slice(0, 10)
+                : [],
             likelyEntrypoints: analysis.interestingEntrypoints.slice(0, 8),
-            boundaryCounts: analysis.boundaryLabels ? analysis.boundaryLabels.summary : null
+            boundaryCounts: analysis.boundaryLabels ? analysis.boundaryLabels.summary : null,
         },
         workspaces: workspaces,
-        journeys: journeys
+        journeys: journeys,
     };
 }
 
 function buildBoundaryWorkspace(boundary, analysis) {
-    var chunks = analysis.chunkMap.items.filter(function (item) { return matchesBoundaryEntry(item, boundary); }).slice(0, 18);
-    var runtime = analysis.runtimeOrigins.items.filter(function (item) { return matchesBoundaryEntry(item, boundary); }).slice(0, 18);
-    var entrypoints = analysis.interestingEntrypoints.filter(function (item) { return matchesBoundaryEntry(item, boundary); }).slice(0, 10);
-    var events = analysis.crossBoundaryFlows.events.filter(function (item) { return matchesBoundaryEntry(item, boundary); }).slice(0, 24);
-    var transitions = analysis.crossBoundaryFlows.transitions.filter(function (item) { return flowTouchesBoundary(item, boundary); }).slice(0, 24);
-    var topTransitions = analysis.crossBoundaryFlows.topTransitions.filter(function (item) { return item.fromBoundary === boundary || item.toBoundary === boundary; }).slice(0, 10);
-    var chains = analysis.crossBoundaryFlows.chains.filter(function (item) { return chainTouchesBoundary(item, boundary); }).slice(0, 10);
+    var chunks = analysis.chunkMap.items
+        .filter(function (item) {
+            return matchesBoundaryEntry(item, boundary);
+        })
+        .slice(0, 18);
+    var runtime = analysis.runtimeOrigins.items
+        .filter(function (item) {
+            return matchesBoundaryEntry(item, boundary);
+        })
+        .slice(0, 18);
+    var entrypoints = analysis.interestingEntrypoints
+        .filter(function (item) {
+            return matchesBoundaryEntry(item, boundary);
+        })
+        .slice(0, 10);
+    var events = analysis.crossBoundaryFlows.events
+        .filter(function (item) {
+            return matchesBoundaryEntry(item, boundary);
+        })
+        .slice(0, 24);
+    var transitions = analysis.crossBoundaryFlows.transitions
+        .filter(function (item) {
+            return flowTouchesBoundary(item, boundary);
+        })
+        .slice(0, 24);
+    var topTransitions = analysis.crossBoundaryFlows.topTransitions
+        .filter(function (item) {
+            return item.fromBoundary === boundary || item.toBoundary === boundary;
+        })
+        .slice(0, 10);
+    var chains = analysis.crossBoundaryFlows.chains
+        .filter(function (item) {
+            return chainTouchesBoundary(item, boundary);
+        })
+        .slice(0, 10);
     return {
         id: boundary,
         title: getBoundaryTitle(boundary),
@@ -1835,7 +2728,7 @@ function buildBoundaryWorkspace(boundary, analysis) {
             eventCount: events.length,
             transitionCount: transitions.length,
             chainCount: chains.length,
-            totalItems: chunks.length + runtime.length + entrypoints.length
+            totalItems: chunks.length + runtime.length + entrypoints.length,
         },
         entrypoints: entrypoints,
         chunks: chunks,
@@ -1847,30 +2740,62 @@ function buildBoundaryWorkspace(boundary, analysis) {
         relatedArtifacts: [
             '_analysis/boundary-labels.json',
             '_analysis/cross-boundary-flows.json',
-            '_analysis/interesting-entrypoints.json'
-        ]
+            '_analysis/interesting-entrypoints.json',
+        ],
     };
 }
 
 function buildFrameworkStateWorkspace(analysis, existingWorkspaces) {
     var frameworkState = analysis.frameworkState || {};
     var boundaries = ['bootstrap', 'router', 'state', 'data', 'auth'];
-    var chunks = analysis.chunkMap.items.filter(function (item) { return matchesAnyBoundary(item, boundaries); }).slice(0, 18);
-    var runtime = analysis.runtimeOrigins.items.filter(function (item) { return matchesAnyBoundary(item, boundaries); }).slice(0, 18);
-    var entrypoints = analysis.interestingEntrypoints.filter(function (item) { return matchesAnyBoundary(item, boundaries); }).slice(0, 12);
-    var transitions = analysis.crossBoundaryFlows.transitions.filter(function (item) { return flowTouchesAnyBoundary(item, boundaries); }).slice(0, 24);
-    var chains = analysis.crossBoundaryFlows.chains.filter(function (item) { return chainTouchesAnyBoundary(item, boundaries); }).slice(0, 10);
+    var chunks = analysis.chunkMap.items
+        .filter(function (item) {
+            return matchesAnyBoundary(item, boundaries);
+        })
+        .slice(0, 18);
+    var runtime = analysis.runtimeOrigins.items
+        .filter(function (item) {
+            return matchesAnyBoundary(item, boundaries);
+        })
+        .slice(0, 18);
+    var entrypoints = analysis.interestingEntrypoints
+        .filter(function (item) {
+            return matchesAnyBoundary(item, boundaries);
+        })
+        .slice(0, 12);
+    var transitions = analysis.crossBoundaryFlows.transitions
+        .filter(function (item) {
+            return flowTouchesAnyBoundary(item, boundaries);
+        })
+        .slice(0, 24);
+    var chains = analysis.crossBoundaryFlows.chains
+        .filter(function (item) {
+            return chainTouchesAnyBoundary(item, boundaries);
+        })
+        .slice(0, 10);
     var events = buildFrameworkStateEvents(frameworkState);
     var supportingWorkspaces = [];
     for (var i = 0; i < existingWorkspaces.length; i++) {
-        if (arrayContainsAny(['bootstrap', 'router', 'state', 'data', 'auth'], [existingWorkspaces[i].id])) supportingWorkspaces.push(existingWorkspaces[i]);
+        if (
+            arrayContainsAny(
+                ['bootstrap', 'router', 'state', 'data', 'auth'],
+                [existingWorkspaces[i].id],
+            )
+        )
+            supportingWorkspaces.push(existingWorkspaces[i]);
     }
     return {
         id: 'framework-state',
         title: 'Framework State workspace',
-        description: 'Summarize the inspected framework state across router, stores, query caches, hydration payloads, auth state, and detected framework roots.',
+        description:
+            'Summarize the inspected framework state across router, stores, query caches, hydration payloads, auth state, and detected framework roots.',
         focusBoundaries: boundaries,
-        questions: ['Which router state is active and where did it come from?', 'Which stores, caches, and hydration payloads are present?', 'What auth/session state is exposed?', 'Which supporting workspaces explain the observed framework state?'],
+        questions: [
+            'Which router state is active and where did it come from?',
+            'Which stores, caches, and hydration payloads are present?',
+            'What auth/session state is exposed?',
+            'Which supporting workspaces explain the observed framework state?',
+        ],
         summary: {
             chunkCount: chunks.length,
             runtimeCount: runtime.length,
@@ -1885,17 +2810,21 @@ function buildFrameworkStateWorkspace(analysis, existingWorkspaces) {
             hydrationCount: frameworkState.hydrationCount || 0,
             authCount: frameworkState.authCount || 0,
             routerFramework: frameworkState.routerFramework || 'generic',
-            route: frameworkState.route || ''
+            route: frameworkState.route || '',
         },
         entrypoints: entrypoints,
         chunks: chunks,
         runtime: runtime,
         events: events,
         transitions: transitions,
-        topTransitions: analysis.crossBoundaryFlows.topTransitions.filter(function (item) { return arrayContainsAny([item.fromBoundary, item.toBoundary], boundaries); }).slice(0, 10),
+        topTransitions: analysis.crossBoundaryFlows.topTransitions
+            .filter(function (item) {
+                return arrayContainsAny([item.fromBoundary, item.toBoundary], boundaries);
+            })
+            .slice(0, 10),
         chains: chains,
         supportingWorkspaces: supportingWorkspaces,
-        relatedArtifacts: frameworkState.relatedArtifacts || []
+        relatedArtifacts: frameworkState.relatedArtifacts || [],
     };
 }
 
@@ -1909,13 +2838,31 @@ function buildFrameworkStateEvents(frameworkState) {
             boundary: 'router',
             label: (frameworkState.routerFramework || 'generic') + ' router',
             detail: frameworkState.route || '',
-            score: frameworkState.queryKeyCount || 0
+            score: frameworkState.queryKeyCount || 0,
         });
     }
-    pushFrameworkCollectionEvents(events, frameworkState.roots, 'framework-root', 'bootstrap', 'root');
-    pushFrameworkCollectionEvents(events, frameworkState.stores, 'store-snapshot', 'state', 'store');
+    pushFrameworkCollectionEvents(
+        events,
+        frameworkState.roots,
+        'framework-root',
+        'bootstrap',
+        'root',
+    );
+    pushFrameworkCollectionEvents(
+        events,
+        frameworkState.stores,
+        'store-snapshot',
+        'state',
+        'store',
+    );
     pushFrameworkCollectionEvents(events, frameworkState.queries, 'query-cache', 'data', 'query');
-    pushFrameworkCollectionEvents(events, frameworkState.hydration, 'hydration-payload', 'bootstrap', 'hydration');
+    pushFrameworkCollectionEvents(
+        events,
+        frameworkState.hydration,
+        'hydration-payload',
+        'bootstrap',
+        'hydration',
+    );
     pushFrameworkCollectionEvents(events, frameworkState.auth, 'auth-state', 'auth', 'auth');
     return events.slice(0, 24);
 }
@@ -1930,7 +2877,7 @@ function pushFrameworkCollectionEvents(target, items, kind, boundary, fallbackLa
             boundary: boundary,
             label: item.id || item.kind || item.tag || fallbackLabel,
             detail: item.source || item.route || item.status || '',
-            score: item.keyCount || item.queryCount || item.childCount || 0
+            score: item.keyCount || item.queryCount || item.childCount || 0,
         });
     }
 }
@@ -1943,7 +2890,13 @@ function matchesBoundaryEntry(entry, boundary) {
 }
 
 function flowTouchesBoundary(flow, boundary) {
-    return !!flow && (flow.fromBoundary === boundary || flow.toBoundary === boundary || matchesBoundaryEntry(flow.from, boundary) || matchesBoundaryEntry(flow.to, boundary));
+    return (
+        !!flow &&
+        (flow.fromBoundary === boundary ||
+            flow.toBoundary === boundary ||
+            matchesBoundaryEntry(flow.from, boundary) ||
+            matchesBoundaryEntry(flow.to, boundary))
+    );
 }
 
 function chainTouchesBoundary(chain, boundary) {
@@ -1952,13 +2905,15 @@ function chainTouchesBoundary(chain, boundary) {
 
 function flowTouchesAnyBoundary(flow, boundaries) {
     if (!flow) return false;
-    for (var i = 0; i < boundaries.length; i++) if (flowTouchesBoundary(flow, boundaries[i])) return true;
+    for (var i = 0; i < boundaries.length; i++)
+        if (flowTouchesBoundary(flow, boundaries[i])) return true;
     return false;
 }
 
 function chainTouchesAnyBoundary(chain, boundaries) {
     if (!chain) return false;
-    for (var i = 0; i < boundaries.length; i++) if (chainTouchesBoundary(chain, boundaries[i])) return true;
+    for (var i = 0; i < boundaries.length; i++)
+        if (chainTouchesBoundary(chain, boundaries[i])) return true;
     return false;
 }
 
@@ -1971,71 +2926,174 @@ function getBoundaryTitle(boundary) {
         auth: 'Auth workspace',
         analytics: 'Analytics workspace',
         editor: 'Editor workspace',
-        vendor: 'Vendor workspace'
+        vendor: 'Vendor workspace',
     };
-    return titles[boundary] || (boundary + ' workspace');
+    return titles[boundary] || boundary + ' workspace';
 }
 
 function getBoundaryDescription(boundary) {
     var descriptions = {
-        bootstrap: 'Focus on initial loaders, hydration code, runtime bootstraps, and early execution pivots.',
+        bootstrap:
+            'Focus on initial loaders, hydration code, runtime bootstraps, and early execution pivots.',
         router: 'Focus on navigation, route loaders, route-linked chunks, and follow-on route activity.',
         state: 'Focus on stores, persistence, rehydration, and state-driven transitions into other subsystems.',
         data: 'Focus on API clients, GraphQL, fetch/XHR activity, and data-triggered runtime behavior.',
         auth: 'Focus on session setup, token handling, login/logout paths, and downstream auth-driven requests.',
-        analytics: 'Focus on telemetry, tracking beacons, pageview/reporting paths, and analytics fan-out.',
+        analytics:
+            'Focus on telemetry, tracking beacons, pageview/reporting paths, and analytics fan-out.',
         editor: 'Focus on rich-text/editor runtimes, content workflows, and document mutation paths.',
-        vendor: 'Focus on third-party/framework code that spawns runtime artifacts or crosses into business logic.'
+        vendor: 'Focus on third-party/framework code that spawns runtime artifacts or crosses into business logic.',
     };
     return descriptions[boundary] || 'Focus on artifacts labeled for this subsystem.';
 }
 
 function getBoundaryQuestions(boundary) {
     var questions = {
-        bootstrap: ['What actually starts the application?', 'Which chunks materialize runtime artifacts first?', 'Where does bootstrap hand off to router, state, or data code?'],
-        router: ['Which chunks own navigation?', 'What route-linked requests or runtime artifacts follow router activity?', 'Which entrypoints look route-specific?'],
-        state: ['Which stores or persistence seams are present?', 'Does state drive data fetches or router changes?', 'Which runtime artifacts look state-derived?'],
-        data: ['Which requests look like the primary API layer?', 'Which chunks and runtimes trigger requests?', 'Are GraphQL or other data clients obvious?'],
-        auth: ['Where is session or token handling initialized?', 'Which requests belong to login/session refresh?', 'What does auth trigger next: data, router, or analytics?'],
-        analytics: ['Which beacons or SDK seams are present?', 'What subsystem activity feeds analytics?', 'Which chunks likely own telemetry wiring?'],
-        editor: ['Which assets or runtimes look content- or editor-related?', 'What runtime materialization follows editor activity?', 'Does editor activity lead into state or data flows?'],
-        vendor: ['Which third-party bundles are most influential?', 'Which runtime artifacts come from vendor/framework code?', 'Where does vendor code cross into app subsystems?']
+        bootstrap: [
+            'What actually starts the application?',
+            'Which chunks materialize runtime artifacts first?',
+            'Where does bootstrap hand off to router, state, or data code?',
+        ],
+        router: [
+            'Which chunks own navigation?',
+            'What route-linked requests or runtime artifacts follow router activity?',
+            'Which entrypoints look route-specific?',
+        ],
+        state: [
+            'Which stores or persistence seams are present?',
+            'Does state drive data fetches or router changes?',
+            'Which runtime artifacts look state-derived?',
+        ],
+        data: [
+            'Which requests look like the primary API layer?',
+            'Which chunks and runtimes trigger requests?',
+            'Are GraphQL or other data clients obvious?',
+        ],
+        auth: [
+            'Where is session or token handling initialized?',
+            'Which requests belong to login/session refresh?',
+            'What does auth trigger next: data, router, or analytics?',
+        ],
+        analytics: [
+            'Which beacons or SDK seams are present?',
+            'What subsystem activity feeds analytics?',
+            'Which chunks likely own telemetry wiring?',
+        ],
+        editor: [
+            'Which assets or runtimes look content- or editor-related?',
+            'What runtime materialization follows editor activity?',
+            'Does editor activity lead into state or data flows?',
+        ],
+        vendor: [
+            'Which third-party bundles are most influential?',
+            'Which runtime artifacts come from vendor/framework code?',
+            'Where does vendor code cross into app subsystems?',
+        ],
     };
-    return questions[boundary] || ['Which artifacts belong here?', 'Which flows enter or leave this boundary?'];
+    return (
+        questions[boundary] || [
+            'Which artifacts belong here?',
+            'Which flows enter or leave this boundary?',
+        ]
+    );
 }
 
 function buildJourneyViews(analysis, workspaces) {
     var workspaceMap = {};
     for (var i = 0; i < workspaces.length; i++) workspaceMap[workspaces[i].id] = workspaces[i];
     return [
-        buildJourneyView('initial-load', 'Initial load', 'Trace how bootstrap code, runtime materialization, routing, and data startup fit together during first load.', analysis, workspaceMap, ['bootstrap', 'router', 'data', 'state'], function (flow) {
-            return flow.fromBoundary === 'bootstrap' || flow.toBoundary === 'bootstrap' || flow.relation === 'imports-boundary' || flow.relation === 'materializes-runtime';
-        }),
-        buildJourneyView('auth-handshake', 'Auth handshake', 'Slice the session/auth path and its downstream transitions into data, router, and analytics.', analysis, workspaceMap, ['auth', 'data', 'router', 'analytics'], function (flow) {
-            return flowTouchesBoundary(flow, 'auth');
-        }),
-        buildJourneyView('route-change', 'Route change', 'Slice the navigation path through router, data, state, and analytics activity.', analysis, workspaceMap, ['router', 'data', 'state', 'analytics'], function (flow) {
-            return flowTouchesBoundary(flow, 'router');
-        }),
-        buildJourneyView('runtime-materialization', 'Runtime materialization', 'Show which chunks create runtime artifacts and how those artifacts lead into requests or more runtime generation.', analysis, workspaceMap, ['bootstrap', 'vendor', 'data'], function (flow) {
-            return flow.relation === 'materializes-runtime' || flow.relation === 'spawns-runtime' || flow.from.kind === 'runtime' || flow.to.kind === 'runtime';
-        })
+        buildJourneyView(
+            'initial-load',
+            'Initial load',
+            'Trace how bootstrap code, runtime materialization, routing, and data startup fit together during first load.',
+            analysis,
+            workspaceMap,
+            ['bootstrap', 'router', 'data', 'state'],
+            function (flow) {
+                return (
+                    flow.fromBoundary === 'bootstrap' ||
+                    flow.toBoundary === 'bootstrap' ||
+                    flow.relation === 'imports-boundary' ||
+                    flow.relation === 'materializes-runtime'
+                );
+            },
+        ),
+        buildJourneyView(
+            'auth-handshake',
+            'Auth handshake',
+            'Slice the session/auth path and its downstream transitions into data, router, and analytics.',
+            analysis,
+            workspaceMap,
+            ['auth', 'data', 'router', 'analytics'],
+            function (flow) {
+                return flowTouchesBoundary(flow, 'auth');
+            },
+        ),
+        buildJourneyView(
+            'route-change',
+            'Route change',
+            'Slice the navigation path through router, data, state, and analytics activity.',
+            analysis,
+            workspaceMap,
+            ['router', 'data', 'state', 'analytics'],
+            function (flow) {
+                return flowTouchesBoundary(flow, 'router');
+            },
+        ),
+        buildJourneyView(
+            'runtime-materialization',
+            'Runtime materialization',
+            'Show which chunks create runtime artifacts and how those artifacts lead into requests or more runtime generation.',
+            analysis,
+            workspaceMap,
+            ['bootstrap', 'vendor', 'data'],
+            function (flow) {
+                return (
+                    flow.relation === 'materializes-runtime' ||
+                    flow.relation === 'spawns-runtime' ||
+                    flow.from.kind === 'runtime' ||
+                    flow.to.kind === 'runtime'
+                );
+            },
+        ),
     ];
 }
 
-function buildJourneyView(id, title, description, analysis, workspaceMap, focusBoundaries, transitionFilter) {
-    var transitions = analysis.crossBoundaryFlows.transitions.filter(function (flow) {
-        return transitionFilter(flow) || arrayTouchesAny(flow.fromBoundary ? [flow.fromBoundary, flow.toBoundary] : [], focusBoundaries);
-    }).slice(0, 26);
-    var events = analysis.crossBoundaryFlows.events.filter(function (event) {
-        return matchesAnyBoundary(event, focusBoundaries);
-    }).slice(0, 28);
-    var entrypoints = analysis.interestingEntrypoints.filter(function (entry) {
-        return matchesAnyBoundary(entry, focusBoundaries);
-    }).slice(0, 10);
-    var chains = analysis.crossBoundaryFlows.chains.filter(function (chain) {
-        return chainPathTouchesAny(chain, focusBoundaries);
-    }).slice(0, 10);
+function buildJourneyView(
+    id,
+    title,
+    description,
+    analysis,
+    workspaceMap,
+    focusBoundaries,
+    transitionFilter,
+) {
+    var transitions = analysis.crossBoundaryFlows.transitions
+        .filter(function (flow) {
+            return (
+                transitionFilter(flow) ||
+                arrayTouchesAny(
+                    flow.fromBoundary ? [flow.fromBoundary, flow.toBoundary] : [],
+                    focusBoundaries,
+                )
+            );
+        })
+        .slice(0, 26);
+    var events = analysis.crossBoundaryFlows.events
+        .filter(function (event) {
+            return matchesAnyBoundary(event, focusBoundaries);
+        })
+        .slice(0, 28);
+    var entrypoints = analysis.interestingEntrypoints
+        .filter(function (entry) {
+            return matchesAnyBoundary(entry, focusBoundaries);
+        })
+        .slice(0, 10);
+    var chains = analysis.crossBoundaryFlows.chains
+        .filter(function (chain) {
+            return chainPathTouchesAny(chain, focusBoundaries);
+        })
+        .slice(0, 10);
     var supportingWorkspaces = [];
     for (var i = 0; i < focusBoundaries.length; i++) {
         var workspace = workspaceMap[focusBoundaries[i]];
@@ -2044,7 +3102,7 @@ function buildJourneyView(id, title, description, analysis, workspaceMap, focusB
             id: workspace.id,
             title: workspace.title,
             summary: workspace.summary,
-            entrypoints: workspace.entrypoints.slice(0, 3)
+            entrypoints: workspace.entrypoints.slice(0, 3),
         });
     }
     return {
@@ -2056,7 +3114,7 @@ function buildJourneyView(id, title, description, analysis, workspaceMap, focusB
             eventCount: events.length,
             transitionCount: transitions.length,
             chainCount: chains.length,
-            entrypointCount: entrypoints.length
+            entrypointCount: entrypoints.length,
         },
         questions: getJourneyQuestions(id),
         entrypoints: entrypoints,
@@ -2067,13 +3125,14 @@ function buildJourneyView(id, title, description, analysis, workspaceMap, focusB
         relatedArtifacts: [
             '_analysis/cross-boundary-flows.json',
             '_analysis/startup-chain.json',
-            '_analysis/runtime-origins.json'
-        ]
+            '_analysis/runtime-origins.json',
+        ],
     };
 }
 
 function matchesAnyBoundary(entry, boundaries) {
-    for (var i = 0; i < boundaries.length; i++) if (matchesBoundaryEntry(entry, boundaries[i])) return true;
+    for (var i = 0; i < boundaries.length; i++)
+        if (matchesBoundaryEntry(entry, boundaries[i])) return true;
     return false;
 }
 
@@ -2092,12 +3151,33 @@ function chainPathTouchesAny(chain, boundaries) {
 
 function getJourneyQuestions(id) {
     var questions = {
-        'initial-load': ['Which chunk booted first?', 'What runtime artifacts were materialized during startup?', 'Which early transitions led into data or router activity?'],
-        'auth-handshake': ['Which assets and requests carry auth signals?', 'Does auth lead into data, router, or analytics behavior?', 'Which runtime artifacts appear around session setup?'],
-        'route-change': ['Which chunks and requests cluster around navigation?', 'Does route activity trigger data fetches or analytics?', 'Which runtime artifacts appear after router activity?'],
-        'runtime-materialization': ['Which chunks created runtime artifacts?', 'Which runtime artifacts spawn other runtimes?', 'What requests or boundary transitions follow runtime generation?']
+        'initial-load': [
+            'Which chunk booted first?',
+            'What runtime artifacts were materialized during startup?',
+            'Which early transitions led into data or router activity?',
+        ],
+        'auth-handshake': [
+            'Which assets and requests carry auth signals?',
+            'Does auth lead into data, router, or analytics behavior?',
+            'Which runtime artifacts appear around session setup?',
+        ],
+        'route-change': [
+            'Which chunks and requests cluster around navigation?',
+            'Does route activity trigger data fetches or analytics?',
+            'Which runtime artifacts appear after router activity?',
+        ],
+        'runtime-materialization': [
+            'Which chunks created runtime artifacts?',
+            'Which runtime artifacts spawn other runtimes?',
+            'What requests or boundary transitions follow runtime generation?',
+        ],
     };
-    return questions[id] || ['What does this slice show first?', 'Which transitions deserve inspection?'];
+    return (
+        questions[id] || [
+            'What does this slice show first?',
+            'Which transitions deserve inspection?',
+        ]
+    );
 }
 
 /*
@@ -2156,7 +3236,7 @@ function generateInvestigationIndexHTML(investigation) {
         '.hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}',
         '.hero .meta{max-width:820px}',
         '.hero .badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:#203a77;font-size:12px;color:#e6ebff;margin-bottom:10px}',
-        '@media (max-width:900px){.shell{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}}'
+        '@media (max-width:900px){.shell{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}}',
     ].join('');
     var script = [
         '(function(){',
@@ -2192,7 +3272,7 @@ function generateInvestigationIndexHTML(investigation) {
         'function renderCurrent(current){var relatedArtifacts=current.relatedArtifacts||[];var supportingWorkspaces=current.supportingWorkspaces||[];var html="";html+=panel(current.title||current.id||"Investigation slice","<div class=\"hero\"><div class=\"meta\"><div class=\"badge\">"+esc(state.type)+"</div><p>"+esc(current.description||"No description available.")+"</p>"+chips(current.focusBoundaries||[])+"</div><div class=\"meta\"><div class=\"muted\">Generated</div><div class=\"mono\">"+esc(data.generatedAt||"")+"</div></div></div>","");html+=panel("Summary",kvs(current.summary||{}),"");html+=panel("Questions",list(current.questions||[],renderQuestion,"No questions recorded."),"");html+="<div class=\"split\">"+panel("Entrypoints",list(current.entrypoints||[],renderEntrypoint,"No entrypoints recorded."),"")+panel("Transitions",list(current.transitions||[],renderTransition,"No transitions recorded."),"")+"</div>";html+="<div class=\"split\">"+panel("Chunks",list(current.chunks||[],renderChunk,"No chunks recorded."),"")+panel("Runtime artifacts",list(current.runtime||[],renderRuntime,"No runtime artifacts recorded."),"")+"</div>";html+="<div class=\"split\">"+panel("Events",list(current.events||[],renderEvent,"No events recorded."),"")+panel("Chains",list(current.chains||[],renderChain,"No chains recorded."),"")+"</div>";if(supportingWorkspaces.length)html+=panel("Supporting workspaces",list(supportingWorkspaces,renderSupportingWorkspace,"No supporting workspaces recorded."),"");if(relatedArtifacts.length)html+=panel("Related artifacts","<div class=\"links\">"+relatedArtifacts.map(renderArtifact).join("")+"</div>","");return html}',
         'function render(){var current=findCurrent();renderNav();if(!current){summaryCards.innerHTML="";view.innerHTML="<section class=\"panel\"><div class=\"empty\">No investigation slice available.</div></section>";return}summaryCards.innerHTML=renderSummary(current);view.innerHTML=renderCurrent(current)}',
         'render();',
-        '})();'
+        '})();',
     ].join('\n');
     return `<!DOCTYPE html>
 <html lang="en">
@@ -2222,14 +3302,19 @@ function generateInvestigationIndexHTML(investigation) {
 }
 
 function serializeInlineJson(value) {
-    return JSON.stringify(value || {}).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+    return JSON.stringify(value || {})
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026');
 }
 
 function exportReadableArtifacts(zip, analysis) {
     var assetMap = {};
     var runtimeMap = {};
-    for (var i = 0; i < analysis.assets.length; i++) assetMap[analysis.assets[i].id] = analysis.assets[i];
-    for (var j = 0; j < analysis.runtimeRecords.length; j++) runtimeMap[analysis.runtimeRecords[j].id] = analysis.runtimeRecords[j];
+    for (var i = 0; i < analysis.assets.length; i++)
+        assetMap[analysis.assets[i].id] = analysis.assets[i];
+    for (var j = 0; j < analysis.runtimeRecords.length; j++)
+        runtimeMap[analysis.runtimeRecords[j].id] = analysis.runtimeRecords[j];
     var written = 0;
     for (var k = 0; k < analysis.interestingEntrypoints.length && written < 10; k++) {
         var entry = analysis.interestingEntrypoints[k];
@@ -2239,7 +3324,8 @@ function exportReadableArtifacts(zip, analysis) {
         if (entry.kind === 'runtime' && typeof record.text !== 'string') continue;
         written++;
         var label = sanitizePathPart(entry.label || entry.id, entry.kind);
-        entry.readableFile = '_analysis/readable/' + ('0000' + written).slice(-4) + '-' + label + '.js';
+        entry.readableFile =
+            '_analysis/readable/' + ('0000' + written).slice(-4) + '-' + label + '.js';
         zip.file(entry.readableFile, buildReadableArtifact(entry, record));
     }
 }
@@ -2255,9 +3341,16 @@ function buildReadableArtifact(entry, record) {
         'Boundaries: ' + ((entry.boundaryLabels || []).join(', ') || 'none'),
         'Why: ' + (entry.why || ''),
         'Score: ' + (entry.score || 0),
-        'Beautified: ' + (readable === body ? 'no' : 'yes')
+        'Beautified: ' + (readable === body ? 'no' : 'yes'),
     ];
-    var header = ['/*', ' * Semantic reconstruction'].concat(facts.map(function (line) { return ' * ' + line; })).concat([' */', '']).join('\n');
+    var header = ['/*', ' * Semantic reconstruction']
+        .concat(
+            facts.map(function (line) {
+                return ' * ' + line;
+            }),
+        )
+        .concat([' */', ''])
+        .join('\n');
     return header + readable;
 }
 
@@ -2286,21 +3379,28 @@ function parseGraphQLOperation(entry) {
         operationType: payload.operationType || '',
         queryPreview: payload.queryPreview || '',
         timestamp: entry.timestamp || 0,
-        status: entry.status || 0
+        status: entry.status || 0,
     };
 }
 
 function looksLikeGraphQLBody(body) {
     if (!body) return false;
-    if (typeof body === 'string') return /(?:^|\b)(query|mutation|subscription)\b/.test(body) || body.indexOf('operationName') >= 0;
+    if (typeof body === 'string')
+        return (
+            /(?:^|\b)(query|mutation|subscription)\b/.test(body) ||
+            body.indexOf('operationName') >= 0
+        );
     return typeof body === 'object' && (body.query || body.operationName || body.extensions);
 }
 
 function normalizeGraphQLPayload(body) {
     var payload = body;
     if (typeof payload === 'string') {
-        try { payload = JSON.parse(payload); }
-        catch (_) { payload = { query: payload }; }
+        try {
+            payload = JSON.parse(payload);
+        } catch (_) {
+            payload = { query: payload };
+        }
     }
     payload = payload && typeof payload === 'object' ? payload : {};
     var query = String(payload.query || payload.body || '');
@@ -2308,7 +3408,7 @@ function normalizeGraphQLPayload(body) {
     return {
         operationName: payload.operationName || (match ? match[2] : ''),
         operationType: match ? match[1] : '',
-        queryPreview: query.substring(0, 240)
+        queryPreview: query.substring(0, 240),
     };
 }
 
@@ -2321,13 +3421,20 @@ function fetchSourceMapText(url) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.text();
         })
-        .catch(function () { return fetchSourceMapTextInPage(url); })
-        .catch(function () { return null; });
+        .catch(function () {
+            return fetchSourceMapTextInPage(url);
+        })
+        .catch(function () {
+            return null;
+        });
 }
 
 function fetchSourceMapTextInPage(url) {
     return new Promise(function (resolve) {
-        var expression = '(function(){return fetch(' + JSON.stringify(url) + ',{credentials:"include"})' +
+        var expression =
+            '(function(){return fetch(' +
+            JSON.stringify(url) +
+            ',{credentials:"include"})' +
             '.then(function(r){return r.ok?r.text():""})' +
             '.catch(function(){return ""})})()';
         chrome.devtools.inspectedWindow.eval(
@@ -2335,17 +3442,19 @@ function fetchSourceMapTextInPage(url) {
             { awaitPromise: true },
             function (result, error) {
                 resolve(!error && typeof result === 'string' && result.length ? result : null);
-            }
+            },
         );
     });
 }
 
 function generateWaterfallHTML(timings) {
     if (!timings || !timings.length) return '<html><body>No timing data available.</body></html>';
-    var sorted = timings.slice().sort(function (a, b) { return a.startTime - b.startTime; });
+    var sorted = timings.slice().sort(function (a, b) {
+        return a.startTime - b.startTime;
+    });
     var maxEnd = 0;
     for (var i = 0; i < sorted.length; i++) {
-        var end = sorted[i].responseEnd || (sorted[i].startTime + sorted[i].duration);
+        var end = sorted[i].responseEnd || sorted[i].startTime + sorted[i].duration;
         if (end > maxEnd) maxEnd = end;
     }
     var totalTime = maxEnd;
@@ -2357,51 +3466,236 @@ function generateWaterfallHTML(timings) {
     var chartHeight = sorted.length * ROW_H + 60;
     var svgHeight = chartHeight + 120;
     var COLORS = {
-        dns: 'rgba(3,169,244,0.6)', tcp: 'rgba(255,152,0,0.6)', ssl: 'rgba(156,39,176,0.6)',
-        ttfb: 'rgba(76,175,80,0.6)', download: 'rgba(3,169,244,0.9)', text: '#ccc', bg: '#242424', stripe: '#2a2a2a'
+        dns: 'rgba(3,169,244,0.6)',
+        tcp: 'rgba(255,152,0,0.6)',
+        ssl: 'rgba(156,39,176,0.6)',
+        ttfb: 'rgba(76,175,80,0.6)',
+        download: 'rgba(3,169,244,0.9)',
+        text: '#ccc',
+        bg: '#242424',
+        stripe: '#2a2a2a',
     };
     var rows = '';
     for (var r = 0; r < sorted.length; r++) {
         var e = sorted[r];
         var y = 40 + r * ROW_H;
-        if (r % 2 === 0) rows += '<rect x="' + BAR_START + '" y="' + y + '" width="' + BAR_W + '" height="' + ROW_H + '" fill="' + COLORS.stripe + '" opacity="0.3"/>';
+        if (r % 2 === 0)
+            rows +=
+                '<rect x="' +
+                BAR_START +
+                '" y="' +
+                y +
+                '" width="' +
+                BAR_W +
+                '" height="' +
+                ROW_H +
+                '" fill="' +
+                COLORS.stripe +
+                '" opacity="0.3"/>';
         var label = e.name.replace(/^https?:\/\/[^\/]+\//, '').substring(0, 55);
-        rows += '<text x="' + (BAR_START - 6) + '" y="' + (y + 14) + '" fill="' + COLORS.text + '" font-size="11" font-family="monospace" text-anchor="end">' + escapeXml(label) + '</text>';
-        var toX = function (t) { return BAR_START + (t / totalTime) * BAR_W; };
-        if (e.domainLookupStart > 0 && e.domainLookupEnd > e.domainLookupStart) rows += '<rect x="' + toX(e.domainLookupStart) + '" y="' + (y + 4) + '" width="' + Math.max(1, toX(e.domainLookupEnd) - toX(e.domainLookupStart)) + '" height="' + (ROW_H - 8) + '" fill="' + COLORS.dns + '"><title>DNS: ' + formatMs(e.domainLookupEnd - e.domainLookupStart) + '</title></rect>';
+        rows +=
+            '<text x="' +
+            (BAR_START - 6) +
+            '" y="' +
+            (y + 14) +
+            '" fill="' +
+            COLORS.text +
+            '" font-size="11" font-family="monospace" text-anchor="end">' +
+            escapeXml(label) +
+            '</text>';
+        var toX = function (t) {
+            return BAR_START + (t / totalTime) * BAR_W;
+        };
+        if (e.domainLookupStart > 0 && e.domainLookupEnd > e.domainLookupStart)
+            rows +=
+                '<rect x="' +
+                toX(e.domainLookupStart) +
+                '" y="' +
+                (y + 4) +
+                '" width="' +
+                Math.max(1, toX(e.domainLookupEnd) - toX(e.domainLookupStart)) +
+                '" height="' +
+                (ROW_H - 8) +
+                '" fill="' +
+                COLORS.dns +
+                '"><title>DNS: ' +
+                formatMs(e.domainLookupEnd - e.domainLookupStart) +
+                '</title></rect>';
         if (e.connectStart > 0 && e.connectEnd > 0) {
             var tcpWidth = Math.max(1, toX(e.connectEnd) - toX(e.connectStart));
-            if (e.secureConnectionStart > 0 && e.secureConnectionStart > e.connectStart) tcpWidth = Math.max(1, toX(e.secureConnectionStart) - toX(e.connectStart));
-            if (tcpWidth > 0) rows += '<rect x="' + toX(e.connectStart) + '" y="' + (y + 4) + '" width="' + tcpWidth + '" height="' + (ROW_H - 8) + '" fill="' + COLORS.tcp + '"><title>TCP: ' + formatMs(e.connectEnd - e.connectStart) + '</title></rect>';
+            if (e.secureConnectionStart > 0 && e.secureConnectionStart > e.connectStart)
+                tcpWidth = Math.max(1, toX(e.secureConnectionStart) - toX(e.connectStart));
+            if (tcpWidth > 0)
+                rows +=
+                    '<rect x="' +
+                    toX(e.connectStart) +
+                    '" y="' +
+                    (y + 4) +
+                    '" width="' +
+                    tcpWidth +
+                    '" height="' +
+                    (ROW_H - 8) +
+                    '" fill="' +
+                    COLORS.tcp +
+                    '"><title>TCP: ' +
+                    formatMs(e.connectEnd - e.connectStart) +
+                    '</title></rect>';
         }
-        if (e.secureConnectionStart > 0 && e.connectEnd > e.secureConnectionStart) rows += '<rect x="' + toX(e.secureConnectionStart) + '" y="' + (y + 4) + '" width="' + Math.max(1, toX(e.connectEnd) - toX(e.secureConnectionStart)) + '" height="' + (ROW_H - 8) + '" fill="' + COLORS.ssl + '"><title>SSL: ' + formatMs(e.connectEnd - e.secureConnectionStart) + '</title></rect>';
-        if (e.requestStart > 0 && e.responseStart > e.requestStart) rows += '<rect x="' + toX(e.requestStart) + '" y="' + (y + 4) + '" width="' + Math.max(1, toX(e.responseStart) - toX(e.requestStart)) + '" height="' + (ROW_H - 8) + '" fill="' + COLORS.ttfb + '"><title>TTFB: ' + formatMs(e.responseStart - e.requestStart) + '</title></rect>';
-        if (e.responseStart > 0 && e.responseEnd > e.responseStart) rows += '<rect x="' + toX(e.responseStart) + '" y="' + (y + 4) + '" width="' + Math.max(1, toX(e.responseEnd) - toX(e.responseStart)) + '" height="' + (ROW_H - 8) + '" fill="' + COLORS.download + '"><title>Download: ' + formatMs(e.responseEnd - e.responseStart) + '</title></rect>';
+        if (e.secureConnectionStart > 0 && e.connectEnd > e.secureConnectionStart)
+            rows +=
+                '<rect x="' +
+                toX(e.secureConnectionStart) +
+                '" y="' +
+                (y + 4) +
+                '" width="' +
+                Math.max(1, toX(e.connectEnd) - toX(e.secureConnectionStart)) +
+                '" height="' +
+                (ROW_H - 8) +
+                '" fill="' +
+                COLORS.ssl +
+                '"><title>SSL: ' +
+                formatMs(e.connectEnd - e.secureConnectionStart) +
+                '</title></rect>';
+        if (e.requestStart > 0 && e.responseStart > e.requestStart)
+            rows +=
+                '<rect x="' +
+                toX(e.requestStart) +
+                '" y="' +
+                (y + 4) +
+                '" width="' +
+                Math.max(1, toX(e.responseStart) - toX(e.requestStart)) +
+                '" height="' +
+                (ROW_H - 8) +
+                '" fill="' +
+                COLORS.ttfb +
+                '"><title>TTFB: ' +
+                formatMs(e.responseStart - e.requestStart) +
+                '</title></rect>';
+        if (e.responseStart > 0 && e.responseEnd > e.responseStart)
+            rows +=
+                '<rect x="' +
+                toX(e.responseStart) +
+                '" y="' +
+                (y + 4) +
+                '" width="' +
+                Math.max(1, toX(e.responseEnd) - toX(e.responseStart)) +
+                '" height="' +
+                (ROW_H - 8) +
+                '" fill="' +
+                COLORS.download +
+                '"><title>Download: ' +
+                formatMs(e.responseEnd - e.responseStart) +
+                '</title></rect>';
         var dur = e.responseEnd - e.startTime || e.duration;
-        rows += '<text x="' + (toX(e.responseEnd || (e.startTime + dur)) + 6) + '" y="' + (y + 14) + '" fill="#888" font-size="10" font-family="monospace">' + formatMs(dur) + '</text>';
+        rows +=
+            '<text x="' +
+            (toX(e.responseEnd || e.startTime + dur) + 6) +
+            '" y="' +
+            (y + 14) +
+            '" fill="#888" font-size="10" font-family="monospace">' +
+            formatMs(dur) +
+            '</text>';
     }
     var gridLines = '';
     var numTicks = Math.min(10, Math.ceil(totalTime / 100));
     for (var t = 0; t <= numTicks; t++) {
         var tx = BAR_START + (t / numTicks) * BAR_W;
-        gridLines += '<line x1="' + tx + '" y1="40" x2="' + tx + '" y2="' + (chartHeight - 10) + '" stroke="#333" stroke-width="0.5"/>';
-        gridLines += '<text x="' + tx + '" y="30" fill="#777" font-size="10" font-family="monospace" text-anchor="middle">' + formatMs((t / numTicks) * totalTime) + '</text>';
+        gridLines +=
+            '<line x1="' +
+            tx +
+            '" y1="40" x2="' +
+            tx +
+            '" y2="' +
+            (chartHeight - 10) +
+            '" stroke="#333" stroke-width="0.5"/>';
+        gridLines +=
+            '<text x="' +
+            tx +
+            '" y="30" fill="#777" font-size="10" font-family="monospace" text-anchor="middle">' +
+            formatMs((t / numTicks) * totalTime) +
+            '</text>';
     }
-    return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Waterfall Report</title>\n<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px}h1{font-size:20px;margin-bottom:6px;color:#03a9f4}.sub{color:#888;font-size:12px;margin-bottom:16px}.summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}.stat{background:#16213e;border-radius:6px;padding:8px 14px;border:1px solid #2a2a4a}.stat .val{font-size:18px;font-weight:600;color:#03a9f4}.stat .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px}.chart{background:#1e1e36;border-radius:8px;padding:16px;overflow-x:auto;border:1px solid #2a2a4a}.legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}.legend span{display:flex;align-items:center;gap:4px;font-size:11px}.legend .sw{width:12px;height:12px;border-radius:2px}.controls{display:flex;gap:8px;margin-bottom:12px}.controls button{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px}.controls button:hover{background:#1e1e46;border-color:#03a9f4}.controls input{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px 10px;border-radius:4px;font-size:11px;width:240px}.controls input:focus{outline:none;border-color:#03a9f4}.controls select{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px;border-radius:4px;font-size:11px}.dark{background:#f5f5f5;color:#333}.dark h1{color:#0288d1}.dark .stat{background:#fff;border:1px solid #ddd}.dark .stat .val{color:#0288d1}.dark .chart{background:#fff;border:1px solid #ddd}.dark .controls button{background:#eee;color:#333;border:1px solid #ccc}.dark .controls input{background:#fff;color:#333;border:1px solid #ccc}.dark .controls select{background:#fff;color:#333;border:1px solid #ccc}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #2a2a4a}th{color:#888;font-weight:500;position:sticky;top:0;background:#1e1e36}tr:hover{background:rgba(3,169,244,.1)}.dark th{background:#fff;color:#666}.dark td{border-color:#eee}</style>\n</head>\n<body><h1>Network Waterfall</h1><div class="sub">Generated ' + new Date().toISOString() + ' | ' + sorted.length + ' requests | Total: ' + formatMs(totalTime) + '</div><div class="summary">' + computeReconStats(timings) + '</div><div class="controls"><button onclick="toggleTheme()">Toggle Dark/Light</button><input id="search" placeholder="Filter by URL..." oninput="filterTable()"><select id="typeFilter" onchange="filterTable()"><option value="">All types</option></select></div><div class="chart"><div class="legend"><span><span class="sw" style="background:' + COLORS.dns + '"></span> DNS</span><span><span class="sw" style="background:' + COLORS.tcp + '"></span> TCP</span><span><span class="sw" style="background:' + COLORS.ssl + '"></span> SSL</span><span><span class="sw" style="background:' + COLORS.ttfb + '"></span> TTFB</span><span><span class="sw" style="background:' + COLORS.download + '"></span> Download</span></div><svg viewBox="0 0 ' + TOTAL_W + ' ' + svgHeight + '" style="width:100%;height:auto;min-width:' + TOTAL_W + 'px"><rect width="' + TOTAL_W + '" height="' + svgHeight + '" fill="' + COLORS.bg + '" rx="6"/>' + gridLines + rows + '</svg></div>' + generateTable(sorted) + '<script>var timings=' + JSON.stringify(sorted) + ';function toggleTheme(){document.body.classList.toggle("dark")}var types=[...new Set(timings.map(function(t){return t.initiatorType||"other"}))];var sel=document.getElementById("typeFilter");for(var i=0;i<types.length;i++){var o=document.createElement("option");o.value=types[i];o.textContent=types[i];sel.appendChild(o)}function filterTable(){var q=(document.getElementById("search").value||"").toLowerCase();var tp=sel.value;var rows=document.querySelectorAll("#resTable tbody tr");for(var i=0;i<rows.length;i++){var r=rows[i];var url=(r.cells[0].textContent||"").toLowerCase();var type=r.cells[1].textContent||"";var show=!q||url.indexOf(q)>-1;if(tp&&type!==tp)show=false;r.style.display=show?"":"none"}}</script></body></html>';
+    return (
+        '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Waterfall Report</title>\n<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px}h1{font-size:20px;margin-bottom:6px;color:#03a9f4}.sub{color:#888;font-size:12px;margin-bottom:16px}.summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}.stat{background:#16213e;border-radius:6px;padding:8px 14px;border:1px solid #2a2a4a}.stat .val{font-size:18px;font-weight:600;color:#03a9f4}.stat .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px}.chart{background:#1e1e36;border-radius:8px;padding:16px;overflow-x:auto;border:1px solid #2a2a4a}.legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}.legend span{display:flex;align-items:center;gap:4px;font-size:11px}.legend .sw{width:12px;height:12px;border-radius:2px}.controls{display:flex;gap:8px;margin-bottom:12px}.controls button{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px}.controls button:hover{background:#1e1e46;border-color:#03a9f4}.controls input{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px 10px;border-radius:4px;font-size:11px;width:240px}.controls input:focus{outline:none;border-color:#03a9f4}.controls select{background:#16213e;color:#e0e0e0;border:1px solid #2a2a4a;padding:6px;border-radius:4px;font-size:11px}.dark{background:#f5f5f5;color:#333}.dark h1{color:#0288d1}.dark .stat{background:#fff;border:1px solid #ddd}.dark .stat .val{color:#0288d1}.dark .chart{background:#fff;border:1px solid #ddd}.dark .controls button{background:#eee;color:#333;border:1px solid #ccc}.dark .controls input{background:#fff;color:#333;border:1px solid #ccc}.dark .controls select{background:#fff;color:#333;border:1px solid #ccc}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #2a2a4a}th{color:#888;font-weight:500;position:sticky;top:0;background:#1e1e36}tr:hover{background:rgba(3,169,244,.1)}.dark th{background:#fff;color:#666}.dark td{border-color:#eee}</style>\n</head>\n<body><h1>Network Waterfall</h1><div class="sub">Generated ' +
+        new Date().toISOString() +
+        ' | ' +
+        sorted.length +
+        ' requests | Total: ' +
+        formatMs(totalTime) +
+        '</div><div class="summary">' +
+        computeReconStats(timings) +
+        '</div><div class="controls"><button onclick="toggleTheme()">Toggle Dark/Light</button><input id="search" placeholder="Filter by URL..." oninput="filterTable()"><select id="typeFilter" onchange="filterTable()"><option value="">All types</option></select></div><div class="chart"><div class="legend"><span><span class="sw" style="background:' +
+        COLORS.dns +
+        '"></span> DNS</span><span><span class="sw" style="background:' +
+        COLORS.tcp +
+        '"></span> TCP</span><span><span class="sw" style="background:' +
+        COLORS.ssl +
+        '"></span> SSL</span><span><span class="sw" style="background:' +
+        COLORS.ttfb +
+        '"></span> TTFB</span><span><span class="sw" style="background:' +
+        COLORS.download +
+        '"></span> Download</span></div><svg viewBox="0 0 ' +
+        TOTAL_W +
+        ' ' +
+        svgHeight +
+        '" style="width:100%;height:auto;min-width:' +
+        TOTAL_W +
+        'px"><rect width="' +
+        TOTAL_W +
+        '" height="' +
+        svgHeight +
+        '" fill="' +
+        COLORS.bg +
+        '" rx="6"/>' +
+        gridLines +
+        rows +
+        '</svg></div>' +
+        generateTable(sorted) +
+        '<script>var timings=' +
+        JSON.stringify(sorted) +
+        ';function toggleTheme(){document.body.classList.toggle("dark")}var types=[...new Set(timings.map(function(t){return t.initiatorType||"other"}))];var sel=document.getElementById("typeFilter");for(var i=0;i<types.length;i++){var o=document.createElement("option");o.value=types[i];o.textContent=types[i];sel.appendChild(o)}function filterTable(){var q=(document.getElementById("search").value||"").toLowerCase();var tp=sel.value;var rows=document.querySelectorAll("#resTable tbody tr");for(var i=0;i<rows.length;i++){var r=rows[i];var url=(r.cells[0].textContent||"").toLowerCase();var type=r.cells[1].textContent||"";var show=!q||url.indexOf(q)>-1;if(tp&&type!==tp)show=false;r.style.display=show?"":"none"}}</script></body></html>'
+    );
 }
 
 function generateTable(timings) {
-    var html = '<table id="resTable"><thead><tr><th>URL</th><th>Type</th><th>Status</th><th>Size</th><th>Time</th><th>DNS</th><th>TCP</th><th>SSL</th><th>TTFB</th><th>Download</th></tr></thead><tbody>';
+    var html =
+        '<table id="resTable"><thead><tr><th>URL</th><th>Type</th><th>Status</th><th>Size</th><th>Time</th><th>DNS</th><th>TCP</th><th>SSL</th><th>TTFB</th><th>Download</th></tr></thead><tbody>';
     for (var i = 0; i < timings.length; i++) {
         var e = timings[i];
         var dns = e.domainLookupEnd - e.domainLookupStart || 0;
         var tcp = e.connectEnd - e.connectStart || 0;
-        var ssl = e.secureConnectionStart > 0 && e.connectEnd > 0 ? e.connectEnd - e.secureConnectionStart : 0;
+        var ssl =
+            e.secureConnectionStart > 0 && e.connectEnd > 0
+                ? e.connectEnd - e.secureConnectionStart
+                : 0;
         var ttfb = e.responseStart - e.requestStart || 0;
         var download = e.responseEnd - e.responseStart || 0;
         var status = e.transferSize > 0 || e.encodedBodySize > 0 ? 'OK' : 'from cache';
         var size = formatSize(e.transferSize || e.encodedBodySize || e.decodedBodySize || 0);
-        html += '<tr><td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeAttr(e.name) + '">' + escapeXml(e.name) + '</td><td>' + escapeXml(e.initiatorType || 'other') + '</td><td>' + status + '</td><td>' + size + '</td><td>' + formatMs(e.duration || 0) + '</td><td>' + (dns > 0 ? formatMs(dns) : '-') + '</td><td>' + (tcp > 0 ? formatMs(tcp) : '-') + '</td><td>' + (ssl > 0 ? formatMs(ssl) : '-') + '</td><td>' + (ttfb > 0 ? formatMs(ttfb) : '-') + '</td><td>' + (download > 0 ? formatMs(download) : '-') + '</td></tr>';
+        html +=
+            '<tr><td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' +
+            escapeAttr(e.name) +
+            '">' +
+            escapeXml(e.name) +
+            '</td><td>' +
+            escapeXml(e.initiatorType || 'other') +
+            '</td><td>' +
+            status +
+            '</td><td>' +
+            size +
+            '</td><td>' +
+            formatMs(e.duration || 0) +
+            '</td><td>' +
+            (dns > 0 ? formatMs(dns) : '-') +
+            '</td><td>' +
+            (tcp > 0 ? formatMs(tcp) : '-') +
+            '</td><td>' +
+            (ssl > 0 ? formatMs(ssl) : '-') +
+            '</td><td>' +
+            (ttfb > 0 ? formatMs(ttfb) : '-') +
+            '</td><td>' +
+            (download > 0 ? formatMs(download) : '-') +
+            '</td></tr>';
     }
     return html + '</tbody></table>';
 }
@@ -2422,20 +3716,59 @@ function computeReconStats(timings) {
         types[tp] = (types[tp] || 0) + 1;
     }
     var typeStr = '';
-    for (var k in types) if (types.hasOwnProperty(k)) typeStr += '<div class="stat"><div class="val">' + types[k] + '</div><div class="lbl">' + escapeXml(k) + '</div></div>';
-    return '<div class="stat"><div class="val">' + timings.length + '</div><div class="lbl">Requests</div></div><div class="stat"><div class="val">' + formatSize(totalBytes) + '</div><div class="lbl">Total Size</div></div><div class="stat"><div class="val">' + Object.keys(domains).length + '</div><div class="lbl">Domains</div></div><div class="stat"><div class="val">' + formatMs(slowest) + '</div><div class="lbl">Slowest</div></div>' + typeStr;
+    for (var k in types)
+        if (Object.prototype.hasOwnProperty.call(types, k))
+            typeStr +=
+                '<div class="stat"><div class="val">' +
+                types[k] +
+                '</div><div class="lbl">' +
+                escapeXml(k) +
+                '</div></div>';
+    return (
+        '<div class="stat"><div class="val">' +
+        timings.length +
+        '</div><div class="lbl">Requests</div></div><div class="stat"><div class="val">' +
+        formatSize(totalBytes) +
+        '</div><div class="lbl">Total Size</div></div><div class="stat"><div class="val">' +
+        Object.keys(domains).length +
+        '</div><div class="lbl">Domains</div></div><div class="stat"><div class="val">' +
+        formatMs(slowest) +
+        '</div><div class="lbl">Slowest</div></div>' +
+        typeStr
+    );
 }
 
 function generateDOMSnapshotHTML(domHtml, pageMeta) {
     var title = pageMeta && pageMeta.title ? pageMeta.title : 'DOM Snapshot';
     var url = pageMeta && pageMeta.url ? pageMeta.url : '';
-    return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>DOM Snapshot</title>\n<style>body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#222}h1{margin:0 0 8px}p{margin:0 0 16px;color:#555}pre{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.5;background:#f7f7f7;border:1px solid #ddd;border-radius:6px;padding:16px}</style>\n</head>\n<body><h1>' + escapeXml(title) + '</h1><p>' + escapeXml(url) + '</p><pre>' + escapeXml(domHtml || '') + '</pre></body>\n</html>';
+    return (
+        '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>DOM Snapshot</title>\n<style>body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#222}h1{margin:0 0 8px}p{margin:0 0 16px;color:#555}pre{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.5;background:#f7f7f7;border:1px solid #ddd;border-radius:6px;padding:16px}</style>\n</head>\n<body><h1>' +
+        escapeXml(title) +
+        '</h1><p>' +
+        escapeXml(url) +
+        '</p><pre>' +
+        escapeXml(domHtml || '') +
+        '</pre></body>\n</html>'
+    );
 }
 
 function escapeXml(s) {
-    return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
+    return s
+        ? String(s)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;')
+        : '';
 }
 
 function escapeAttr(s) {
-    return s ? String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+    return s
+        ? String(s)
+              .replace(/&/g, '&amp;')
+              .replace(/"/g, '&quot;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+        : '';
 }

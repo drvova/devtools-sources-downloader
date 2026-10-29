@@ -37,8 +37,10 @@ function unescapeJsLiteral(raw) {
         else if (n === 'f') out += '\f';
         else if (n === 'v') out += '\v';
         else if (n === '0') out += '\0';
-        else if (n === 'x') out += String.fromCharCode(parseInt(raw.substr(i + 1, 2), 16) || 0), i += 2;
-        else if (n === 'u') out += String.fromCharCode(parseInt(raw.substr(i + 1, 4), 16) || 0), i += 4;
+        else if (n === 'x')
+            ((out += String.fromCharCode(parseInt(raw.substr(i + 1, 2), 16) || 0)), (i += 2));
+        else if (n === 'u')
+            ((out += String.fromCharCode(parseInt(raw.substr(i + 1, 4), 16) || 0)), (i += 4));
         else out += n;
     }
     return out;
@@ -145,7 +147,13 @@ export function detectPacker(text) {
     var base = parsed.args[1];
     var count = parsed.args[2];
     var words = parsed.args[3];
-    if (payload.type !== 'string' || base.type !== 'number' || count.type !== 'number' || words.type !== 'string') return null;
+    if (
+        payload.type !== 'string' ||
+        base.type !== 'number' ||
+        count.type !== 'number' ||
+        words.type !== 'string'
+    )
+        return null;
     if (base.value < 2 || base.value > 62) return null;
     var wordList = words.value.split(words.split || '|');
     return { payload: payload.value, base: base.value, count: count.value, words: wordList };
@@ -192,7 +200,12 @@ export function detectAaencode(source) {
     }
     var density = total ? kaomoji / total : 0;
     if (bannerHits >= 1 && density >= 0.05) {
-        return { tool: 'aaencode', detail: 'kaomoji shell (execution required to decode)', bannerHits: bannerHits, density: density };
+        return {
+            tool: 'aaencode',
+            detail: 'kaomoji shell (execution required to decode)',
+            bannerHits: bannerHits,
+            density: density,
+        };
     }
     return null;
 }
@@ -201,7 +214,10 @@ export function detectJjencode(source) {
     var trimmed = source.trim();
     if (trimmed.length < 80) return null;
     if (trimmed.includes('=~[]') && (trimmed.includes('{___:++') || trimmed.includes('{ ___:++'))) {
-        return { tool: 'jjencode', detail: '$=~[] global-object shell (execution required to decode)' };
+        return {
+            tool: 'jjencode',
+            detail: '$=~[] global-object shell (execution required to decode)',
+        };
     }
     return null;
 }
@@ -226,7 +242,11 @@ export function detectJsfiretruck(source) {
     var purity = hits / counted;
     var dsDensity = dotSlash / counted;
     if (purity >= 0.9 && dsDensity > 0.005 && hits >= 256) {
-        return { tool: 'jsfiretruck', detail: '[]()!+./ shell (execution required to decode)', purity: purity };
+        return {
+            tool: 'jsfiretruck',
+            detail: '[]()!+./ shell (execution required to decode)',
+            purity: purity,
+        };
     }
     return null;
 }
@@ -236,11 +256,20 @@ export function detectJsfiretruck(source) {
 const OBFUSCATOR_MARKERS = [
     { name: 'banner', test: /obfuscator\.io|javascript-obfuscator/ },
     { name: 'hex identifiers', test: /\b_0x[0-9a-fA-F]{3,}\b/ },
-    { name: 'string array rotation', test: /\[\s*['"][^'"]+['"]\s*\]\s*\.\s*concat|\.shift\s*\(\s*\)|\.push\s*\(\s*[\w$]+\s*\[\s*0\s*\]/ },
+    {
+        name: 'string array rotation',
+        test: /\[\s*['"][^'"]+['"]\s*\]\s*\.\s*concat|\.shift\s*\(\s*\)|\.push\s*\(\s*[\w$]+\s*\[\s*0\s*\]/,
+    },
     { name: 'rotation IIFE', test: /\(\s*function\s*\([^)]*\)\s*\{[\s\S]*?parseInt/ },
-    { name: 'base64 decoder', test: /atob\s*\(|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/ },
+    {
+        name: 'base64 decoder',
+        test: /atob\s*\(|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/,
+    },
     { name: 'rc4 decoder', test: /\b_0x[0-9a-fA-F]+\s*\(\s*_0x[0-9a-fA-F]+\s*,\s*_0x[0-9a-fA-F]+/ },
-    { name: 'switch dispatcher', test: /switch\s*\(\s*_?0x[\w$]*\s*\)|switch\s*\(\s*[\w$]+\s*\+\s*parseInt/ },
+    {
+        name: 'switch dispatcher',
+        test: /switch\s*\(\s*_?0x[\w$]*\s*\)|switch\s*\(\s*[\w$]+\s*\+\s*parseInt/,
+    },
     { name: 'boolean shorthand', test: /!!\[\]|\[\s*\]/ },
     { name: 'hex literals', test: /=\s*0x[0-9a-fA-F]{2,}\b/ },
     { name: 'self defending', test: /self.?defending/i },
@@ -248,7 +277,7 @@ const OBFUSCATOR_MARKERS = [
     { name: 'console disable', test: /console\s*\[|call\s*\(\s*this\s*,\s*console\)/ },
     { name: 'opaque predicate', test: /\?\s*['"][^'"]*['"]\s*:\s*['"][^'"]*['"]/ },
     { name: 'split string concat', test: /['"][^'"]{0,3}\['"\s]\s*\+\s*concat/ },
-    { name: 'renamed properties', test: /\.\s*_0x[0-9a-fA-F]{3,}\b/ }
+    { name: 'renamed properties', test: /\.\s*_0x[0-9a-fA-F]{3,}\b/ },
 ];
 
 export function detectObfuscatorIo(text) {
@@ -268,9 +297,23 @@ export function detectObfuscatorIo(text) {
     }
     if (!markers.length) return null;
     var score = markers.length;
-    var hasStrong = markers.some(function (m) { return m.marker === 'banner' || m.marker === 'string array rotation' || m.marker === 'rc4 decoder'; });
+    var hasStrong = markers.some(function (m) {
+        return (
+            m.marker === 'banner' ||
+            m.marker === 'string array rotation' ||
+            m.marker === 'rc4 decoder'
+        );
+    });
     if (!hasStrong && score < 3) return null;
-    return { tool: 'obfuscator-io', detail: markers.map(function (m) { return m.marker; }).join(', '), markers: markers };
+    return {
+        tool: 'obfuscator-io',
+        detail: markers
+            .map(function (m) {
+                return m.marker;
+            })
+            .join(', '),
+        markers: markers,
+    };
 }
 
 // --------------------------------------------------- string array + rotator
@@ -325,7 +368,11 @@ export function findStringArray(source) {
     if (!match) return null;
     var literals = parseArrayLiterals(match[2]);
     if (!literals) return null;
-    return { arrayId: match[1], literals: literals, declRange: [match.index, match.index + match[0].length] };
+    return {
+        arrayId: match[1],
+        literals: literals,
+        declRange: [match.index, match.index + match[0].length],
+    };
 }
 
 function parseIntLiteral(raw) {
@@ -343,7 +390,12 @@ function parseIntLiteral(raw) {
 
 export function findRotator(source, arrayId) {
     var needle = arrayId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var re = new RegExp('\\(\\s*function\\s*\\(([^)]*)\\)\\s*\\{(.+?)\\}\\s*\\(\\s*' + needle + '\\s*,\\s*([-+]?0x[0-9a-fA-F]+|\\d+)\\s*\\)\\s*\\)\\s*;', 'ms');
+    var re = new RegExp(
+        '\\(\\s*function\\s*\\(([^)]*)\\)\\s*\\{(.+?)\\}\\s*\\(\\s*' +
+            needle +
+            '\\s*,\\s*([-+]?0x[0-9a-fA-F]+|\\d+)\\s*\\)\\s*\\)\\s*;',
+        'ms',
+    );
     var match = re.exec(source);
     if (!match) return null;
     var body = match[2];
@@ -351,7 +403,11 @@ export function findRotator(source, arrayId) {
     var pivotValue = parseIntLiteral(match[3]);
     if (pivotValue === null) return null;
     var pivotIndex = findPivotIndex(body);
-    return { pivotIndex: pivotIndex, pivotValue: pivotValue, iifeRange: [match.index, match.index + match[0].length] };
+    return {
+        pivotIndex: pivotIndex,
+        pivotValue: pivotValue,
+        iifeRange: [match.index, match.index + match[0].length],
+    };
 }
 
 function looksLikeRotator(body) {
@@ -379,7 +435,10 @@ export function simulateRotation(strings, pivotValue) {
         var first = strings[index];
         var n = parseIntLiteral(first);
         if (n !== null && n === pivotValue) {
-            return { rotated: strings.slice(index).concat(strings.slice(0, index)), rotations: index };
+            return {
+                rotated: strings.slice(index).concat(strings.slice(0, index)),
+                rotations: index,
+            };
         }
     }
     return { rotated: strings, rotations: 0 };
@@ -389,25 +448,32 @@ function emitArrayDecl(id, literals) {
     var s = 'var ' + id + ' = [';
     for (var i = 0; i < literals.length; i++) {
         if (i) s += ', ';
-        s += "'" + literals[i].replace(/[\\'\n\t\r]/g, function (c) {
-            if (c === '\\') return '\\\\';
-            if (c === "'") return "\\'";
-            if (c === '\n') return '\\n';
-            if (c === '\t') return '\\t';
-            return '\\r';
-        }) + "'";
+        s +=
+            "'" +
+            literals[i].replace(/[\\'\n\t\r]/g, function (c) {
+                if (c === '\\') return '\\\\';
+                if (c === "'") return "\\'";
+                if (c === '\n') return '\\n';
+                if (c === '\t') return '\\t';
+                return '\\r';
+            }) +
+            "'";
     }
     return s + '];';
 }
 
 function jsQuote(s) {
-    return "'" + s.replace(/[\\'\n\t\r]/g, function (c) {
-        if (c === '\\') return '\\\\';
-        if (c === "'") return "\\'";
-        if (c === '\n') return '\\n';
-        if (c === '\t') return '\\t';
-        return '\\r';
-    }) + "'";
+    return (
+        "'" +
+        s.replace(/[\\'\n\t\r]/g, function (c) {
+            if (c === '\\') return '\\\\';
+            if (c === "'") return "\\'";
+            if (c === '\n') return '\\n';
+            if (c === '\t') return '\\t';
+            return '\\r';
+        }) +
+        "'"
+    );
 }
 
 // Replaces the array declaration with its rotated form and deletes the rotator
@@ -433,7 +499,14 @@ export function rebuildStringArraySource(source, found, rotator, rotated) {
 // Anything richer is refused rather than sandbox-run.
 export function inlineDecoderCalls(source, arrayId) {
     var found = findDecoderDecl(source, arrayId);
-    if (!found) return { source: source, decoderName: null, inlined: 0, total: 0, refusal: 'decoder declaration not found' };
+    if (!found)
+        return {
+            source: source,
+            decoderName: null,
+            inlined: 0,
+            total: 0,
+            refusal: 'decoder declaration not found',
+        };
     var index = analyzeDecoderBody(found.body, found.params, arrayId);
     if (!index) {
         return {
@@ -441,20 +514,35 @@ export function inlineDecoderCalls(source, arrayId) {
             decoderName: found.name,
             inlined: 0,
             total: 0,
-            refusal: 'decoder is not a plain array index (execution required)'
+            refusal: 'decoder is not a plain array index (execution required)',
         };
     }
     var sites = findDecoderCallSites(source, found.name, found.range);
     var literals = currentArrayLiterals(source, arrayId);
-    if (!literals) return { source: source, decoderName: found.name, inlined: 0, total: sites.sites.length, refusal: 'array literals unreadable' };
+    if (!literals)
+        return {
+            source: source,
+            decoderName: found.name,
+            inlined: 0,
+            total: sites.sites.length,
+            refusal: 'array literals unreadable',
+        };
     var out = '';
     var cursor = 0;
     var inlined = 0;
     var events = sites.sites.slice();
-    if (!sites.hasUnresolved && sites.sites.length && sites.sites.every(function (s) { return decodeIndex(s.arg, index, literals) !== null; })) {
+    if (
+        !sites.hasUnresolved &&
+        sites.sites.length &&
+        sites.sites.every(function (s) {
+            return decodeIndex(s.arg, index, literals) !== null;
+        })
+    ) {
         events.push({ range: found.range, arg: null }); // decoder decl removal
     }
-    events.sort(function (a, b) { return a.range[0] - b.range[0]; });
+    events.sort(function (a, b) {
+        return a.range[0] - b.range[0];
+    });
     for (var i = 0; i < events.length; i++) {
         var ev = events[i];
         if (ev.range[0] < cursor) continue;
@@ -485,8 +573,16 @@ function decodeIndex(callArg, indexShape, literals) {
 function findDecoderDecl(source, arrayId) {
     var needle = arrayId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     var patterns = [
-        '(?:var|let|const)\\s+([\\w$]+)\\s*=\\s*function\\s*\\(([^)]*)\\)\\s*\\{\\s*(?:var\\s+[\\w$]+\\s*=\\s*' + needle + '\\s*;\\s*)?([^}]*' + needle + '\\s*\\[[^\\]]+\\][^}]*)\\}\\s*;',
-        'function\\s+([\\w$]+)\\s*\\(([^)]*)\\)\\s*\\{\\s*(?:var\\s+[\\w$]+\\s*=\\s*' + needle + '\\s*;\\s*)?([^}]*' + needle + '\\s*\\[[^\\]]+\\][^}]*)\\}'
+        '(?:var|let|const)\\s+([\\w$]+)\\s*=\\s*function\\s*\\(([^)]*)\\)\\s*\\{\\s*(?:var\\s+[\\w$]+\\s*=\\s*' +
+            needle +
+            '\\s*;\\s*)?([^}]*' +
+            needle +
+            '\\s*\\[[^\\]]+\\][^}]*)\\}\\s*;',
+        'function\\s+([\\w$]+)\\s*\\(([^)]*)\\)\\s*\\{\\s*(?:var\\s+[\\w$]+\\s*=\\s*' +
+            needle +
+            '\\s*;\\s*)?([^}]*' +
+            needle +
+            '\\s*\\[[^\\]]+\\][^}]*)\\}',
     ];
     for (var p = 0; p < patterns.length; p++) {
         var re = new RegExp(patterns[p], 'ms');
@@ -494,9 +590,14 @@ function findDecoderDecl(source, arrayId) {
         if (match) {
             return {
                 name: match[1],
-                params: match[2].split(',').map(function (s) { return s.trim(); }).filter(Boolean),
+                params: match[2]
+                    .split(',')
+                    .map(function (s) {
+                        return s.trim();
+                    })
+                    .filter(Boolean),
                 body: match[3],
-                range: [match.index, match.index + match[0].length]
+                range: [match.index, match.index + match[0].length],
             };
         }
     }
@@ -509,17 +610,32 @@ function analyzeDecoderBody(body, params, arrayId) {
     var openCount = 0;
     for (var i = 0; i < body.length; i++) if (body[i] === '[') openCount++;
     if (openCount !== 1) return null;
-    var match = new RegExp('([\\w$]+)\\s*\\[\\s*([\\w$]+)\\s*(?:([+-])\\s*(0x[0-9a-fA-F]+|\\d+))?\\s*\\]').exec(body);
+    var match = new RegExp(
+        '([\\w$]+)\\s*\\[\\s*([\\w$]+)\\s*(?:([+-])\\s*(0x[0-9a-fA-F]+|\\d+))?\\s*\\]',
+    ).exec(body);
     if (!match) return null;
     // The base may be the array itself or a local alias bound to it.
-    var alias = new RegExp('var\\s+([\\w$]+)\\s*=\\s*' + arrayId.replace(/[.*+?^${}()|[\]\\\\]/g, '\\\\$&') + '\\s*;').exec(body);
+    var alias = new RegExp(
+        'var\\s+([\\w$]+)\\s*=\\s*' + arrayId.replace(/[.*+?^${}()|[\]\\\\]/g, '\\\\$&') + '\\s*;',
+    ).exec(body);
     var baseOk = match[1] === arrayId || (alias && alias[1] === match[1]);
     if (!baseOk) return null;
     if (match[2] !== p0) return null;
     var offset = match[4] !== undefined ? parseIntLiteral(match[4]) : 0;
     if (offset === null || offset < 0) return null;
-    if (!/^\s*(?:var\s+[\w$]+\s*=\s*[\w$]+\s*;\s*)?return\s+(?:[\w$]+\s*=\s*)?$/.test(body.slice(0, match.index))) return null;
-    if (/[\w$\s=]\s*;/.test(body.slice(match.index + match[0].length).replace(/\s*\]\s*;?\s*$/, '')) && !/^\s*\]\s*;?\s*$/.test(body.slice(match.index + match[0].length))) return null;
+    if (
+        !/^\s*(?:var\s+[\w$]+\s*=\s*[\w$]+\s*;\s*)?return\s+(?:[\w$]+\s*=\s*)?$/.test(
+            body.slice(0, match.index),
+        )
+    )
+        return null;
+    if (
+        /[\w$\s=]\s*;/.test(
+            body.slice(match.index + match[0].length).replace(/\s*\]\s*;?\s*$/, ''),
+        ) &&
+        !/^\s*\]\s*;?\s*$/.test(body.slice(match.index + match[0].length))
+    )
+        return null;
     return { param: p0, offset: offset || 0, sign: match[3] || '+' };
 }
 
@@ -597,6 +713,6 @@ export function detectStringArray(source) {
         tool: 'string-array',
         arrayId: found.arrayId,
         literals: found.literals.length,
-        pivot: rotator.pivotValue
+        pivot: rotator.pivotValue,
     };
 }

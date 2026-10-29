@@ -11,14 +11,27 @@
 import * as beautifyNamespace from 'js-beautify';
 import { decodeJsfuck, detectJsfuck } from './jsfuck.js';
 import { detectV8CodeCache, parseV8CodeCache, parseSealedV8 } from './v8codecache.js';
-import { parseJscHeader, detectJscBytecode, recoverJscStrings, analyzeJscModule, findJscSharedTable } from './jscbytecode.js';
+import {
+    parseJscHeader,
+    detectJscBytecode,
+    recoverJscStrings,
+    analyzeJscModule,
+    findJscSharedTable,
+} from './jscbytecode.js';
 import { detectWasmModule, parseWasmModule } from './wasm.js';
 import {
-    detectAaencode, detectJjencode, detectJsfiretruck, detectObfuscatorIo,
-    detectPacker, detectStringArray, transformStringArray, unpackPacker
+    detectAaencode,
+    detectJjencode,
+    detectJsfiretruck,
+    detectObfuscatorIo,
+    detectPacker,
+    detectStringArray,
+    transformStringArray,
+    unpackPacker,
 } from './packers.js';
 
-const jsBeautify = beautifyNamespace.js || (beautifyNamespace.default && beautifyNamespace.default.js);
+const jsBeautify =
+    beautifyNamespace.js || (beautifyNamespace.default && beautifyNamespace.default.js);
 
 export const LIMITS = {
     maxDepth: 8,
@@ -27,7 +40,7 @@ export const LIMITS = {
     maxModules: 400,
     maxSources: 400,
     maxMapBytes: 32 * 1024 * 1024,
-    minPayloadLength: 24
+    minPayloadLength: 24,
 };
 
 // ---------------------------------------------------------------- digests
@@ -36,7 +49,11 @@ export async function sha256Hex(text) {
     var bytes = new TextEncoder().encode(text);
     if (globalThis.crypto && globalThis.crypto.subtle) {
         var digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-        return Array.from(new Uint8Array(digest)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        return Array.from(new Uint8Array(digest))
+            .map(function (b) {
+                return b.toString(16).padStart(2, '0');
+            })
+            .join('');
     }
     // FNV-1a fallback: still detects "did this stage change anything".
     var hash = 0x811c9dc5;
@@ -53,7 +70,11 @@ export async function sha256HexBytes(bytes) {
     if (!bytes || !bytes.length) return null;
     if (globalThis.crypto && globalThis.crypto.subtle) {
         var digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-        return Array.from(new Uint8Array(digest)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        return Array.from(new Uint8Array(digest))
+            .map(function (b) {
+                return b.toString(16).padStart(2, '0');
+            })
+            .join('');
     }
     var fnv = 0x811c9dc5;
     for (var i = 0; i < bytes.length; i++) {
@@ -69,8 +90,10 @@ export async function sha256HexBytes(bytes) {
 // they reach unpackBinaryAsset only when named like a script cache.
 export function looksBinaryScript(url, bytes) {
     if (/\.(jsc|bc|wasm)(\?|$)/i.test(String(url || ''))) return true;
-    return !!(bytes && bytes.length >= 8 && detectWasmModule(bytes))
-        || !!(bytes && bytes.length >= 32 && (detectV8CodeCache(bytes) || detectJscBytecode(bytes)));
+    return (
+        !!(bytes && bytes.length >= 8 && detectWasmModule(bytes)) ||
+        !!(bytes && bytes.length >= 32 && (detectV8CodeCache(bytes) || detectJscBytecode(bytes)))
+    );
 }
 
 // ------------------------------------------------------- scanner primitives
@@ -81,7 +104,10 @@ function skipQuoted(text, index, quote) {
     var j = index + 1;
     while (j < text.length) {
         var ch = text[j];
-        if (ch === '\\') { j += 2; continue; }
+        if (ch === '\\') {
+            j += 2;
+            continue;
+        }
         if (ch === quote) return j + 1;
         if (ch === '\n' && quote !== '`') return j;
         j++;
@@ -93,7 +119,10 @@ function skipTemplate(text, index) {
     var j = index + 1;
     while (j < text.length) {
         var ch = text[j];
-        if (ch === '\\') { j += 2; continue; }
+        if (ch === '\\') {
+            j += 2;
+            continue;
+        }
         if (ch === '`') return j + 1;
         if (ch === '$' && text[j + 1] === '{') {
             var close = findBalanced(text, j + 1);
@@ -127,7 +156,10 @@ function skipRegex(text, index) {
     var inClass = false;
     while (j < text.length) {
         var ch = text[j];
-        if (ch === '\\') { j += 2; continue; }
+        if (ch === '\\') {
+            j += 2;
+            continue;
+        }
         if (ch === '\n') return index + 1;
         if (ch === '[') inClass = true;
         else if (ch === ']') inClass = false;
@@ -152,13 +184,23 @@ export function collectStringLiterals(text, options) {
             var end = ch === '`' ? skipTemplate(text, i) : skipQuoted(text, i, ch);
             var raw = text.slice(i + 1, ch === '`' ? end - 1 : end - 1);
             var decoded = decodeEscapes(raw);
-            if (decoded.length >= minLength) out.push({ start: i, end: end, quote: ch, raw: raw, value: decoded });
+            if (decoded.length >= minLength)
+                out.push({ start: i, end: end, quote: ch, raw: raw, value: decoded });
             i = end;
             continue;
         }
-        if (ch === '/' && text[i + 1] === '/') { i = skipLineComment(text, i); continue; }
-        if (ch === '/' && text[i + 1] === '*') { i = skipBlockComment(text, i); continue; }
-        if (ch === '/' && isRegexStart(text, i)) { i = skipRegex(text, i); continue; }
+        if (ch === '/' && text[i + 1] === '/') {
+            i = skipLineComment(text, i);
+            continue;
+        }
+        if (ch === '/' && text[i + 1] === '*') {
+            i = skipBlockComment(text, i);
+            continue;
+        }
+        if (ch === '/' && isRegexStart(text, i)) {
+            i = skipRegex(text, i);
+            continue;
+        }
         i++;
     }
     return out;
@@ -172,10 +214,22 @@ export function findBalanced(text, openIndex) {
     var i = openIndex;
     while (i < text.length) {
         var ch = text[i];
-        if (ch === '"' || ch === "'" || ch === '`') { i = ch === '`' ? skipTemplate(text, i) : skipQuoted(text, i, ch); continue; }
-        if (ch === '/' && text[i + 1] === '/') { i = skipLineComment(text, i); continue; }
-        if (ch === '/' && text[i + 1] === '*') { i = skipBlockComment(text, i); continue; }
-        if (ch === '/' && isRegexStart(text, i)) { i = skipRegex(text, i); continue; }
+        if (ch === '"' || ch === "'" || ch === '`') {
+            i = ch === '`' ? skipTemplate(text, i) : skipQuoted(text, i, ch);
+            continue;
+        }
+        if (ch === '/' && text[i + 1] === '/') {
+            i = skipLineComment(text, i);
+            continue;
+        }
+        if (ch === '/' && text[i + 1] === '*') {
+            i = skipBlockComment(text, i);
+            continue;
+        }
+        if (ch === '/' && isRegexStart(text, i)) {
+            i = skipRegex(text, i);
+            continue;
+        }
         if (ch === open) depth++;
         else if (ch === close) {
             depth--;
@@ -192,7 +246,10 @@ export function decodeEscapes(raw) {
     var out = '';
     for (var i = 0; i < raw.length; i++) {
         var ch = raw[i];
-        if (ch !== '\\') { out += ch; continue; }
+        if (ch !== '\\') {
+            out += ch;
+            continue;
+        }
         var next = raw[i + 1];
         i++;
         if (next === 'n') out += '\n';
@@ -202,8 +259,10 @@ export function decodeEscapes(raw) {
         else if (next === 'f') out += '\f';
         else if (next === 'v') out += '\v';
         else if (next === '0') out += '\0';
-        else if (next === 'x') { out += String.fromCharCode(parseInt(raw.substr(i + 1, 2), 16) || 0); i += 2; }
-        else if (next === 'u') {
+        else if (next === 'x') {
+            out += String.fromCharCode(parseInt(raw.substr(i + 1, 2), 16) || 0);
+            i += 2;
+        } else if (next === 'u') {
             if (raw[i + 1] === '{') {
                 var close = raw.indexOf('}', i + 2);
                 out += String.fromCodePoint(parseInt(raw.slice(i + 2, close), 16) || 0);
@@ -212,8 +271,9 @@ export function decodeEscapes(raw) {
                 out += String.fromCharCode(parseInt(raw.substr(i + 1, 4), 16) || 0);
                 i += 4;
             }
-        } else if (next === '\n') { /* line continuation */ }
-        else if (next >= '0' && next <= '7') {
+        } else if (next === '\n') {
+            /* line continuation */
+        } else if (next >= '0' && next <= '7') {
             var octal = next;
             while (octal.length < 3 && raw[i + 1] >= '0' && raw[i + 1] <= '7') octal += raw[++i];
             out += String.fromCharCode(parseInt(octal, 8));
@@ -226,8 +286,11 @@ export function decodeBase64ToBytes(base64) {
     var normalized = String(base64).replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
     while (normalized.length % 4) normalized += '=';
     var binary;
-    try { binary = atob(normalized); }
-    catch (_) { return null; }
+    try {
+        binary = atob(normalized);
+    } catch (_) {
+        return null;
+    }
     var bytes = new Uint8Array(binary.length);
     for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes;
@@ -266,13 +329,19 @@ export async function inflateBytes(bytes, format) {
 
 function gzipFormat(bytes) {
     if (bytes.length > 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) return 'gzip';
-    if (bytes.length > 2 && bytes[0] === 0x78 && (bytes[1] === 0x01 || bytes[1] === 0x9c || bytes[1] === 0xda)) return 'deflate';
+    if (
+        bytes.length > 2 &&
+        bytes[0] === 0x78 &&
+        (bytes[1] === 0x01 || bytes[1] === 0x9c || bytes[1] === 0xda)
+    )
+        return 'deflate';
     return null;
 }
 
 // ------------------------------------------------------------- detectors
 
-const KEYWORD_GAIN = /(?:function|return|var |let |const |window\.|document\.|prototype|undefined|null|true|false)/g;
+const KEYWORD_GAIN =
+    /(?:function|return|var |let |const |window\.|document\.|prototype|undefined|null|true|false)/g;
 const BASE64_LITERAL = /(?:atob\s*\(\s*)?["']([A-Za-z0-9+/=_-]{40,})["']/g;
 const HEX_ESCAPE = /\\x[0-9a-fA-F]{2}/g;
 const UNICODE_PERCENT = /%u[0-9a-fA-F]{4}/g;
@@ -310,29 +379,68 @@ export function detectLayers(text) {
     var fnHeads = countMatches(text, FUNCTION_HEAD);
     // The collector is the single source of truth for what eval()/Function() can
     // yield; the detector must not re-derive that gate or it routes nothing.
-    var payloads = (evalHeads || fnHeads) ? collectEvalPayloads(text) : [];
+    var payloads = evalHeads || fnHeads ? collectEvalPayloads(text) : [];
     if (payloads.length) {
-        findings.push({ tool: 'eval-unwrap', score: 0.7 + Math.min(0.3, payloads.length / 20), detail: evalHeads + ' eval() / ' + fnHeads + ' Function() call(s)' });
+        findings.push({
+            tool: 'eval-unwrap',
+            score: 0.7 + Math.min(0.3, payloads.length / 20),
+            detail: evalHeads + ' eval() / ' + fnHeads + ' Function() call(s)',
+        });
     }
     var base64 = longestBase64Literal(text);
-    if (base64) findings.push({ tool: 'base64', score: 0.5 + Math.min(0.3, base64.length / 4000), detail: base64.length + ' char literal' });
+    if (base64)
+        findings.push({
+            tool: 'base64',
+            score: 0.5 + Math.min(0.3, base64.length / 4000),
+            detail: base64.length + ' char literal',
+        });
     var hexEscapes = countMatches(text, HEX_ESCAPE);
-    if (hexEscapes > 8 && hexEscapes * 4 > text.length * 0.15) findings.push({ tool: 'hex-escape', score: 0.6, detail: hexEscapes + ' \\x escapes' });
-    if (countMatches(text, UNICODE_PERCENT) > 8) findings.push({ tool: 'unescape', score: 0.6, detail: '%uXXXX encoding' });
-    if (countMatches(text, CHARCODE_CALL)) findings.push({ tool: 'charcode', score: 0.65, detail: 'String.fromCharCode list' });
+    if (hexEscapes > 8 && hexEscapes * 4 > text.length * 0.15)
+        findings.push({ tool: 'hex-escape', score: 0.6, detail: hexEscapes + ' \\x escapes' });
+    if (countMatches(text, UNICODE_PERCENT) > 8)
+        findings.push({ tool: 'unescape', score: 0.6, detail: '%uXXXX encoding' });
+    if (countMatches(text, CHARCODE_CALL))
+        findings.push({ tool: 'charcode', score: 0.65, detail: 'String.fromCharCode list' });
     var reversed = text.split('').reverse().join('');
-    if (gain(reversed) > gain(text) + 2) findings.push({ tool: 'reverse', score: 0.45, detail: 'reversed source' });
-    var rot13 = text.replace(/[a-zA-Z]/g, function (c) { return String.fromCharCode((c <= 'Z' ? 90 : 122) >= c.charCodeAt(0) + 13 ? c.charCodeAt(0) + 13 : c.charCodeAt(0) - 13); });
-    if (gain(rot13) > gain(text) + 2) findings.push({ tool: 'rot13', score: 0.42, detail: 'rot13 source' });
+    if (gain(reversed) > gain(text) + 2)
+        findings.push({ tool: 'reverse', score: 0.45, detail: 'reversed source' });
+    var rot13 = text.replace(/[a-zA-Z]/g, function (c) {
+        return String.fromCharCode(
+            (c <= 'Z' ? 90 : 122) >= c.charCodeAt(0) + 13
+                ? c.charCodeAt(0) + 13
+                : c.charCodeAt(0) - 13,
+        );
+    });
+    if (gain(rot13) > gain(text) + 2)
+        findings.push({ tool: 'rot13', score: 0.42, detail: 'rot13 source' });
     // Self-contained detectors: each one both detects and routes (its own
     // predicate is the collector), so the transform never guesses.
     var packer = detectPacker(text);
-    if (packer) findings.push({ tool: 'packer', score: 0.9, detail: 'Dean Edwards packer, base ' + packer.base + ', ' + packer.words.length + ' words' });
+    if (packer)
+        findings.push({
+            tool: 'packer',
+            score: 0.9,
+            detail:
+                'Dean Edwards packer, base ' + packer.base + ', ' + packer.words.length + ' words',
+        });
     var jsf = detectJsfuck(text);
-    if (jsf.detected) findings.push({ tool: 'jsfuck', score: 0.95, detail: 'jsfuck, purity ' + (jsf.purity * 100).toFixed(1) + '%' });
+    if (jsf.detected)
+        findings.push({
+            tool: 'jsfuck',
+            score: 0.95,
+            detail: 'jsfuck, purity ' + (jsf.purity * 100).toFixed(1) + '%',
+        });
     var stringArray = detectStringArray(text);
-    if (stringArray) findings.push({ tool: 'string-array', score: 0.8, detail: 'string array ' + stringArray.arrayId + ', ' + stringArray.literals + ' literals' });
-    findings.sort(function (a, b) { return b.score - a.score; });
+    if (stringArray)
+        findings.push({
+            tool: 'string-array',
+            score: 0.8,
+            detail:
+                'string array ' + stringArray.arrayId + ', ' + stringArray.literals + ' literals',
+        });
+    findings.sort(function (a, b) {
+        return b.score - a.score;
+    });
     return findings;
 }
 
@@ -349,7 +457,8 @@ export function collectEvalPayloads(text) {
     var evalHeads = [];
     EVAL_HEAD.lastIndex = 0;
     var match;
-    while ((match = EVAL_HEAD.exec(text))) evalHeads.push(match.index + match[0].lastIndexOf('eval'));
+    while ((match = EVAL_HEAD.exec(text)))
+        evalHeads.push(match.index + match[0].lastIndexOf('eval'));
     for (var i = 0; i < evalHeads.length; i++) {
         var parenIdx = text.indexOf('(', evalHeads[i]);
         if (parenIdx < 0) continue;
@@ -359,7 +468,11 @@ export function collectEvalPayloads(text) {
         var parts = collectStringLiterals(arg, { minLength: 0 });
         // A packer usually passes one literal, or literals joined by '+' / commas.
         if (parts.length && isLiteralOnlyArg(arg)) {
-            var joined = parts.map(function (p) { return p.value; }).join('');
+            var joined = parts
+                .map(function (p) {
+                    return p.value;
+                })
+                .join('');
             if (joined.length >= LIMITS.minPayloadLength) push(evalHeads[i], joined, close);
             continue;
         }
@@ -379,22 +492,31 @@ export function collectEvalPayloads(text) {
         var body = args[args.length - 1].value;
         if (body.length >= LIMITS.minPayloadLength) push(match.index, body, fclose);
     }
-    payloads.sort(function (a, b) { return a.head - b.head; });
+    payloads.sort(function (a, b) {
+        return a.head - b.head;
+    });
     return payloads;
 }
 
 // True when everything left after removing the string literals is punctuation and
 // whitespace, i.e. the argument is a concatenation of literals rather than an expression.
 function isLiteralOnlyArg(arg) {
-    return arg.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '')
-        .replace(/\s+/g, '')
-        .replace(/[+(),]/g, '') === '';
+    return (
+        arg
+            .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '')
+            .replace(/\s+/g, '')
+            .replace(/[+(),]/g, '') === ''
+    );
 }
 
 function unwrapEval(text) {
     var payloads = collectEvalPayloads(text);
     if (!payloads.length) return null;
-    return payloads.map(function (p) { return p.code; }).join('\n;\n');
+    return payloads
+        .map(function (p) {
+            return p.code;
+        })
+        .join('\n;\n');
 }
 
 function unwrapBase64(text) {
@@ -414,12 +536,18 @@ function unwrapBase64(text) {
 function unwrapHexEscapes(text) {
     if (!countMatches(text, HEX_ESCAPE)) return null;
     return text
-        .replace(/\\x([0-9a-fA-F]{2})/g, function (_, hex) { return String.fromCharCode(parseInt(hex, 16)); })
-        .replace(/\\u([0-9a-fA-F]{4})/g, function (_, hex) { return String.fromCharCode(parseInt(hex, 16)); });
+        .replace(/\\x([0-9a-fA-F]{2})/g, function (_, hex) {
+            return String.fromCharCode(parseInt(hex, 16));
+        })
+        .replace(/\\u([0-9a-fA-F]{4})/g, function (_, hex) {
+            return String.fromCharCode(parseInt(hex, 16));
+        });
 }
 
 function unwrapUnescape(text) {
-    var windows = text.replace(/%u([0-9a-fA-F]{4})/g, function (_, hex) { return '%' + encodeURIComponent(String.fromCharCode(parseInt(hex, 16))).slice(1); });
+    var windows = text.replace(/%u([0-9a-fA-F]{4})/g, function (_, hex) {
+        return '%' + encodeURIComponent(String.fromCharCode(parseInt(hex, 16))).slice(1);
+    });
     try {
         return decodeURIComponent(windows);
     } catch (_) {
@@ -429,9 +557,22 @@ function unwrapUnescape(text) {
 
 function unwrapCharcode(text) {
     var out = text.replace(CHARCODE_CALL, function (_, numbers) {
-        var codes = numbers.split(',').map(function (part) { return parseInt(part.trim(), 10); }).filter(function (n) { return Number.isFinite(n); });
+        var codes = numbers
+            .split(',')
+            .map(function (part) {
+                return parseInt(part.trim(), 10);
+            })
+            .filter(function (n) {
+                return Number.isFinite(n);
+            });
         if (codes.length < 7) return '';
-        return JSON.stringify(codes.map(function (n) { return String.fromCharCode(n); }).join(''));
+        return JSON.stringify(
+            codes
+                .map(function (n) {
+                    return String.fromCharCode(n);
+                })
+                .join(''),
+        );
     });
     return out === text ? null : out;
 }
@@ -443,7 +584,7 @@ function unwrapReverse(text) {
 function unwrapRot13(text) {
     return text.replace(/[a-zA-Z]/g, function (c) {
         var base = c <= 'Z' ? 65 : 97;
-        return String.fromCharCode((c.charCodeAt(0) - base + 13) % 26 + base);
+        return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
     });
 }
 
@@ -493,7 +634,11 @@ function collectRefusals(text) {
     var ft = detectJsfiretruck(text);
     if (ft) refusals.push(ft);
     var ob = detectObfuscatorIo(text);
-    if (ob && !detectStringArray(text)) refusals.push({ tool: 'obfuscator-io', detail: ob.detail + ' (runtime shell; static string-array pass did not match)' });
+    if (ob && !detectStringArray(text))
+        refusals.push({
+            tool: 'obfuscator-io',
+            detail: ob.detail + ' (runtime shell; static string-array pass did not match)',
+        });
     return refusals;
 }
 
@@ -532,7 +677,7 @@ export async function peelText(text, options) {
             inputBytes: current.length,
             outputBytes: produced.length,
             digest: await sha256Hex(produced),
-            sourceUrl: (produced.match(SOURCE_URL_COMMENT) || [])[1] || null
+            sourceUrl: (produced.match(SOURCE_URL_COMMENT) || [])[1] || null,
         });
         outputs.push(produced);
         current = produced;
@@ -542,7 +687,8 @@ export async function peelText(text, options) {
 
 // ------------------------------------------------------------- beautifier
 
-const CODE_SIGNAL = /(?:^|[^\w$])(?:function|return|var|let|const|class|new|typeof|window\.|document\.|module\.exports|exports\.|prototype)\b|=>/;
+const CODE_SIGNAL =
+    /(?:^|[^\w$])(?:function|return|var|let|const|class|new|typeof|window\.|document\.|module\.exports|exports\.|prototype)\b|=>/;
 
 export function looksMinified(text) {
     var probe = text.length > 200000 ? text.slice(0, 200000) : text;
@@ -558,7 +704,13 @@ export function beautifyJs(text, maxBytes) {
     var limit = maxBytes || LIMITS.maxBeautifyBytes;
     if (text.length > limit || typeof jsBeautify !== 'function') return text;
     try {
-        return jsBeautify(text, { indent_size: 2, preserve_newlines: false, max_preserve_newlines: 1, end_with_newline: true, brace_style: 'collapse,preserve-inline' });
+        return jsBeautify(text, {
+            indent_size: 2,
+            preserve_newlines: false,
+            max_preserve_newlines: 1,
+            end_with_newline: true,
+            brace_style: 'collapse,preserve-inline',
+        });
     } catch (_) {
         return text;
     }
@@ -582,14 +734,19 @@ export function extractBundleModules(text, maxModules) {
     var body = text.slice(openIndex + 1, end - 1);
     var modules = [];
     var cursor = 0;
-    var header = /(?:^|[,\s])(\d{1,7})\s*:\s*(?:function\s*\(([^)]*)\)|(?:\(([^)]*)\)|([\w$]+))\s*=>)/g;
+    var header =
+        /(?:^|[,\s])(\d{1,7})\s*:\s*(?:function\s*\(([^)]*)\)|(?:\(([^)]*)\)|([\w$]+))\s*=>)/g;
     var match;
     while ((match = header.exec(body)) && modules.length < cap) {
         var keyIndex = body.indexOf(match[1], match.index);
         var braceIndex = body.indexOf('{', header.lastIndex);
         if (braceIndex < 0) continue;
         var arrowless = body.slice(header.lastIndex, braceIndex);
-        var isExpressionBody = arrowless.indexOf('=>') >= 0 && arrowless.trim().length > 0 && arrowless.indexOf(')') !== -1 && body[braceIndex - 1] === ')';
+        var isExpressionBody =
+            arrowless.indexOf('=>') >= 0 &&
+            arrowless.trim().length > 0 &&
+            arrowless.indexOf(')') !== -1 &&
+            body[braceIndex - 1] === ')';
         var regionEnd = isExpressionBody ? -1 : findBalanced(body, braceIndex);
         if (regionEnd < 0) continue;
         var slice = body.slice(keyIndex, regionEnd);
@@ -677,9 +834,12 @@ export function assetSlug(url, index) {
 }
 
 function safePath(path) {
-    return String(path).split('/').map(function (segment) {
-        return segment.replace(/[\\:*?"<>|]/g, '_').replace(/^\.+$/, '_');
-    }).join('/');
+    return String(path)
+        .split('/')
+        .map(function (segment) {
+            return segment.replace(/[\\:*?"<>|]/g, '_').replace(/^\.+$/, '_');
+        })
+        .join('/');
 }
 
 // Binary pass for cached-bytecode assets (V8 code cache, JSC bytecode,
@@ -701,7 +861,7 @@ async function unpackBinaryAsset(asset, options) {
         sources: 0,
         beautified: false,
         sourceMap: null,
-        notes: []
+        notes: [],
     };
     var files = [];
     if (asset.bytes.length > LIMITS.maxAssetBytes) {
@@ -713,39 +873,100 @@ async function unpackBinaryAsset(asset, options) {
     var strings = null;
 
     function cacheHeaderFile(payload) {
-        files.push({ path: base + '/cache-header.json', content: JSON.stringify(payload, null, 2) });
+        files.push({
+            path: base + '/cache-header.json',
+            content: JSON.stringify(payload, null, 2),
+        });
     }
     function stringsFile(list) {
-        if (list && list.length) files.push({ path: base + '/strings.json', content: JSON.stringify(list, null, 2) });
+        if (list && list.length)
+            files.push({ path: base + '/strings.json', content: JSON.stringify(list, null, 2) });
     }
 
     if (detectWasmModule(bytes)) {
         var wasm = parseWasmModule(bytes);
-        entry.stages.push({ depth: 0, tool: 'wasm-module', detail: 'wasm module, ' + wasm.sections.length + ' sections, ' + wasm.imports.length + ' imports, ' + wasm.exports.length + ' exports, ' + Object.keys(wasm.functionNames).length + ' named functions' });
-        files.push({ path: base + '/wasm-info.json', content: JSON.stringify({
-            version: wasm.version, moduleName: wasm.moduleName,
-            sections: wasm.sections, imports: wasm.imports, exports: wasm.exports,
-            functionNames: wasm.functionNames, typeNames: wasm.typeNames,
-            dataStrings: wasm.dataStrings, notes: wasm.notes
-        }, null, 2) });
+        entry.stages.push({
+            depth: 0,
+            tool: 'wasm-module',
+            detail:
+                'wasm module, ' +
+                wasm.sections.length +
+                ' sections, ' +
+                wasm.imports.length +
+                ' imports, ' +
+                wasm.exports.length +
+                ' exports, ' +
+                Object.keys(wasm.functionNames).length +
+                ' named functions',
+        });
+        files.push({
+            path: base + '/wasm-info.json',
+            content: JSON.stringify(
+                {
+                    version: wasm.version,
+                    moduleName: wasm.moduleName,
+                    sections: wasm.sections,
+                    imports: wasm.imports,
+                    exports: wasm.exports,
+                    functionNames: wasm.functionNames,
+                    typeNames: wasm.typeNames,
+                    dataStrings: wasm.dataStrings,
+                    notes: wasm.notes,
+                },
+                null,
+                2,
+            ),
+        });
     }
 
     if (detectV8CodeCache(bytes)) {
         var cache = parseV8CodeCache(bytes);
         if (cache) {
-            entry.stages.push({ depth: 0, tool: 'v8-code-cache', detail: cache.runtime + ' ' + cache.format + ', payload ' + cache.payloadLength + 'B' });
+            entry.stages.push({
+                depth: 0,
+                tool: 'v8-code-cache',
+                detail:
+                    cache.runtime + ' ' + cache.format + ', payload ' + cache.payloadLength + 'B',
+            });
             strings = cache.strings;
-            cacheHeaderFile({ shape: 'v8-code-cache', magic: cache.magicHex, runtime: cache.runtime, format: cache.format, versionHash: cache.versionHash, sourceHash: cache.sourceHash, flagHash: cache.flagHash, payloadLength: cache.payloadLength });
+            cacheHeaderFile({
+                shape: 'v8-code-cache',
+                magic: cache.magicHex,
+                runtime: cache.runtime,
+                format: cache.format,
+                versionHash: cache.versionHash,
+                sourceHash: cache.sourceHash,
+                flagHash: cache.flagHash,
+                payloadLength: cache.payloadLength,
+            });
         }
     }
     if (!entry.stages.length && detectJscBytecode(bytes)) {
         var header = parseJscHeader(bytes);
-        entry.stages.push({ depth: 0, tool: 'jsc-bytecode', detail: 'JSC bytecode v' + header.version + ', ' + header.declaredLength + 'B' });
+        entry.stages.push({
+            depth: 0,
+            tool: 'jsc-bytecode',
+            detail: 'JSC bytecode v' + header.version + ', ' + header.declaredLength + 'B',
+        });
         strings = recoverJscStrings(bytes);
-        cacheHeaderFile({ shape: 'jsc-bytecode', stamp: header.stamp, format: header.format, version: header.version, declaredLength: header.declaredLength, bodyOffset: header.bodyOffset });
+        cacheHeaderFile({
+            shape: 'jsc-bytecode',
+            stamp: header.stamp,
+            format: header.format,
+            version: header.version,
+            declaredLength: header.declaredLength,
+            bodyOffset: header.bodyOffset,
+        });
         var structure = analyzeJscModule(bytes, opts.sharedJscStrings || null);
         if (structure.blocks > 0) {
-            entry.stages[entry.stages.length - 1].detail += ', ' + structure.functions.length + ' functions, ' + structure.blocks + ' blocks, ' + structure.ops + ' ops';
+            entry.stages[entry.stages.length - 1].detail +=
+                ', ' +
+                structure.functions.length +
+                ' functions, ' +
+                structure.blocks +
+                ' blocks, ' +
+                structure.ops +
+                ' ops';
             entry.functions = structure.functions.length;
             if (opts.sharedJscStrings) {
                 var named = 0;
@@ -753,10 +974,18 @@ async function unpackBinaryAsset(asset, options) {
                     var fn = structure.functions[f];
                     if (fn.name && String(fn.name).indexOf('<ordinal ') !== 0) named++;
                 }
-                structure.sharedTable = { source: opts.sharedJscSource || 'batch', ordinals: opts.sharedJscStrings.length, resolvedNames: named };
-                entry.stages[entry.stages.length - 1].detail += ', ' + named + ' names via shared table';
+                structure.sharedTable = {
+                    source: opts.sharedJscSource || 'batch',
+                    ordinals: opts.sharedJscStrings.length,
+                    resolvedNames: named,
+                };
+                entry.stages[entry.stages.length - 1].detail +=
+                    ', ' + named + ' names via shared table';
             }
-            files.push({ path: base + '/functions.json', content: JSON.stringify(structure, null, 2) });
+            files.push({
+                path: base + '/functions.json',
+                content: JSON.stringify(structure, null, 2),
+            });
         } else {
             entry.notes.push('JSC function tree did not bind (build opcode drift)');
         }
@@ -764,15 +993,37 @@ async function unpackBinaryAsset(asset, options) {
     if (!entry.stages.length) {
         var sealed = await parseSealedV8(bytes, { inflate: opts.inflate });
         if (sealed) {
-            entry.stages.push({ depth: 0, tool: 'jsc-sealed-v8', detail: 'brotli-sealed V8 cache, ' + sealed.inflatedBytes + 'B inflated' });
-            entry.stages.push({ depth: 1, tool: 'v8-code-cache', detail: sealed.cache.runtime + ' ' + sealed.cache.format + ', payload ' + sealed.cache.payloadLength + 'B' });
+            entry.stages.push({
+                depth: 0,
+                tool: 'jsc-sealed-v8',
+                detail: 'brotli-sealed V8 cache, ' + sealed.inflatedBytes + 'B inflated',
+            });
+            entry.stages.push({
+                depth: 1,
+                tool: 'v8-code-cache',
+                detail:
+                    sealed.cache.runtime +
+                    ' ' +
+                    sealed.cache.format +
+                    ', payload ' +
+                    sealed.cache.payloadLength +
+                    'B',
+            });
             strings = sealed.cache.strings;
-            cacheHeaderFile({ shape: 'jsc-sealed-v8', inflatedBytes: sealed.inflatedBytes, magic: sealed.cache.magicHex, runtime: sealed.cache.runtime, format: sealed.cache.format });
+            cacheHeaderFile({
+                shape: 'jsc-sealed-v8',
+                inflatedBytes: sealed.inflatedBytes,
+                magic: sealed.cache.magicHex,
+                runtime: sealed.cache.runtime,
+                format: sealed.cache.format,
+            });
         }
     }
     stringsFile(strings);
     if (!entry.stages.length) {
-        entry.notes.push('binary asset: no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape recognized');
+        entry.notes.push(
+            'binary asset: no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape recognized',
+        );
     }
     return { entry: entry, files: files };
 }
@@ -795,7 +1046,7 @@ export async function unpackAsset(asset, options) {
         sources: 0,
         beautified: false,
         sourceMap: null,
-        notes: []
+        notes: [],
     };
     var files = [];
     if (!asset.content || asset.content.length > LIMITS.maxAssetBytes) {
@@ -813,7 +1064,10 @@ export async function unpackAsset(asset, options) {
 
     for (var s = 0; s < peeled.stages.length; s++) {
         var stage = peeled.stages[s];
-        files.push({ path: base + '/layers/' + ('0' + stage.depth) + '-' + stage.tool + '.js', content: peeled.outputs[s].slice(0, LIMITS.maxAssetBytes) });
+        files.push({
+            path: base + '/layers/' + ('0' + stage.depth) + '-' + stage.tool + '.js',
+            content: peeled.outputs[s].slice(0, LIMITS.maxAssetBytes),
+        });
     }
 
     if (peeled.stages.length) {
@@ -823,7 +1077,10 @@ export async function unpackAsset(asset, options) {
     var modules = extractBundleModules(current, opts.maxModules);
     entry.modules = modules.length;
     for (var m = 0; m < modules.length; m++) {
-        files.push({ path: base + '/modules/' + safePath(moduleFileName(modules[m])), content: modules[m].code });
+        files.push({
+            path: base + '/modules/' + safePath(moduleFileName(modules[m])),
+            content: modules[m].code,
+        });
     }
 
     if (looksMinified(current)) {
@@ -839,14 +1096,18 @@ export async function unpackAsset(asset, options) {
 
     var mapRef = findSourceMapRef(asset.content) || findSourceMapRef(current);
     if (mapRef) {
-        entry.sourceMap = { kind: mapRef.kind, ref: mapRef.kind === 'inline' ? 'inline data URI' : mapRef.value };
+        entry.sourceMap = {
+            kind: mapRef.kind,
+            ref: mapRef.kind === 'inline' ? 'inline data URI' : mapRef.value,
+        };
         var mapJson = null;
         if (mapRef.kind === 'inline') {
             mapJson = decodeInlineSourceMap(mapRef.value);
         } else if (typeof opts.fetchText === 'function') {
             var mapUrl = resolveMapUrl(asset.url, mapRef.value);
             var fetched = await opts.fetchText(mapUrl);
-            if (fetched && typeof fetched === 'string' && fetched.length <= LIMITS.maxMapBytes) mapJson = fetched;
+            if (fetched && typeof fetched === 'string' && fetched.length <= LIMITS.maxMapBytes)
+                mapJson = fetched;
             else entry.notes.push('source map fetch failed: ' + mapRef.value);
         }
         if (mapJson) {
@@ -855,7 +1116,10 @@ export async function unpackAsset(asset, options) {
                 entry.sources = parsed.files.length;
                 files.push({ path: base + '/source-map.json', content: mapJson });
                 for (var f = 0; f < parsed.files.length; f++) {
-                    files.push({ path: base + '/sources/' + safePath(parsed.files[f].path), content: parsed.files[f].content });
+                    files.push({
+                        path: base + '/sources/' + safePath(parsed.files[f].path),
+                        content: parsed.files[f].content,
+                    });
                 }
             } catch (_) {
                 entry.notes.push('source map parse failed');
@@ -871,7 +1135,11 @@ export async function unpackAsset(asset, options) {
 
 export async function unpackAssets(assets, options) {
     var opts = options || {};
-    var report = { generatedBy: 'unpack.js', assets: [], totals: { assets: assets.length, unpacked: 0, modules: 0, sources: 0, beautified: 0 } };
+    var report = {
+        generatedBy: 'unpack.js',
+        assets: [],
+        totals: { assets: assets.length, unpacked: 0, modules: 0, sources: 0, beautified: 0 },
+    };
     var allFiles = [];
     // Shared JSC string table: chunks reach this batch as loose assets with
     // no module graph, so the container-wide EncoderStringTable is discovered
@@ -880,16 +1148,20 @@ export async function unpackAssets(assets, options) {
     if (!opts.sharedJscStrings) {
         var wantsTable = false;
         for (var d = 0; d < assets.length; d++) {
-            if (assets[d].bytes && detectJscBytecode(assets[d].bytes)) { wantsTable = true; break; }
+            if (assets[d].bytes && detectJscBytecode(assets[d].bytes)) {
+                wantsTable = true;
+                break;
+            }
         }
         if (wantsTable) {
             for (var s = 0; s < assets.length; s++) {
                 var scanBytes = assets[s].bytes;
-                if (!scanBytes || scanBytes.length < 24 || scanBytes.length > LIMITS.maxAssetBytes) continue;
+                if (!scanBytes || scanBytes.length < 24 || scanBytes.length > LIMITS.maxAssetBytes)
+                    continue;
                 var found = findJscSharedTable(scanBytes);
                 if (found && found.resolved >= 8) {
                     opts.sharedJscStrings = found.strings;
-                    opts.sharedJscSource = assets[s].url || assets[s].zipPath || ('asset ' + s);
+                    opts.sharedJscSource = assets[s].url || assets[s].zipPath || 'asset ' + s;
                     break;
                 }
             }
@@ -906,11 +1178,12 @@ export async function unpackAssets(assets, options) {
             pathPrefix: opts.pathPrefix,
             sharedJscStrings: opts.sharedJscStrings,
             sharedJscSource: opts.sharedJscSource,
-            zipPath: assets[i].zipPath
+            zipPath: assets[i].zipPath,
         });
         report.assets.push(result.entry);
         for (var f = 0; f < result.files.length; f++) allFiles.push(result.files[f]);
-        if (result.entry.stages.length || result.entry.sources || result.entry.modules) report.totals.unpacked++;
+        if (result.entry.stages.length || result.entry.sources || result.entry.modules)
+            report.totals.unpacked++;
         report.totals.modules += result.entry.modules;
         report.totals.sources += result.entry.sources;
         if (result.entry.beautified) report.totals.beautified++;
@@ -923,7 +1196,8 @@ export async function unpackAssetsIntoZip(zip, assets, options) {
     var opts = options || {};
     var prefix = opts.pathPrefix || '_unpack';
     var result = await unpackAssets(assets, opts);
-    for (var i = 0; i < result.files.length; i++) zip.file(result.files[i].path, result.files[i].content);
+    for (var i = 0; i < result.files.length; i++)
+        zip.file(result.files[i].path, result.files[i].content);
     result.report.generatedBy = 'unpack.js';
     result.report.root = prefix;
     result.report.unpackedAt = new Date().toISOString();

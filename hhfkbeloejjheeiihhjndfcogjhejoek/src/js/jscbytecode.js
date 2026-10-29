@@ -18,19 +18,15 @@
 
 const JSC_HEADER_SIZE = 32;
 const JSC_FORMAT_WORD = 1;
-const JSC_LENGTH_MASK = 0x07FFFFFF;
+const JSC_LENGTH_MASK = 0x07ffffff;
 const JSC_IS_8_BIT = 0x08000000;
 const JSC_RECORD_HEADER = 12;
 const JSC_STRING_LIMIT = 4096;
-const JSC_HASH_MASK = 0x00FFFFFF;
+const JSC_HASH_MASK = 0x00ffffff;
 
 // RapidHash secret from WTF's rapidhash.h — constant, not build specific.
-const WTF_SECRET = [
-    0x2d358dccaa6c78a5n,
-    0x8bb84b93962eacc9n,
-    0x4b33a62ed433d4a3n
-];
-const HASH_64 = 0xFFFFFFFFFFFFFFFFn;
+const WTF_SECRET = [0x2d358dccaa6c78a5n, 0x8bb84b93962eacc9n, 0x4b33a62ed433d4a3n];
+const HASH_64 = 0xffffffffffffffffn;
 
 function u32(bytes, at) {
     return (bytes[at] | (bytes[at + 1] << 8) | (bytes[at + 2] << 16) | (bytes[at + 3] << 24)) >>> 0;
@@ -69,7 +65,10 @@ export function wtfStringHash(bytes) {
             first = (read32Big(bytes, 0) << 32n) | read32Big(bytes, length - 4);
             second = (read32Big(bytes, delta) << 32n) | read32Big(bytes, length - 4 - delta);
         } else if (length) {
-            first = (BigInt(bytes[0]) << 56n) | (BigInt(bytes[length >> 1]) << 32n) | BigInt(bytes[length - 1]);
+            first =
+                (BigInt(bytes[0]) << 56n) |
+                (BigInt(bytes[length >> 1]) << 32n) |
+                BigInt(bytes[length - 1]);
             second = 0n;
         } else {
             first = 0n;
@@ -92,7 +91,10 @@ export function wtfStringHash(bytes) {
             seed ^= see1 ^ see2;
         }
         if (remaining > 16) {
-            seed = rapidMix(read64(bytes, at) ^ secret[2], read64(bytes, at + 8) ^ seed ^ secret[1]);
+            seed = rapidMix(
+                read64(bytes, at) ^ secret[2],
+                read64(bytes, at + 8) ^ seed ^ secret[1],
+            );
             if (remaining > 32) {
                 seed = rapidMix(read64(bytes, at + 16) ^ secret[2], read64(bytes, at + 24) ^ seed);
             }
@@ -104,7 +106,8 @@ export function wtfStringHash(bytes) {
     second ^= seed;
     var product = first * second;
     var value = Number(
-        rapidMix((product & HASH_64) ^ secret[0] ^ BigInt(length), (product >> 64n) ^ secret[1]) & BigInt(JSC_HASH_MASK)
+        rapidMix((product & HASH_64) ^ secret[0] ^ BigInt(length), (product >> 64n) ^ secret[1]) &
+            BigInt(JSC_HASH_MASK),
     );
     return value || 0x800000;
 }
@@ -122,7 +125,7 @@ export function parseJscHeader(bytes) {
         format: formatWord,
         version: version,
         declaredLength: declaredLength,
-        bodyOffset: bodyOffset
+        bodyOffset: bodyOffset,
     };
 }
 
@@ -142,14 +145,20 @@ export function recoverJscStrings(bytes) {
     var len = bytes.length;
     while (at + JSC_RECORD_HEADER <= len) {
         // prefilter: bits 24-26 of the flag word clear (top byte & 0x07 == 0)
-        if ((bytes[at + 3] & 0x07) !== 0 || bytes[at + 7] !== 0x00) { at++; continue; }
+        if ((bytes[at + 3] & 0x07) !== 0 || bytes[at + 7] !== 0x00) {
+            at++;
+            continue;
+        }
         var flags = u32(bytes, at);
         var stored = u32(bytes, at + 4);
         var length = flags & JSC_LENGTH_MASK;
         // bit 27 is the IS-8-BIT flag: set means one-byte characters
-        var width = (flags & JSC_IS_8_BIT) ? 1 : 2;
+        var width = flags & JSC_IS_8_BIT ? 1 : 2;
         var byteLength = length * width;
-        if (!length || length > JSC_STRING_LIMIT || at + JSC_RECORD_HEADER + byteLength > len) { at++; continue; }
+        if (!length || length > JSC_STRING_LIMIT || at + JSC_RECORD_HEADER + byteLength > len) {
+            at++;
+            continue;
+        }
         var charAt = at + JSC_RECORD_HEADER;
         var raw = bytes.subarray(charAt, charAt + byteLength);
         var hash = wtfStringHash(raw);
@@ -159,13 +168,19 @@ export function recoverJscStrings(bytes) {
             if (width === 1) {
                 for (var c = 0; c < length; c++) {
                     var b = raw[c];
-                    if (b < 0x20 || b >= 0x7f) { ok = false; break; }
+                    if (b < 0x20 || b >= 0x7f) {
+                        ok = false;
+                        break;
+                    }
                     text += String.fromCharCode(b);
                 }
             } else {
                 for (var w = 0; w < length; w++) {
                     var unit = raw[w * 2] | (raw[w * 2 + 1] << 8);
-                    if (unit < 0x20 || unit >= 0x7f) { ok = false; break; }
+                    if (unit < 0x20 || unit >= 0x7f) {
+                        ok = false;
+                        break;
+                    }
                     text += String.fromCharCode(unit);
                 }
             }
@@ -522,11 +537,15 @@ var JSC_OPCODE_TABLE = null;
 export function jscOpcodeTable() {
     if (JSC_OPCODE_TABLE) return JSC_OPCODE_TABLE;
     var table = {};
-    var rows = JSC_OPCODE_SOURCE.split("\n");
+    var rows = JSC_OPCODE_SOURCE.split('\n');
     for (var i = 0; i < rows.length; i++) {
         var parts = rows[i].trim().split(/\s+/);
         if (parts.length < 4) continue;
-        table[parts[0]] = [parts[1], parseInt(parts[2], 10) + parseInt(parts[3], 10), parts[3] === "1"];
+        table[parts[0]] = [
+            parts[1],
+            parseInt(parts[2], 10) + parseInt(parts[3], 10),
+            parts[3] === '1',
+        ];
     }
     JSC_OPCODE_TABLE = table;
     return table;
@@ -535,15 +554,29 @@ export function jscOpcodeTable() {
 const JSC_WIDE16 = 0x83;
 const JSC_WIDE32 = 0x85;
 const JSC_ENTER_OPCODE = 134;
-const JSC_ARRAY_ORDER = ["steps", "instr", "consts", "cscr", "idents", "fdecls", "fexprs"];
+const JSC_ARRAY_ORDER = ['steps', 'instr', 'consts', 'cscr', 'idents', 'fdecls', 'fexprs'];
 const JSC_ARRAY_SPANS = { steps: 4, instr: 1, idents: 4, fdecls: 4, fexprs: 4 };
 const JSC_BLOCK_GAPS = [4, 0x38, 0x28, 16];
 const JSC_TERMINAL_OPS = {
-    ret: 1, jmp: 1, ret_undefined: 1, checkpoint_osr_exit_from_in_call: 1, throw: 1,
-    rethrow: 1, unreachable: 1, tail_call_varargs: 1, call_varargs: 1, call: 1,
-    tail_call: 1, call_direct: 1, tail_call_direct: 1, call_eval: 1,
-    call_ignore_result: 1, construct: 1, construct_varargs: 1, jneq_ptr: 1,
-    direct_tail_call: 1
+    ret: 1,
+    jmp: 1,
+    ret_undefined: 1,
+    checkpoint_osr_exit_from_in_call: 1,
+    throw: 1,
+    rethrow: 1,
+    unreachable: 1,
+    tail_call_varargs: 1,
+    call_varargs: 1,
+    call: 1,
+    tail_call: 1,
+    call_direct: 1,
+    tail_call_direct: 1,
+    call_eval: 1,
+    call_ignore_result: 1,
+    construct: 1,
+    construct_varargs: 1,
+    jneq_ptr: 1,
+    direct_tail_call: 1,
 };
 
 function varint(bytes, at) {
@@ -553,7 +586,7 @@ function varint(bytes, at) {
         if (at >= bytes.length || shift > 35) return null;
         var b = bytes[at];
         at += 1;
-        value += (b & 0x7F) * Math.pow(2, shift);
+        value += (b & 0x7f) * Math.pow(2, shift);
         if (!(b & 0x80)) return [value, at];
         shift += 7;
     }
@@ -563,7 +596,7 @@ function svarint(bytes, at) {
     var pair = varint(bytes, at);
     if (!pair) return null;
     var value = pair[0];
-    return [((value >> 1) ^ -(value & 1)), pair[1]];
+    return [(value >> 1) ^ -(value & 1), pair[1]];
 }
 
 export function parseJscTail(bytes, at) {
@@ -577,7 +610,7 @@ export function parseJscTail(bytes, at) {
     cursor = pair[1];
     if (flags & 1) {
         pair = varint(bytes, cursor);
-        if (!pair || pair[0] > (1 << 24)) return null;
+        if (!pair || pair[0] > 1 << 24) return null;
         cursor = pair[1];
     }
     var arrays = {};
@@ -603,7 +636,13 @@ export function parseJscTail(bytes, at) {
         extras = pair[0];
         cursor = pair[1];
     }
-    return { flags: flags, recordOffset: recordOffset, arrays: arrays, extras: extras, scalarsAt: cursor };
+    return {
+        flags: flags,
+        recordOffset: recordOffset,
+        arrays: arrays,
+        extras: extras,
+        scalarsAt: cursor,
+    };
 }
 
 function walkJscOps(bytes, start, length, table) {
@@ -613,13 +652,14 @@ function walkJscOps(bytes, start, length, table) {
     while (offset < end) {
         if (offset >= bytes.length) return null;
         var first = bytes[offset];
+        var op;
         if (first === JSC_WIDE16 || first === JSC_WIDE32) {
             if (offset + 2 > bytes.length) return null;
-            var op = table[bytes[offset + 1]];
+            op = table[bytes[offset + 1]];
             if (!op) return null;
             offset += 2 + op[1] * (first === JSC_WIDE16 ? 2 : 4);
         } else {
-            var op = table[first];
+            op = table[first];
             if (!op) return null;
             offset += 1 + op[1];
         }
@@ -649,7 +689,10 @@ export function bindJscBlock(bytes, record, table) {
             if (!entry[0] || entry[1] < 0) continue;
             var span = JSC_ARRAY_SPANS[name];
             var end = entry[1] + entry[0] * (span || 1);
-            if (end > tail.recordOffset) { rejected = true; break; }
+            if (end > tail.recordOffset) {
+                rejected = true;
+                break;
+            }
             if (span) {
                 hasPositive = true;
                 if (end > packedEnd) packedEnd = end;
@@ -672,10 +715,12 @@ export function bindJscBlock(bytes, record, table) {
             instrLength: instr[0],
             opCount: ops.length,
             tail: tail,
-            tight: !hasPositive || packedEnd === tail.recordOffset
+            tight: !hasPositive || packedEnd === tail.recordOffset,
         });
     }
-    candidates.sort(function (a, b) { return (a.tight === b.tight) ? a.gap - b.gap : (a.tight ? -1 : 1); });
+    candidates.sort(function (a, b) {
+        return a.tight === b.tight ? a.gap - b.gap : a.tight ? -1 : 1;
+    });
     return candidates;
 }
 
@@ -683,10 +728,10 @@ export function bindJscBlock(bytes, record, table) {
 // resolve inside a lone chunk, so it reports as `<ordinal N>`).
 function readJscInlineString(bytes, at) {
     if (at < 0 || at + 12 > bytes.length) return null;
-    var length = u32(bytes, at) & 0xFFFFFF;
+    var length = u32(bytes, at) & 0xffffff;
     if (!length || length > 4096) return null;
     if (at + 12 + length > bytes.length) return null;
-    var text = "";
+    var text = '';
     for (var i = 0; i < length; i++) {
         var b = bytes[at + 12 + i];
         if (b < 0x20 || b >= 0x7f) return null;
@@ -694,7 +739,6 @@ function readJscInlineString(bytes, at) {
     }
     return text;
 }
-
 
 // ---------------------------------------------------------------
 // Shared bytecode string table (EncoderStringTable). A
@@ -727,17 +771,18 @@ export function readJscSharedTable(bytes, offset, length) {
         if (recordAt % 4 || recordAt < 8 || at + 8 > end) continue;
         var flags = u32(bytes, at);
         var stored = u32(bytes, at + 4);
-        var textLength = flags & 0x7FFFFFFF;
+        var textLength = flags & 0x7fffffff;
         var width = (flags >>> 31) & 1 ? 1 : 2;
         var byteLength = textLength * width;
         if (!textLength || at + 8 + byteLength > end) continue;
         var chars = bytes.subarray(at + 8, at + 8 + byteLength);
         if (wtfStringHash(chars) !== stored) continue;
-        var text = "";
+        var text = '';
         if (width === 1) {
             for (var c = 0; c < textLength; c++) text += String.fromCharCode(chars[c]);
         } else {
-            for (var u = 0; u < textLength; u++) text += String.fromCharCode(chars[u * 2] | (chars[u * 2 + 1] << 8));
+            for (var u = 0; u < textLength; u++)
+                text += String.fromCharCode(chars[u * 2] | (chars[u * 2 + 1] << 8));
         }
         strings[ordinal] = text;
         resolved++;
@@ -763,39 +808,56 @@ export function findJscSharedTable(bytes) {
         for (var p = 0; p < probes.length; p++) {
             var recordAt = u32(bytes, at + 4 + probes[p] * 4);
             var rec = at + recordAt;
-            if (recordAt % 4 || recordAt < 8 || rec + 8 > bytes.length || recordAt <= lastOffset) { ok = false; break; }
+            if (recordAt % 4 || recordAt < 8 || rec + 8 > bytes.length || recordAt <= lastOffset) {
+                ok = false;
+                break;
+            }
             lastOffset = recordAt;
             var flags = u32(bytes, rec);
             var stored = u32(bytes, rec + 4);
-            var textLength = flags & 0x7FFFFFFF;
+            var textLength = flags & 0x7fffffff;
             var width = (flags >>> 31) & 1 ? 1 : 2;
             var byteLength = textLength * width;
-            if (!textLength || rec + 8 + byteLength > bytes.length) { ok = false; break; }
-            if (wtfStringHash(bytes.subarray(rec + 8, rec + 8 + byteLength)) !== stored) { ok = false; break; }
+            if (!textLength || rec + 8 + byteLength > bytes.length) {
+                ok = false;
+                break;
+            }
+            if (wtfStringHash(bytes.subarray(rec + 8, rec + 8 + byteLength)) !== stored) {
+                ok = false;
+                break;
+            }
         }
         if (!ok) continue;
         var read = readJscSharedTable(bytes, at, bytes.length - at);
         if (read.resolved >= probes.length) {
-            return { strings: read.strings, count: read.count, resolved: read.resolved, offset: at, length: read.length };
+            return {
+                strings: read.strings,
+                count: read.count,
+                resolved: read.resolved,
+                offset: at,
+                length: read.length,
+            };
         }
     }
     return null;
 }
 
 export function decodeJscSlot(bytes, fieldAt, slot, shared, depth) {
-    if (slot === 0x7FFFFFFF || slot === 0xFFFFFFFF) return "";
+    if (slot === 0x7fffffff || slot === 0xffffffff) return '';
     if (depth === undefined) depth = 0;
     var tag = slot & 3;
     if (tag === 1) {
         var length = (slot >>> 2) & 3;
-        var text = "";
-        for (var i = 0; i < length; i++) text += String.fromCharCode((slot >>> (8 * (i + 1))) & 0xFF);
+        var text = '';
+        for (var i = 0; i < length; i++)
+            text += String.fromCharCode((slot >>> (8 * (i + 1))) & 0xff);
         return text;
     }
     if (tag === 2) {
         var ordinal = slot >>> 2;
-        if (shared && ordinal < shared.length && shared[ordinal] !== undefined) return shared[ordinal];
-        return "<ordinal " + ordinal + ">";
+        if (shared && ordinal < shared.length && shared[ordinal] !== undefined)
+            return shared[ordinal];
+        return '<ordinal ' + ordinal + '>';
     }
     if (tag === 0 && depth < 3) {
         // field-relative pointer (signed 32-bit): the target is either
@@ -806,15 +868,15 @@ export function decodeJscSlot(bytes, fieldAt, slot, shared, depth) {
             var inner = u32(bytes, target);
             if ((inner & 3) <= 2) {
                 var decoded = decodeJscSlot(bytes, target, inner, shared, depth + 1);
-                if (decoded.indexOf("<offset") !== 0) return decoded;
+                if (decoded.indexOf('<offset') !== 0) return decoded;
             }
             var record = readJscInlineString(bytes, target);
             if (record !== null) return record;
         }
-        if (target > 0) return "<offset " + signed + ">";
+        if (target > 0) return '<offset ' + signed + '>';
     }
-    if (tag === 3) return "<slot " + slot.toString(16) + ">";
-    return "";
+    if (tag === 3) return '<slot ' + slot.toString(16) + '>';
+    return '';
 }
 
 export function instantiateJscExec(bytes, record, shared) {
@@ -826,24 +888,29 @@ export function instantiateJscExec(bytes, record, shared) {
         name: (header >>> 2) & 1,
         tdz: (header >>> 3) & 1,
         rare: (header >>> 4) & 1,
-        metadata: (header >>> 5) & 1
+        metadata: (header >>> 5) & 1,
     };
-    var parsed = { record: record, parseMode: (header >>> 16) & 0xFF, present: present };
+    var parsed = { record: record, parseMode: (header >>> 16) & 0xff, present: present };
     var cursor = record + 4;
     if (present.metadata) cursor += 4;
     var table = jscOpcodeTable();
     var view = bytes;
-    function i32(at) { return (view[at] | (view[at + 1] << 8) | (view[at + 2] << 16) | (view[at + 3] << 24)); }
+    function i32(at) {
+        return view[at] | (view[at + 1] << 8) | (view[at + 2] << 16) | (view[at + 3] << 24);
+    }
     for (var key = 0; key < 2; key++) {
-        var kind = key === 0 ? "call" : "construct";
+        var kind = key === 0 ? 'call' : 'construct';
         if (!present[kind]) continue;
         if (cursor + 4 > bytes.length) return null;
         var fieldAt = cursor;
         var value = i32(cursor);
         cursor += 4;
-        if (value === -1) { parsed[kind + "Empty"] = true; continue; }
+        if (value === -1) {
+            parsed[kind + 'Empty'] = true;
+            continue;
+        }
         if (fieldAt + value < 0x20 || fieldAt + value >= bytes.length) continue;
-        parsed[kind + "Blocks"] = bindJscBlock(bytes, fieldAt + value, table);
+        parsed[kind + 'Blocks'] = bindJscBlock(bytes, fieldAt + value, table);
     }
     if (present.name) {
         if (cursor + 4 > bytes.length) return null;
@@ -860,7 +927,7 @@ export function instantiateJscExec(bytes, record, shared) {
 function jscBlockChildren(bytes, block) {
     var children = [];
     var region = block.region;
-    var kinds = ["fdecls", "fexprs"];
+    var kinds = ['fdecls', 'fexprs'];
     for (var k = 0; k < kinds.length; k++) {
         var entry = block.tail.arrays[kinds[k]];
         if (!entry[0]) continue;
@@ -868,7 +935,11 @@ function jscBlockChildren(bytes, block) {
         for (var index = 0; index < entry[0]; index++) {
             var slotAt = base + index * 4;
             if (slotAt + 4 > bytes.length) break;
-            var delta = (bytes[slotAt] | (bytes[slotAt + 1] << 8) | (bytes[slotAt + 2] << 16) | (bytes[slotAt + 3] << 24));
+            var delta =
+                bytes[slotAt] |
+                (bytes[slotAt + 1] << 8) |
+                (bytes[slotAt + 2] << 16) |
+                (bytes[slotAt + 3] << 24);
             children.push([kinds[k], slotAt + delta]);
         }
     }
@@ -906,7 +977,7 @@ export function analyzeJscModule(bytes, shared) {
         blocks: 0,
         ops: 0,
         bindFailed: 0,
-        functions: []
+        functions: [],
     };
     var pending = [];
     var seenBlocks = {};
@@ -916,13 +987,28 @@ export function analyzeJscModule(bytes, shared) {
         var program = null;
         var candidates = bindJscBlock(bytes, entry.codeBlockRecord, jscOpcodeTable());
         for (var ci = 0; ci < candidates.length; ci++) {
-            if (candidates[ci].gap === 0x38) { program = candidates[ci]; break; }
+            if (candidates[ci].gap === 0x38) {
+                program = candidates[ci];
+                break;
+            }
         }
         if (!program) return stats;
         stats.rootName = decodeJscSlot(bytes, 0x1c, u32(bytes, 0x1c), shared) || null;
         stats.rootParseMode = 0;
         stats.nodes = 1;
-        stats.functions.push({ name: stats.rootName, kind: "root", record: program.record, callBlock: { region: program.region, instrAt: program.instrAt, instrLength: program.instrLength, opCount: program.opCount, gap: program.gap }, constructBlock: null });
+        stats.functions.push({
+            name: stats.rootName,
+            kind: 'root',
+            record: program.record,
+            callBlock: {
+                region: program.region,
+                instrAt: program.instrAt,
+                instrLength: program.instrLength,
+                opCount: program.opCount,
+                gap: program.gap,
+            },
+            constructBlock: null,
+        });
         pending.push(program);
     } else {
         var root = instantiateJscExec(bytes, 0x20, shared);
@@ -930,21 +1016,37 @@ export function analyzeJscModule(bytes, shared) {
         stats.rootName = root.name;
         stats.rootParseMode = root.parseMode;
         stats.nodes = 1;
-        stats.functions.push({ name: root.name === undefined ? null : root.name, kind: "root", record: root.record, callBlock: null, constructBlock: null });
+        stats.functions.push({
+            name: root.name === undefined ? null : root.name,
+            kind: 'root',
+            record: root.record,
+            callBlock: null,
+            constructBlock: null,
+        });
         var rootEntry = stats.functions[0];
         seenExec[root.record] = 1;
         for (var kind = 0; kind < 2; kind++) {
-            var key = kind === 0 ? "call" : "construct";
-            var blocks = root[key + "Blocks"];
-            if (!blocks) { if (root.present[key] && !root[key + "Empty"]) stats.bindFailed++; continue; }
+            var key = kind === 0 ? 'call' : 'construct';
+            var blocks = root[key + 'Blocks'];
+            if (!blocks) {
+                if (root.present[key] && !root[key + 'Empty']) stats.bindFailed++;
+                continue;
+            }
             pending = pending.concat(blocks);
             var best = blocks[0];
-            if (best) rootEntry[key === "call" ? "callBlock" : "constructBlock"] = { region: best.region, instrAt: best.instrAt, instrLength: best.instrLength, opCount: best.opCount, gap: best.gap };
+            if (best)
+                rootEntry[key === 'call' ? 'callBlock' : 'constructBlock'] = {
+                    region: best.region,
+                    instrAt: best.instrAt,
+                    instrLength: best.instrLength,
+                    opCount: best.opCount,
+                    gap: best.gap,
+                };
         }
     }
     while (pending.length) {
         var block = pending.pop();
-        var identity = block.record + ":" + block.gap;
+        var identity = block.record + ':' + block.gap;
         if (seenBlocks[identity]) continue;
         seenBlocks[identity] = 1;
         stats.blocks += 1;
@@ -952,10 +1054,22 @@ export function analyzeJscModule(bytes, shared) {
         var children = jscBlockChildren(bytes, block);
         for (var c = 0; c < children.length; c++) {
             var target = children[c][1];
-            if (target < 0x20 || target >= bytes.length - 32) { stats.bindFailed++; continue; }
+            if (target < 0x20 || target >= bytes.length - 32) {
+                stats.bindFailed++;
+                continue;
+            }
             var child = instantiateJscExec(bytes, target, shared);
-            if (!child) { stats.bindFailed++; continue; }
-            var fn = { name: child.name === undefined ? null : child.name, kind: children[c][0], record: child.record, callBlock: null, constructBlock: null };
+            if (!child) {
+                stats.bindFailed++;
+                continue;
+            }
+            var fn = {
+                name: child.name === undefined ? null : child.name,
+                kind: children[c][0],
+                record: child.record,
+                callBlock: null,
+                constructBlock: null,
+            };
             if (child.record in seenExec) {
                 // already walked; but this parent gives it its kind label once
             } else {
@@ -964,16 +1078,28 @@ export function analyzeJscModule(bytes, shared) {
                 stats.functions.push(fn);
             }
             for (var k2 = 0; k2 < 2; k2++) {
-                var key2 = k2 === 0 ? "call" : "construct";
-                var blocks2 = child[key2 + "Blocks"];
-                if (!blocks2) { if (child.present[key2] && !child[key2 + "Empty"]) stats.bindFailed++; continue; }
+                var key2 = k2 === 0 ? 'call' : 'construct';
+                var blocks2 = child[key2 + 'Blocks'];
+                if (!blocks2) {
+                    if (child.present[key2] && !child[key2 + 'Empty']) stats.bindFailed++;
+                    continue;
+                }
                 pending = pending.concat(blocks2);
                 var best2 = blocks2[0];
-                if (best2) fn[key2 === "call" ? "callBlock" : "constructBlock"] = { region: best2.region, instrAt: best2.instrAt, instrLength: best2.instrLength, opCount: best2.opCount, gap: best2.gap };
+                if (best2)
+                    fn[key2 === 'call' ? 'callBlock' : 'constructBlock'] = {
+                        region: best2.region,
+                        instrAt: best2.instrAt,
+                        instrLength: best2.instrLength,
+                        opCount: best2.opCount,
+                        gap: best2.gap,
+                    };
             }
         }
     }
     stats.valid = stats.blocks > 0 && stats.bindFailed === 0;
-    stats.functions.sort(function (a, b) { return a.record - b.record; });
+    stats.functions.sort(function (a, b) {
+        return a.record - b.record;
+    });
     return stats;
 }

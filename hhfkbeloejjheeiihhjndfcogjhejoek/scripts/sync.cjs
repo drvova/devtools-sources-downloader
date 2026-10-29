@@ -36,7 +36,8 @@ let unchanged = 0;
 
 for (const dir of DIRECTORIES) {
     const src = path.join(dist, dir);
-    if (!fs.existsSync(src)) throw new Error('build output missing: dist/' + dir + ' (run webpack first)');
+    if (!fs.existsSync(src))
+        throw new Error('build output missing: dist/' + dir + ' (run webpack first)');
     for (const rel of listFiles(src, '')) {
         const from = path.join(src, rel);
         const to = path.join(root, dir, rel);
@@ -62,4 +63,6 @@ for (const file of FILES) {
     console.log('sync ' + file);
 }
 
-console.log('root layout in sync with dist: ' + copied + ' written, ' + unchanged + ' already current');
+console.log(
+    'root layout in sync with dist: ' + copied + ' written, ' + unchanged + ' already current',
+);
