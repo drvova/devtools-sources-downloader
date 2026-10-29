@@ -791,6 +791,57 @@ pub fn infer_flow_relation(from_event: &Value, to_event: &Value) -> String {
     .to_string()
 }
 
+/// `matchesBoundaryEntry`.
+pub fn matches_boundary_entry(entry: &Value, boundary: &str) -> bool {
+    if !js_truthy(entry) {
+        return false;
+    }
+    if field_str(entry, "primaryBoundary") == boundary {
+        return true;
+    }
+    entry
+        .get("boundaryLabels")
+        .and_then(|v| v.as_array())
+        .map(|labels| labels.iter().any(|label| label.as_str() == Some(boundary)))
+        .unwrap_or(false)
+}
+
+/// `flowTouchesBoundary`.
+pub fn flow_touches_boundary(flow: &Value, boundary: &str) -> bool {
+    js_truthy(flow)
+        && (field_str(flow, "fromBoundary") == boundary
+            || field_str(flow, "toBoundary") == boundary
+            || matches_boundary_entry(flow.get("from").unwrap_or(&Value::Null), boundary)
+            || matches_boundary_entry(flow.get("to").unwrap_or(&Value::Null), boundary))
+}
+
+/// `chainTouchesBoundary`.
+pub fn chain_touches_boundary(chain: &Value, boundary: &str) -> bool {
+    js_truthy(chain)
+        && chain
+            .get("path")
+            .and_then(|v| v.as_array())
+            .map(|path| path.iter().any(|item| item.as_str() == Some(boundary)))
+            .unwrap_or(false)
+}
+
+/// `flowTouchesAnyBoundary`.
+pub fn flow_touches_any_boundary(flow: &Value, boundaries: &[String]) -> bool {
+    if !js_truthy(flow) {
+        return false;
+    }
+    boundaries
+        .iter()
+        .any(|boundary| flow_touches_boundary(flow, boundary))
+}
+
+/// `matchesAnyBoundary`.
+pub fn matches_any_boundary(entry: &Value, boundaries: &[String]) -> bool {
+    boundaries
+        .iter()
+        .any(|boundary| matches_boundary_entry(entry, boundary))
+}
+
 /// `countSharedValues`.
 pub fn count_shared_values(left: &[String], right: &[String]) -> usize {
     left.iter().filter(|value| right.contains(value)).count()

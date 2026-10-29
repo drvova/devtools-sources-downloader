@@ -12,9 +12,11 @@
 //! semantics (verified against node oracles captured from the pre-port
 //! implementation).
 
+pub mod analysis;
 pub mod assets;
 pub mod boundary;
 pub mod graph;
 pub mod model;
 pub mod text;
 pub mod view;
+pub mod workspace;
