@@ -70,7 +70,7 @@ Per asset, `_unpack/<slug>/` holds:
 ## Unpack engine
 
 `src/js/unpack-bridge.js` + the compiled Rust engine (`js/engine.wasm`, built
-by `scripts/build-engine.cjs` from `unpack-rs/`) run the same loop as offline
+by `scripts/build-engine.cjs` from the crate at `../`) run the same loop as offline
 unpackers (detect -> route -> transform -> re-detect) but entirely inside the
 DevTools panel: no Python, no sandbox, no toolchain. Each pass scores the
 layers it can see, applies the strongest one, and repeats until the payload
@@ -81,4 +81,4 @@ extension origin, or a caller-supplied `fetchMap`).
 The engine is the `devtools-unpack` crate compiled for wasm32; the bridge
 keeps the exact API surface the former JavaScript engine exported, which is
 why `npm test` covers the shipped artifact outside a browser. Port notes and
-deliberate divergences live in `unpack-rs/PORTING.md`.
+deliberate divergences live in `../PORTING.md`.

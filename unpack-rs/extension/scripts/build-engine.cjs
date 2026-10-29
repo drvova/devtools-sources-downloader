@@ -11,7 +11,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
-const CRATE = path.resolve(ROOT, '..', 'unpack-rs');
+// The extension lives inside the crate root (unpack-rs/extension), so the
+// crate is the parent directory.
+const CRATE = path.resolve(ROOT, '..');
 const OUT = path.join(ROOT, '.cache', 'engine.wasm');
 
 if (!fs.existsSync(path.join(CRATE, 'Cargo.toml'))) {

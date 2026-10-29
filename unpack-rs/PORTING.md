@@ -1,17 +1,17 @@
 # PORTING.md - devtools-unpack (JS -> Rust)
 
 Behavior-faithful port of the DevTools sources-downloader unpack engine
-(`../hhfkbeloejjheeiihhjndfcogjhejoek/src/js/{unpack,packers,jsfuck,v8codecache,jscbytecode,wasm}.js`,
+(`extension/src/js/{unpack,packers,jsfuck,v8codecache,jscbytecode,wasm}.js`,
 since replaced by `src/js/unpack-bridge.js` + the compiled `engine.wasm`)
 to the `devtools-unpack` crate. Same observable behavior, same test surface:
 every one of the 67 node baseline cases in
-`../hhfkbeloejjheeiihhjndfcogjhejoek/test/unpack.test.mjs` has a 1:1 Rust
+`extension/test/unpack.test.mjs` has a 1:1 Rust
 twin in `tests/unpack_test.rs` with the same test name (camelCase -> snake_case).
 
 Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 77/77
 (67 integration + 10 lib unit), `cargo clippy --all-targets -- -D warnings`
 clean. Fixtures are referenced in place
-(`env!("CARGO_MANIFEST_DIR")/../hhfkbeloejjheeiihhjndfcogjhejoek/test/fixtures`),
+(`env!("CARGO_MANIFEST_DIR")/extension/test/fixtures`),
 never copied.
 
 ## Browser integration (wasm bridge)

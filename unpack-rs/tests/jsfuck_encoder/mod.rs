@@ -1,5 +1,5 @@
 // Test oracle: JSFuck 0.5.0 encoder, ported verbatim from
-// hhfkbeloejjheeiihhjndfcogjhejoek/test/fixtures/jsfuck-encoder.js so the
+// extension/test/fixtures/jsfuck-encoder.js so the
 // decode tests exercise the same byte shapes the vendored web library
 // produces. This mirrors the JS suite, which loads the fixture and calls
 // JSFuck.encode() — the encoder belongs to the test rig, not the engine.
