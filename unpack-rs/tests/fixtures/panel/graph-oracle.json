@@ -1,0 +1,572 @@
+{
+ "input": {
+  "scriptFixture": [
+   {
+    "url": "https://demo.test/app/main.js",
+    "content": "import a from \"react\";__webpack_require__(1);"
+   },
+   {
+    "url": "https://demo.test/vendor.js",
+    "content": "plain vendor"
+   },
+   {
+    "url": "inline/script-3.js",
+    "content": "xxxxxxxxxx"
+   },
+   {
+    "url": "",
+    "content": ""
+   }
+  ],
+  "reconFixture": {
+   "timings": [
+    {
+     "name": "https://demo.test/app/main.js?v=1",
+     "transferSize": 60000,
+     "startTime": 12.5,
+     "duration": 8
+    },
+    {
+     "name": "https://demo.test/vendor.js",
+     "transferSize": 1000,
+     "startTime": 1,
+     "duration": 2
+    },
+    {
+     "name": "",
+     "transferSize": 9
+    }
+   ],
+   "stackProfile": {
+    "technologies": [
+     {
+      "name": "Next.js"
+     }
+    ]
+   }
+  },
+  "runtimeEntries": [
+   {
+    "id": "r1",
+    "kind": "eval",
+    "url": "https://demo.test/app/main.js",
+    "stack": "at f (https://demo.test/vendor.js:1:2)"
+   },
+   {
+    "id": "r2",
+    "kind": "wasm",
+    "blobId": "blob-1",
+    "text": "x",
+    "timestamp": 3
+   }
+  ],
+  "runtimeManifest": [
+   {
+    "id": "r1",
+    "file": "runtime/eval-1.js",
+    "mimeType": "application/javascript",
+    "size": 42
+   },
+   {
+    "id": "r2",
+    "file": "runtime/wasm-1.wasm"
+   }
+  ],
+  "graphRecon": {
+   "xhr": [
+    {
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "requestBody": "{\"query\":\"query Q{a}\"}",
+     "timestamp": 5,
+     "status": 200,
+     "requestHeaders": {
+      "x-a": "1"
+     },
+     "responseText": "{\"data\":1}"
+    },
+    {
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "requestBody": "{\"query\":\"query Q{a}\"}",
+     "timestamp": 1,
+     "status": 200
+    }
+   ],
+   "fetch": [
+    {
+     "url": "https://api.test/data.json",
+     "timestamp": 3,
+     "responseBodyExcerpt": "{\"x\":1}"
+    },
+    {
+     "url": "https://api.test/graphql",
+     "requestBody": "query T{a}",
+     "timestamp": 2
+    }
+   ]
+  },
+  "page": {
+   "url": "https://demo.test/app"
+  },
+  "captureStatus": {
+   "profile": "spa"
+  }
+ },
+ "expected": {
+  "looksLikeGraphQLBody": [
+   true,
+   true,
+   true,
+   true,
+   false,
+   false,
+   false,
+   "query A",
+   "B",
+   {},
+   null,
+   null
+  ],
+  "normalizeGraphQLPayload": [
+   {
+    "operationName": "Explicit",
+    "operationType": "query",
+    "queryPreview": "query Foo($x:Int){a}"
+   },
+   {
+    "operationName": "Baz",
+    "operationType": "mutation",
+    "queryPreview": "mutation Baz { b }"
+   },
+   {
+    "operationName": "",
+    "operationType": "",
+    "queryPreview": "not json at all"
+   },
+   {
+    "operationName": "Sub",
+    "operationType": "subscription",
+    "queryPreview": "subscription Sub { c }"
+   },
+   {
+    "operationName": "",
+    "operationType": "",
+    "queryPreview": "plain text"
+   },
+   {
+    "operationName": "",
+    "operationType": "",
+    "queryPreview": ""
+   },
+   {
+    "operationName": "",
+    "operationType": "",
+    "queryPreview": ""
+   }
+  ],
+  "parseGraphQLOperation": [
+   {
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "operationName": "Q",
+    "operationType": "query",
+    "queryPreview": "query Q{a}",
+    "timestamp": 5,
+    "status": 200
+   },
+   {
+    "url": "https://api.test/rest",
+    "method": "POST",
+    "operationName": "R",
+    "operationType": "query",
+    "queryPreview": "query R{a}",
+    "timestamp": 0,
+    "status": 0
+   },
+   null,
+   {
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "operationName": "S",
+    "operationType": "query",
+    "queryPreview": "query S{a}",
+    "timestamp": 0,
+    "status": 0
+   },
+   null
+  ],
+  "collectGraphQLOperations": [
+   {
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "operationName": "Q",
+    "operationType": "query",
+    "queryPreview": "query Q{a}",
+    "timestamp": 5,
+    "status": 200
+   },
+   {
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "operationName": "Q",
+    "operationType": "query",
+    "queryPreview": "query Q{a}",
+    "timestamp": 1,
+    "status": 200
+   },
+   {
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "operationName": "T",
+    "operationType": "query",
+    "queryPreview": "query T{a}",
+    "timestamp": 2,
+    "status": 0
+   }
+  ],
+  "collectNetworkOperations": [
+   {
+    "type": "xhr",
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "status": 200,
+    "timestamp": 1,
+    "requestBody": "{\"query\":\"query Q{a}\"}",
+    "requestHeaders": {},
+    "responseHeaders": "",
+    "responsePreview": ""
+   },
+   {
+    "type": "fetch",
+    "url": "https://api.test/graphql",
+    "method": "GET",
+    "status": 0,
+    "timestamp": 2,
+    "requestBody": "query T{a}",
+    "requestHeaders": {},
+    "responseHeaders": "",
+    "responsePreview": ""
+   },
+   {
+    "type": "fetch",
+    "url": "https://api.test/data.json",
+    "method": "GET",
+    "status": 0,
+    "timestamp": 3,
+    "requestBody": "",
+    "requestHeaders": {},
+    "responseHeaders": "",
+    "responsePreview": "{\"x\":1}"
+   },
+   {
+    "type": "xhr",
+    "url": "https://api.test/graphql",
+    "method": "POST",
+    "status": 200,
+    "timestamp": 5,
+    "requestBody": "{\"query\":\"query Q{a}\"}",
+    "requestHeaders": {
+     "x-a": "1"
+    },
+    "responseHeaders": "",
+    "responsePreview": "{\"data\":1}"
+   }
+  ],
+  "buildModuleGraph": {
+   "summary": {
+    "nodes": 9,
+    "edges": 9,
+    "runtimeNodes": 2,
+    "chunkNodes": 4
+   },
+   "nodes": [
+    {
+     "id": "page",
+     "type": "page",
+     "label": "https://demo.test/app"
+    },
+    {
+     "id": "chunk-main.js-1e7d8eef",
+     "type": "chunk",
+     "label": "main.js",
+     "meta": {
+      "classification": "framework",
+      "bundler": "webpack",
+      "primaryBoundary": ""
+     }
+    },
+    {
+     "id": "pkg:react",
+     "type": "package",
+     "label": "react"
+    },
+    {
+     "id": "chunk-vendor.js-12d54eae",
+     "type": "chunk",
+     "label": "vendor.js",
+     "meta": {
+      "classification": "vendor",
+      "bundler": "unknown",
+      "primaryBoundary": ""
+     }
+    },
+    {
+     "id": "chunk-script-3.js-37d31dd0",
+     "type": "chunk",
+     "label": "script-3.js",
+     "meta": {
+      "classification": "framework",
+      "bundler": "unknown",
+      "primaryBoundary": ""
+     }
+    },
+    {
+     "id": "chunk-script-4.js-37d2a971",
+     "type": "chunk",
+     "label": "script-4.js",
+     "meta": {
+      "classification": "framework",
+      "bundler": "unknown",
+      "primaryBoundary": ""
+     }
+    },
+    {
+     "id": "runtime:r1",
+     "type": "runtime",
+     "label": "eval",
+     "meta": {
+      "originType": "bundle-linked",
+      "file": "runtime/eval-1.js",
+      "primaryBoundary": ""
+     }
+    },
+    {
+     "id": "runtime:r2",
+     "type": "runtime",
+     "label": "wasm",
+     "meta": {
+      "originType": "blob-derived",
+      "file": "runtime/wasm-1.wasm",
+      "primaryBoundary": ""
+     }
+    },
+    {
+     "id": "endpoint:https://api.test/graphql",
+     "type": "endpoint",
+     "label": "https://api.test/graphql"
+    }
+   ],
+   "edges": [
+    {
+     "from": "page",
+     "to": "chunk-main.js-1e7d8eef",
+     "reason": "resource",
+     "meta": {
+      "startTime": 12.5
+     }
+    },
+    {
+     "from": "chunk-main.js-1e7d8eef",
+     "to": "pkg:react",
+     "reason": "imports",
+     "meta": {
+      "specifier": "react"
+     }
+    },
+    {
+     "from": "page",
+     "to": "chunk-vendor.js-12d54eae",
+     "reason": "resource",
+     "meta": {
+      "startTime": 1
+     }
+    },
+    {
+     "from": "page",
+     "to": "chunk-script-3.js-37d31dd0",
+     "reason": "resource",
+     "meta": {
+      "startTime": 0
+     }
+    },
+    {
+     "from": "page",
+     "to": "chunk-script-4.js-37d2a971",
+     "reason": "resource",
+     "meta": {
+      "startTime": 0
+     }
+    },
+    {
+     "from": "chunk-main.js-1e7d8eef",
+     "to": "runtime:r1",
+     "reason": "bundle-linked"
+    },
+    {
+     "from": "chunk-vendor.js-12d54eae",
+     "to": "runtime:r1",
+     "reason": "bundle-linked"
+    },
+    {
+     "from": "runtime:blob-1",
+     "to": "runtime:r2",
+     "reason": "spawns"
+    },
+    {
+     "from": "page",
+     "to": "endpoint:https://api.test/graphql",
+     "reason": "graphql"
+    }
+   ]
+  },
+  "buildStartupChain": {
+   "profile": "spa",
+   "scripts": [
+    {
+     "id": "chunk-script-3.js-37d31dd0",
+     "url": "inline/script-3.js",
+     "classification": "framework",
+     "primaryBoundary": "",
+     "startTime": 0,
+     "duration": 0,
+     "startupSignals": []
+    },
+    {
+     "id": "chunk-script-4.js-37d2a971",
+     "url": "inline/script-4.js",
+     "classification": "framework",
+     "primaryBoundary": "",
+     "startTime": 0,
+     "duration": 0,
+     "startupSignals": []
+    },
+    {
+     "id": "chunk-vendor.js-12d54eae",
+     "url": "https://demo.test/vendor.js",
+     "classification": "vendor",
+     "primaryBoundary": "",
+     "startTime": 1,
+     "duration": 2,
+     "startupSignals": []
+    },
+    {
+     "id": "chunk-main.js-1e7d8eef",
+     "url": "https://demo.test/app/main.js",
+     "classification": "framework",
+     "primaryBoundary": "",
+     "startTime": 12.5,
+     "duration": 8,
+     "startupSignals": []
+    }
+   ],
+   "runtime": [
+    {
+     "id": "r1",
+     "kind": "eval",
+     "originType": "bundle-linked",
+     "primaryBoundary": "",
+     "timestamp": 0,
+     "relatedChunks": [
+      "chunk-main.js-1e7d8eef",
+      "chunk-vendor.js-12d54eae"
+     ],
+     "file": "runtime/eval-1.js"
+    },
+    {
+     "id": "r2",
+     "kind": "wasm",
+     "originType": "blob-derived",
+     "primaryBoundary": "",
+     "timestamp": 3,
+     "relatedChunks": [],
+     "file": "runtime/wasm-1.wasm"
+    }
+   ],
+   "data": [
+    {
+     "type": "xhr",
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "status": 200,
+     "timestamp": 1,
+     "requestBody": "{\"query\":\"query Q{a}\"}",
+     "requestHeaders": {},
+     "responseHeaders": "",
+     "responsePreview": ""
+    },
+    {
+     "type": "fetch",
+     "url": "https://api.test/graphql",
+     "method": "GET",
+     "status": 0,
+     "timestamp": 2,
+     "requestBody": "query T{a}",
+     "requestHeaders": {},
+     "responseHeaders": "",
+     "responsePreview": ""
+    },
+    {
+     "type": "fetch",
+     "url": "https://api.test/data.json",
+     "method": "GET",
+     "status": 0,
+     "timestamp": 3,
+     "requestBody": "",
+     "requestHeaders": {},
+     "responseHeaders": "",
+     "responsePreview": "{\"x\":1}"
+    },
+    {
+     "type": "xhr",
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "status": 200,
+     "timestamp": 5,
+     "requestBody": "{\"query\":\"query Q{a}\"}",
+     "requestHeaders": {
+      "x-a": "1"
+     },
+     "responseHeaders": "",
+     "responsePreview": "{\"data\":1}"
+    }
+   ],
+   "graphql": [
+    {
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "operationName": "Q",
+     "operationType": "query",
+     "queryPreview": "query Q{a}",
+     "timestamp": 5,
+     "status": 200
+    },
+    {
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "operationName": "Q",
+     "operationType": "query",
+     "queryPreview": "query Q{a}",
+     "timestamp": 1,
+     "status": 200
+    },
+    {
+     "url": "https://api.test/graphql",
+     "method": "POST",
+     "operationName": "T",
+     "operationType": "query",
+     "queryPreview": "query T{a}",
+     "timestamp": 2,
+     "status": 0
+    }
+   ],
+   "summary": {
+    "scripts": 4,
+    "runtime": 2,
+    "dataRequests": 4,
+    "graphqlOperations": 3
+   }
+  },
+  "buildStartupChainProfileFromStack": "ssr"
+ }
+}

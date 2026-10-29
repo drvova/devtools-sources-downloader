@@ -647,7 +647,8 @@ fn field<'a>(entry: &'a Value, key: &str) -> Option<&'a Value> {
     entry.get(key).filter(|v| js_truthy(v))
 }
 
-fn field_str(entry: &Value, key: &str) -> String {
+/// The JS `entry[key] || ''` string read.
+pub fn field_str(entry: &Value, key: &str) -> String {
     match field(entry, key) {
         Some(Value::String(s)) => s.clone(),
         Some(Value::Number(n)) => crate::jsnumber::js_number_to_string(n.as_f64().unwrap_or(f64::NAN)),
@@ -655,7 +656,8 @@ fn field_str(entry: &Value, key: &str) -> String {
     }
 }
 
-fn field_number(entry: &Value, key: &str) -> f64 {
+/// The JS truthy-number read (`entry[key] || 0`).
+pub fn field_number(entry: &Value, key: &str) -> f64 {
     match field(entry, key) {
         Some(value) => js_number(value),
         None => 0.0,
