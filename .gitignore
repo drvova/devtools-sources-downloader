@@ -12,3 +12,6 @@ desktop.ini
 
 # dev-build source maps
 *.js.map
+
+# Chrome for Testing download + dev extension profile
+.cache/

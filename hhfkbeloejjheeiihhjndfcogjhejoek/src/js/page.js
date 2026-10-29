@@ -143,6 +143,16 @@ function fetchTextAsset(url, label) {
 }
 
 function injectAndReload(buttonLabel, onComplete) {
+    // When the panel page runs outside a DevTools window (e.g. opened
+    // directly as an extension page), the devtools API is absent. Fail
+    // visibly instead of throwing mid-flow.
+    if (!chrome.devtools || !chrome.devtools.inspectedWindow) {
+        setActivity(
+            'danger',
+            'DevTools API unavailable - open this panel from the DevTools window (Sources Downloader tab).',
+        );
+        return;
+    }
     if (isPolling) return;
     isPolling = true;
     onPollComplete = onComplete;
@@ -517,6 +527,16 @@ function formatMs(ms) {
 }
 
 function doDownload() {
+    // When the panel page runs outside a DevTools window (e.g. opened
+    // directly as an extension page), the devtools API is absent. Fail
+    // visibly instead of throwing inside the click handler.
+    if (!chrome.devtools || !chrome.devtools.inspectedWindow) {
+        setActivity(
+            'danger',
+            'DevTools API unavailable - open this panel from the DevTools window (Sources Downloader tab).',
+        );
+        return;
+    }
     downloadBtn.disabled = true;
     downloadBtn.textContent = 'Downloading...';
     setActivity('info', 'Collecting resources, HTML, recon data, and runtime artifacts...');

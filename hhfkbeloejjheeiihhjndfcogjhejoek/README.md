@@ -7,26 +7,42 @@ and framework state, then exports an unpacked, site-aware package as `sources.zi
 
 The extension exists in two loadable copies that must stay identical:
 
-- `dist/` - webpack build output (`manifest.json` + `js/ html/ css/ images/`).
+- `dist/` - rsbuild (Rstack CLI) build output (`manifest.json` + `js/ html/ css/ images/`).
 - repository root - an unpacked load of the same files.
 
-`npm run build` writes `dist/` and then mirrors it over the root with `scripts/sync.js`,
+`npm run build` writes `dist/` and then mirrors it over the root with `scripts/sync.cjs`,
 so the build output is the single source of truth and the two copies cannot drift.
 `src/js/*` is the source; nothing in `js/` or `dist/` should be edited by hand.
 
 ## Commands
 
-| Command            | What it does                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `npm run build`    | production webpack build + mirror into the root layout                                |
-| `npm run dev`      | development build (unminified, source maps) + mirror                                  |
-| `npm test`         | unit tests for the unpack engine (`test/unpack.test.mjs`)                             |
-| `npm run test:e2e` | loads the built bundle in a real browser, clicks Download All, reads the produced zip |
-| `npm run verify`   | unit tests + build + end-to-end (run this before committing)                          |
+| Command                | What it does                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `npm run build`        | production rsbuild build + mirror into the root layout                                              |
+| `npm run dev`          | development build (unminified, source maps) + mirror                                                |
+| `npm run dev:ext`      | watch build + a dedicated Chrome for Testing window with the extension auto-reloading               |
+| `npm test`             | unit tests for the unpack engine (`test/unpack.test.mjs`)                                           |
+| `npm run test:e2e`     | loads the built bundle in a real browser, clicks Download All, reads the produced zip               |
+| `npm run test:e2e:ext` | loads `dist/` as an unpacked extension in Chrome for Testing and asserts the real extension context |
+| `npm run verify`       | unit tests + build + both end-to-end suites (run this before committing)                            |
+| `npm run check`        | Rslint + format check over the source tree                                                          |
 
 `test:e2e` drives a Chromium browser over the DevTools protocol with a stubbed
 `chrome.devtools` API; it needs Chrome or Edge installed (`test/browser-e2e.mjs` lists
 the paths it looks in), and it uses the _built_ artifacts, so build first.
+
+`test:e2e:ext` and `dev:ext` load `dist/` as a real unpacked extension. Branded
+Chrome/Edge ignore `--load-extension`, so both use Chrome for Testing, downloaded
+once into `.cache/browser/` on first run.
+
+## Loading the extension
+
+- **Manual (any Chrome):** open `chrome://extensions`, enable Developer mode,
+  "Load unpacked", select the repository root (or `dist/`). Open DevTools on any
+  page - the downloader is the "Sources Downloader" panel tab.
+- **Dev loop:** `npm run dev:ext` starts the watch build plus a dedicated
+  Chrome for Testing window with the extension preloaded; every save rebuilds
+  and reloads the extension in that window automatically.
 
 ## Export package
 

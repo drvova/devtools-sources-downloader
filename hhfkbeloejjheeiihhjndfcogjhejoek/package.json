@@ -12,13 +12,16 @@
         "lint": "rs lint",
         "format": "rs fmt",
         "check": "rs check",
-        "verify": "npm test && npm run build && npm run test:e2e"
+        "verify": "npm test && npm run build && npm run test:e2e && npm run test:e2e:ext",
+        "dev:ext": "node scripts/dev-ext.mjs",
+        "test:e2e:ext": "node test/browser-e2e-extension.mjs"
     },
     "dependencies": {
         "file-saver": "^2.0.5",
         "jszip": "^3.10.1"
     },
     "devDependencies": {
+        "@puppeteer/browsers": "^3.2.6",
         "js-beautify": "^2.0.3",
         "rstack": "^0.8.6"
     }

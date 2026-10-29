@@ -1,1 +1,1 @@
-console.log("[DevTools Downloader] devtools.js loaded via webpack bundle"),chrome.devtools.panels.sources.createSidebarPane("Download",function(e){e.setPage("../html/page.html")});
+chrome.devtools.panels.create("Sources Downloader","../images/icons/48.png","../html/page.html");

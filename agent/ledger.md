@@ -3,6 +3,38 @@
 Append-only. Newest first. One entry per execution-time failure or workflow
 defect fixed during a turn: date, seam, root cause, canonical fix, validation.
 
+- 2026-10-29 (making the extension real: load-automation archaeology on the
+  DevTools surface): (1) Branded Chrome/Edge IGNORE `--load-extension`
+  (Chrome 137 removal persists in Edge 156) - the known-working route is
+  Chrome for Testing (`@puppeteer/browsers install chrome@stable`, ~4 s,
+  keeps the flag by design); the probe-copy trick (a throwaway manifest with
+  a dummy `background.service_worker`) makes "did the extension load"
+  OBSERVABLE for extensions that otherwise expose no targets. (2) The
+  extension id for unpacked loads = sha256 of the UTF-16LE absolute path,
+  first 32 hex nibbles mapped onto [a-p] - verified against a live-observed
+  id, which turns `chrome-extension://<id>/...` URLs into deterministic
+  targets. (3) A devtools:// page opened via Target.createTarget is NOT a
+  real DevTools window to the browser (no extension plumbing), and
+  --auto-open-devtools-for-tabs yields a REDUCED frontend that hosts the
+  devtools_page (proved via chrome.runtime.getContexts from an injected SW
+  oracle: the context EXISTS) but renders NO extension UI - sidebar pane,
+  main panel, even ExtensionPanel.show() all fire callbacks while the tab
+  strip never gains the entry; conversely the full frontend (manual
+  inspector.html URL) hosts no extension pages at all. Conclusion: Chrome
+  156 cannot render extension DevTools surfaces headlessly/programmatically;
+  automate what the platform exposes (real context, real origin, real
+  identity) and leave panel visibility to manual verification. (4) DevTools
+  frontend DOM is shadow-DOM end to end - document.querySelectorAll sees
+  nothing; a recursive shadowRoot walker (deepAll) reaches real tab titles.
+  (5) The stale DevToolsActivePort file from a killed browser reads as a
+  dead port on the next launch - delete it before spawn. Validation: new
+  test/browser-e2e-extension.mjs drives the REAL unpacked extension (runtime
+  id match, getManifest version, graceful off-panel guard, zero console
+  errors), scripts/dev-ext.mjs gives the watch+auto-reload loop (reload
+  proved live: touch -> "[dev-ext] extension reloaded"), full npm run verify
+  green (67/67 + both e2e suites), sidebar pane -> main panel migration in
+  src/js/devtools.js (panels.create returns a Promise since Chrome 152).
+
 - 2026-10-29 (webpack -> rstack CLI migration on the MV3 extension): four
   seams, all caught by the artifact-baseline discipline. (1) Rsbuild's
   `output.copy` runs copied .js/.css through the rspack minimizer BY DESIGN
