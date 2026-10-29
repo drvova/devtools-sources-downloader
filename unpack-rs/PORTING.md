@@ -8,9 +8,9 @@ every one of the 67 node baseline cases in
 `extension/test/unpack.test.mjs` has a 1:1 Rust
 twin in `tests/unpack_test.rs` with the same test name (camelCase -> snake_case).
 
-Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 77/77
-(67 integration + 10 lib unit), `cargo clippy --all-targets -- -D warnings`
-clean. Fixtures are referenced in place
+Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 121/121
+(67 integration + 54 lib unit: 44 panel, 10 engine), `cargo clippy
+--all-targets -- -D warnings` clean. Fixtures are referenced in place
 (`env!("CARGO_MANIFEST_DIR")/extension/test/fixtures`),
 never copied.
 
@@ -171,3 +171,133 @@ asserts (verified against captured node output during the port).
   (detect miss breaks, no-change breaks), preserving nested packer peeling.
 - `wtfStringHash` keeps the JS's misleadingly named `read32Big`, which
   builds LITTLE-endian words (the Rust twin comments this).
+
+---
+
+# Panel port (`page.js` -> `src/panel/*`)
+
+The DevTools panel (`extension/src/js/page.js`, 3676 lines) is the extension's
+UI layer: it collects scripts and recon data from the inspected page, builds
+the semantic analysis, and assembles the exported archive. Its DOM and
+`chrome.devtools` half cannot exist in a crate, so the port splits it at the
+seam: **everything that decides or produces content is ported; everything that
+reads the page or writes to the screen stays in the extension.**
+
+Verification of this half: every ported function has a node oracle captured by
+running the real `page.js` in the harness (`extension/.scratch/oracle_lib.cjs`
+loads all 3676 lines with stubbed DOM/chrome globals), and the Rust tests
+compare against that captured output - including two whole HTML documents
+byte for byte. Where an oracle was impossible, the test says so and names the
+substitute (see "Census instead of oracle" below).
+
+## Module map
+
+| JS source | Rust module | Notes |
+|---|---|---|
+| `page.js` script/recon collection, scoring, summaries, boundaries | `panel/assets.rs`, `panel/boundary.rs`, `panel/model.rs` | `ScriptInput` -> `ScriptAsset` is `prepare_script_assets` |
+| `page.js` module graph, startup chain, GraphQL operations | `panel/graph.rs` | |
+| `page.js` workspaces, journeys, investigation model | `panel/workspace.rs` | |
+| `page.js` `buildSemanticAnalysis` assembly | `panel/analysis.rs` | the whole analysis object is oracle-compared |
+| `page.js` text helpers (formatSize, formatMs, slugify, escape) | `panel/text.rs`, `panel/view.rs` | |
+| `page.js` runtime paths, report merging, cookies, inline JSON, recon stats, readable artifacts | `panel/artifacts.rs` | |
+| `page.js` console page, waterfall, table, capture reason, export wrappers | `panel/report.rs` | |
+| `page.js` `writeReconArtifacts` + `finalizeZipWithRecon` | `panel/export.rs` | |
+
+## API map (JS -> Rust)
+
+- `escapeXml` / `escapeAttr` / `escapeHtml` -> `panel::view::escape_html` (one
+  implementation; `escape_attr`/`escape_xml` coerce through `assets::value_text`)
+- `formatSize` / `formatMs` / `sanitizePathPart` / `sanitizePageTitle` /
+  `sanitizeFilename` / `safeDecodeURIComponent` -> `panel::text` (snake_case)
+- `prepareScriptAssets` -> `panel::assets::prepare_script_assets`
+- `buildChunkSummary` / `buildRuntimeOrigins` / `buildRuntimeSummary` /
+  `scoreScriptAsset` / `scoreRuntimeEntry` / `stripChunkAsset` /
+  `stripRuntimeEntry` / `determineRuntimeOriginType` -> `panel::assets`
+- `buildBoundaryLabels` / `buildCrossBoundaryFlows` / the boundary predicates
+  and `Any` variants -> `panel::boundary`
+- `buildModuleGraph` / `buildStartupChain` / `parseGraphQLOperation` /
+  `normalizeGraphQLPayload` / `looksLikeGraphQLBody` /
+  `collectGraphQLOperations` -> `panel::graph`
+- `buildInvestigationWorkspace` / the boundary workspaces / the framework-state
+  workspace / `pushFrameworkCollectionEvents` / the four journey views ->
+  `panel::workspace`
+- `buildSemanticAnalysis` -> `panel::analysis::build_semantic_analysis`
+- `runtimeFolderName` / `runtimeExtension` / `buildRuntimePath` /
+  `buildRuntimeUnpackAssets` / `mergeUnpackReports` / `parseCookies` /
+  `serializeInlineJson` / `computeReconStats` / `generateDOMSnapshotHTML` /
+  `buildReadableArtifact` / `exportReadableArtifacts` -> `panel::artifacts`
+- `generateInvestigationIndexHTML` / `generateWaterfallHTML` / `generateTable` /
+  `describeCaptureReason` / `exportFrameworkArtifacts` /
+  `exportRuntimeArtifacts` / `exportSemanticAnalysis` -> `panel::report`
+- `collectRuntimePayloads` / `writeReconArtifacts` (the head of
+  `finalizeZipWithRecon`) / `finalizeZipWithRecon` -> `panel::export`
+- `Object.keys(x).length` guards -> `panel::assets::keys_len`
+
+## Test map
+
+| JS behaviour | Rust test |
+|---|---|
+| whole analysis object (assets, chunkMap, moduleGraph, startupChain, runtimeOrigins, boundaryLabels, crossBoundaryFlows, frameworkState, frameworkRuntime, interestingEntrypoints, investigation with its workspaces and journeys) | `panel::analysis` whole-pipeline oracle compare |
+| boundary labels, flows, predicates, workspaces, journeys | `panel::boundary`, `panel::workspace` oracle compares |
+| script/runtime scoring, summaries, origins | `panel::assets` |
+| text helpers, number formatting, slugify | `panel::text`, `panel::view` |
+| runtime paths, unpack assets, report merge, cookies, inline JSON, recon stats, readable artifacts | `panel::artifacts` |
+| the three console documents (byte for byte), waterfall, table, capture reason, framework/runtime/analysis exports | `panel::report` |
+| recon artifact set and order, section guards, DOM snapshot fallback, the full export run and merged totals, runtime payload collection | `panel::export` |
+
+## Deliberate differences (panel)
+
+1. **JSON key order is preserved, not sorted.** The crate enables
+   `serde_json`'s `preserve_order` feature so object keys keep insertion order,
+   matching `JSON.stringify`. Without it every serialized report differs from
+   the JavaScript byte-wise (same data, reordered keys) and the console page's
+   embedded data blob cannot match.
+2. **The DOM and `chrome.devtools` layers are not ported.** `setActivity`,
+   `clearActivity`, `doDownload`, `injectAndReload`, `startPolling`,
+   `stopPolling`, `resetTrackerView`, `renderResults`, `renderPageOrigin`,
+   `renderStackProfile`, `renderTrackerView`, `fetchRuntimePayload`,
+   `fetchTextAsset`, `fetchSourceMapText`, `fetchSourceMapTextInPage` and
+   `collectReconAndFinalize` read or write the inspected page and the panel
+   UI; they stay in the extension. Their logic-free parts survive as seams:
+   payload fetching is `export::collect_runtime_payloads`'s `fetch` closure,
+   source-map fetching is `pipeline::UnpackOptions::fetch_text`, and the
+   finished archive is the writer closure.
+3. **The beautifier is an injectable seam.** `buildReadableArtifact` calls the
+   engine's `looksMinified`/`beautifyJs`; the port defaults to
+   `beautify::{looks_minified, beautify_js}` and takes both as parameters in
+   `*_with` variants. The harness stubs that seam deterministically, so the
+   oracle tests pin the assembly (header, facts, branch, body selection) while
+   the engine functions carry their own tests.
+4. **Census instead of oracle, for one function.** `finalizeZipWithRecon`'s
+   JavaScript half cannot run in the harness (its analysis step calls the wasm
+   engine, which is not available there). Its `zip.file` paths are therefore
+   censused from the source text in source order and the test asserts the Rust
+   writes exactly that set, in that order, for a maximal input; the guards and
+   the assembly are covered behaviourally. The fixture labels this
+   `sourceCensus` and the test comment repeats it.
+5. **The runtime unpack prefix is a constant.** The JavaScript hardcodes
+   `pathPrefix: '_unpack-runtime'` at the runtime call site; the port sets it
+   the same way rather than deriving it from the caller's options.
+6. **`parseCookies` returns an insertion-ordered map.** `_recon/cookies.json`
+   serializes in the JavaScript's key order; a sorted map would reorder it.
+7. **Numbers in embedded JSON are JS-formatted.** Values interpolated into
+   documents go through `jsnumber::js_number_to_string`, and tests that build
+   JSON fixtures use `panel::text::js_number_value` so `0.0` serializes as `0`.
+
+## Preserved JS quirks (panel)
+
+- Guards use `Object.keys(x).length`, so an empty object, array or string is
+  falsy-but-present and writes nothing (`keys_len`).
+- `reconData.ls && ...` style checks keep JavaScript truthiness: `0`, `''`,
+  `[]` and `{}` never pass a presence guard (`js_truthy`).
+- `e.field || fallback` keeps the JavaScript fallback for `0` and `NaN`
+  (`export::number_or` in the waterfall, `field_number` elsewhere).
+- The waterfall's `Math.max(1, ...)` minimum bar width and its
+  `Math.min(10, Math.ceil(total/100))` tick count are kept exactly.
+- The recon-artifact file order is the source order, including
+  `_framework/*` being written from inside the framework export between
+  `_recon/capture-status.json` and `_recon/timings.json`.
+- The readable-artifact export keeps its ten-entry cap and its skip rules
+  (empty chunk content, non-string runtime text, missing record).
+- `buildRuntimeUnpackAssets` only takes runtime entries whose extension is
+  `js`, and looks its raw file up by id in the manifest.

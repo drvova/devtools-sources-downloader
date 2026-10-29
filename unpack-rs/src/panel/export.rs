@@ -135,6 +135,48 @@ pub fn write_recon_artifacts(
     runtime_entries
 }
 
+/// `collectRuntimePayloads`: resolves the text of the runtime entries that
+/// have one on the page, walking the list in order and leaving the rest
+/// untouched.
+///
+/// The JavaScript version fetches asynchronously through
+/// `chrome.devtools.inspectedWindow.eval`; here the page read is the `fetch`
+/// seam, which receives the entry's index and returns the payload object (or
+/// nothing when the page has no payload for it).
+pub fn collect_runtime_payloads(
+    runtime_entries: &[Value],
+    fetch: &mut dyn FnMut(usize) -> Option<Value>,
+) -> Vec<Value> {
+    if runtime_entries.is_empty() {
+        return Vec::new();
+    }
+    let mut entries = runtime_entries.to_vec();
+    let mut cursor = 0usize;
+    while cursor < entries.len() {
+        let needs_payload = {
+            let entry = &entries[cursor];
+            !js_truthy(entry.get("hasText").unwrap_or(&Value::Null))
+                && !js_truthy(entry.get("hasBase64").unwrap_or(&Value::Null))
+        };
+        if needs_payload {
+            cursor += 1;
+            continue;
+        }
+        let index = field_number(&entries[cursor], "index");
+        let index = if index >= 0.0 { index as usize } else { cursor };
+        cursor += 1;
+        if let Some(payload) = fetch(index) {
+            if let Some(text) = payload.get("text").filter(|value| value.is_string()) {
+                entries[cursor - 1]["text"] = text.clone();
+            }
+            if let Some(base64) = payload.get("base64").filter(|value| value.is_string()) {
+                entries[cursor - 1]["base64"] = base64.clone();
+            }
+        }
+    }
+    entries
+}
+
 /// `finalizeZipWithRecon`: the recon artifacts, the runtime payloads, the
 /// semantic analysis and the two unpack passes, in the JavaScript's order.
 ///
@@ -345,6 +387,35 @@ mod tests {
         assert!(with_page.contains("&lt;html&gt;&lt;body&gt;x&lt;/body&gt;&lt;/html&gt;"));
         assert!(without_page.contains("<h1>Snapshot</h1>"), "snapshot title fallback");
         assert!(without_page.contains("&lt;html&gt;&lt;body&gt;x&lt;/body&gt;&lt;/html&gt;"));
+    }
+
+    #[test]
+    fn runtime_payloads_are_fetched_in_order_and_skipped_when_present() {
+        let entries = json!([
+            {"index": 0, "id": "a", "hasText": true, "hasBase64": false, "text": "page text"},
+            {"index": 1, "id": "b", "hasText": false, "hasBase64": false, "note": "not captured"},
+            {"index": 2, "id": "c", "hasText": false, "hasBase64": true},
+            {"index": 3, "id": "d", "hasText": true, "hasBase64": false},
+        ]);
+        let entries = entries.as_array().unwrap();
+        let mut asked: Vec<usize> = Vec::new();
+        let collected = collect_runtime_payloads(entries, &mut |index| {
+            asked.push(index);
+            match index {
+                2 => Some(json!({"base64": "AGFzbQ=="})),
+                3 => None,
+                _ => Some(json!({"text": "fetched"})),
+            }
+        });
+        // Entries that report a payload are read from the page (their text is
+        // the page's, not the placeholder), entries that report neither are
+        // skipped entirely.
+        assert_eq!(asked, vec![0, 2, 3], "only entries that have a payload");
+        assert_eq!(collected[0]["text"], json!("fetched"), "text comes from the page");
+        assert_eq!(collected[1]["note"], json!("not captured"), "untouched");
+        assert_eq!(collected[2]["base64"], json!("AGFzbQ=="));
+        assert!(collected[3].get("text").is_none(), "failed fetch leaves none");
+        assert!(collect_runtime_payloads(&[], &mut |_| None).is_empty());
     }
 
     #[test]
