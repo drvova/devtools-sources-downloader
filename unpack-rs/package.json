@@ -1,6 +1,7 @@
 {
     "name": "devtools-sources-downloader",
     "version": "0.1.0",
+    "type": "module",
     "private": true,
     "description": "DevTools extension - download inspected page sources with debug mode",
     "scripts": {
@@ -12,7 +13,7 @@
         "lint": "rs lint",
         "format": "rs fmt",
         "check": "rs check",
-        "verify": "npm test && npm run build && npm run test:e2e && npm run test:e2e:ext",
+        "verify": "rs check && cargo test && cargo clippy --all-targets -- -D warnings && rs test && npm run build && npm run test:e2e && npm run test:e2e:ext",
         "dev:ext": "node scripts/dev-ext.mjs",
         "test:e2e:ext": "node test/browser-e2e-extension.mjs",
         "build:engine": "node scripts/build-engine.cjs"

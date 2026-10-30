@@ -31,7 +31,7 @@ Nothing in `dist/` is edited by hand.
 | `npm test`             | unit tests for the unpack engine (`test/unpack.test.mjs`)                                           |
 | `npm run test:e2e`     | loads the built bundle in a real browser, clicks Download All, reads the produced zip               |
 | `npm run test:e2e:ext` | loads `dist/` as an unpacked extension in Chrome for Testing and asserts the real extension context |
-| `npm run verify`       | unit tests + build + both end-to-end suites (run this before committing)                            |
+| `npm run verify`       | the whole gate: `rs check`, `cargo test`, `cargo clippy -D warnings`, unit tests, build, both e2e   |
 | `npm run check`        | Rslint + format check over the source tree                                                          |
 
 `test:e2e` drives a Chromium browser over the DevTools protocol with a stubbed
