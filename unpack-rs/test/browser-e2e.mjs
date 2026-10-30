@@ -403,8 +403,7 @@ async function main() {
         assert(
             worldState.policyLimits ===
                 'items,keys,mutations,runtimeBinary,runtimeItems,runtimeText,string',
-            'the injected policy must carry the engine limits, got ' +
-                worldState.policyLimits,
+            'the injected policy must carry the engine limits, got ' + worldState.policyLimits,
         );
         assert(
             worldState.policyRedact.indexOf('token') >= 0 &&

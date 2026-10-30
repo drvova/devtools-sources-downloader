@@ -545,7 +545,10 @@
     function limitBytes(bytes) {
         var byteLength = bytes ? bytes.length : 0;
         return {
-            bytes: byteLength > limit('runtimeBinary') ? bytes.subarray(0, limit('runtimeBinary')) : bytes,
+            bytes:
+                byteLength > limit('runtimeBinary')
+                    ? bytes.subarray(0, limit('runtimeBinary'))
+                    : bytes,
             length: byteLength,
             truncated: byteLength > limit('runtimeBinary'),
         };

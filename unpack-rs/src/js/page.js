@@ -213,9 +213,7 @@ function injectAndReload(buttonLabel, onComplete) {
             // The capture policy is engine-owned (panel::policy): it crosses
             // once, here, so the page world reads it from its first line.
             var policy =
-                'window.__CAPTURE_POLICY__ = ' +
-                JSON.stringify(panelCapturePolicy()) +
-                ';\n';
+                'window.__CAPTURE_POLICY__ = ' + JSON.stringify(panelCapturePolicy()) + ';\n';
             var code = policy + scripts.join('\n;\n');
             chrome.devtools.inspectedWindow.reload({ injectedScript: code, ignoreCache: true });
             setActivity(
