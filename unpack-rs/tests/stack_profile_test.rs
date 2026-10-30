@@ -10,7 +10,7 @@
 //! the Rust analyzer is held to the same values *and* the same key order.
 
 use devtools_unpack::panel::stackprofile;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 fn oracle() -> Value {
     let path = format!(
@@ -141,4 +141,89 @@ fn the_default_strategy_survives_when_no_rule_fires() {
     assert_eq!(strategy["bootDelayMs"], json!(1200));
     assert_eq!(strategy["maxCaptureMs"], json!(18000));
     assert_eq!(strategy["preferHydratedDom"], json!(false));
+}
+
+/// The page world keeps its own copy of the default strategy
+/// (`injected.js::defaultStrategy`) because it needs usable timings before the
+/// engine can answer - PORTING.md records that as a deliberate mirror. These
+/// values drive the capture gates, so a mirror that drifts is a defect: this
+/// reads the JavaScript literal and holds it to the engine's default field for
+/// field.
+#[test]
+fn the_page_world_default_strategy_matches_the_engine() {
+    let path = format!("{}/src/js/injected.js", env!("CARGO_MANIFEST_DIR"));
+    let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let mirrored = js_default_strategy(&source).expect("injected.js declares a default strategy");
+
+    let engine = stackprofile::analyze(&json!({}));
+    let strategy = engine["strategy"].as_object().expect("strategy object").clone();
+
+    let engine_keys: std::collections::BTreeSet<&String> = strategy.keys().collect();
+    let js_keys: std::collections::BTreeSet<&String> = mirrored.keys().collect();
+    assert_eq!(
+        js_keys, engine_keys,
+        "the mirrored default strategy lost or gained a field"
+    );
+    for (key, want) in &strategy {
+        assert_eq!(
+            &mirrored[key], want,
+            "default strategy field `{key}` drifted from the engine"
+        );
+    }
+}
+
+/// Pulls the object literal out of `function defaultStrategy() { ... }`.
+fn js_default_strategy(source: &str) -> Option<Map<String, Value>> {
+    let at = source.find("function defaultStrategy()")?;
+    let body = &source[at..];
+    let open = body.find("return {")? + "return {".len();
+    let mut depth = 1usize;
+    let mut end = open;
+    for (offset, ch) in body[open..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = open + offset;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out = Map::new();
+    for line in body[open..end].lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("//") {
+            continue;
+        }
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = value.trim().trim_end_matches(',').trim();
+        let parsed = if value == "true" || value == "false" {
+            json!(value == "true")
+        } else if let Ok(number) = value.parse::<f64>() {
+            // same shape `JSON.stringify` writes, or the comparison trips on
+            // 1200.0 vs 1200
+            if number.fract() == 0.0 {
+                json!(number as i64)
+            } else {
+                json!(number)
+            }
+        } else if value.starts_with('[') {
+            json!(value
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(|item| item.trim().trim_matches('\'').to_string())
+                .collect::<Vec<String>>())
+        } else {
+            json!(value.trim_matches('\''))
+        };
+        out.insert(key.to_string(), parsed);
+    }
+    Some(out)
 }

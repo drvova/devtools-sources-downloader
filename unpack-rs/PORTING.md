@@ -322,8 +322,11 @@ self-source list mentions it any more.
    the placeholder is visible only for the first poll.
 3. **The default strategy is mirrored, not shared.** The page world needs
    timings before the engine can answer, so `defaultStrategy()` in
-   `injected.js` keeps its own copy of the engine's defaults; the parity test
-   pins the engine side of that pair.
+   `injected.js` keeps its own copy of the engine's defaults. Those values
+   drive the capture gates, so the pair is guarded rather than trusted:
+   `the_page_world_default_strategy_matches_the_engine` reads the JavaScript
+   literal out of `injected.js` and holds it to the engine's default field for
+   field (drifting `bootDelayMs` by 100 ms fails it by name).
 4. **`generatedAt` comes from the host clock.** The same seam as
    `util::iso8601_now`: `xu_host_now_ms` on wasm, `SystemTime` elsewhere. The
    parity test normalizes the field on both sides, since it is the profile's
