@@ -172,7 +172,11 @@ const stub = (port) => `
     runtime: { getURL: function (p) { return 'http://127.0.0.1:${port}/' + String(p).replace(/^\\//, ''); } },
     devtools: {
       inspectedWindow: {
-        reload: function () {},
+        reload: function (options) {
+          // Keep the injected script so the harness can run it for real: it is
+          // the only thing in the suite that executes the page-world scripts.
+          window.__TEST_INJECTED_SCRIPT__ = (options && options.injectedScript) || '';
+        },
         getResources: function (cb) {
           cb([
             { url: SCRIPT_URL, type: 'script', getContent: function (done) { done(SCRIPT_BODY, 'text'); } },
@@ -319,6 +323,7 @@ async function main() {
             await new Promise((r) => setTimeout(r, 250));
         }
         console.log('export status: ' + status);
+
         // Report what the page said before the status check, so a stalled
         // export names its own cause instead of timing out silently.
         if (!/Export ready\./.test(status)) {
@@ -353,6 +358,83 @@ async function main() {
                 throw new Error('assertion failed: ' + message);
             }
         };
+
+        // The page-world scripts (stack-profile.js + framework-introspect.js +
+        // injected.js, concatenated by the panel) are otherwise never executed
+        // by any test. Run them in this real page and assert what they publish:
+        // a shadowed or broken helper shows up here as a missing global.
+        const injected = await cdp.send('Runtime.evaluate', {
+            expression: 'window.__TEST_INJECTED_SCRIPT__ || ""',
+            returnByValue: true,
+        });
+        const script = injected.result.value || '';
+        assert(script.length > 0, 'the panel must inject the page-world scripts');
+        const world = await cdp.send('Runtime.evaluate', {
+            expression:
+                '(function(){try{(0,eval)(' +
+                JSON.stringify(script) +
+                ');}catch(e){return JSON.stringify({error:String((e&&e.message)||e)});}' +
+                'return JSON.stringify({status:typeof window.__CAPTURE_STATUS__,' +
+                'stack:typeof window.__STACK_PROFILE__,' +
+                'framework:typeof window.__FRAMEWORK_STATE__,' +
+                'tracker:typeof window.__RESOURCE_TRACKER__});})()',
+            returnByValue: true,
+        });
+        const worldState = JSON.parse(world.result.value || '{}');
+        console.log('page world: ' + JSON.stringify(worldState));
+        assert(!worldState.error, 'page-world scripts threw: ' + worldState.error);
+        assert(worldState.status === 'object', 'capture status must be published');
+        assert(worldState.stack === 'object', 'stack profile must be published');
+        assert(
+            worldState.framework === 'object',
+            'framework state must be published (a shadowed refresh leaves it unset)',
+        );
+
+        // Re-load the page the way the panel does - the script installed
+        // BEFORE the document loads - and then drive the capture path by
+        // mutating the DOM. That runs recordMutation -> scheduleProfileRefresh
+        // -> the stack and framework refreshes, which is where a helper that
+        // is missing from its own scope throws (the exception is swallowed by
+        // the observer, so consoleErrors below is the other half of this).
+        await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: script });
+        const reloaded = new Promise((resolve) => cdp.on('Page.loadEventFired', resolve));
+        await cdp.send('Page.navigate', {
+            url: 'http://127.0.0.1:' + port + '/html/page.html',
+        });
+        await reloaded;
+        const before = await cdp.send('Runtime.evaluate', {
+            expression: 'String((((window.__RECON__||{}).mutations)||[]).length)',
+            returnByValue: true,
+        });
+        await cdp.send('Runtime.evaluate', {
+            expression:
+                "(function(){var s=document.createElement('script');" +
+                "s.src='https://demo.test/app/late.js';document.head.appendChild(s);" +
+                "return 'appended';})()",
+            returnByValue: true,
+        });
+        await new Promise((r) => setTimeout(r, 500));
+        const recon = await cdp.send('Runtime.evaluate', {
+            expression:
+                'JSON.stringify({mutations:(((window.__RECON__||{}).mutations)||[]).length,' +
+                'framework:typeof window.__FRAMEWORK_STATE__})',
+            returnByValue: true,
+        });
+        const captureState = JSON.parse(recon.result.value || '{}');
+        captureState.before = Number(before.result.value);
+        console.log('capture path: ' + JSON.stringify(captureState));
+        assert(
+            captureState.mutations > captureState.before,
+            'appending a script must ADD a recorded mutation (before=' +
+                captureState.before +
+                ' after=' +
+                captureState.mutations +
+                ')',
+        );
+        assert(
+            captureState.framework === 'object',
+            'the mutation path must refresh the framework state',
+        );
 
         const unpackRoot = names
             .filter((n) => n.startsWith('_unpack/'))

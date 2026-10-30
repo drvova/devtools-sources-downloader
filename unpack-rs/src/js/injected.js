@@ -1218,7 +1218,14 @@
             var mo = new MutationObserver(function (mutations) {
                 for (var i = 0; i < mutations.length; i++) recordMutation(mutations[i]);
             });
-            mo.observe(document.documentElement, {
+            // Observing `document` rather than `document.documentElement`:
+            // the panel injects this script BEFORE the page loads
+            // (`inspectedWindow.reload({ injectedScript })`), so at this point
+            // documentElement is still null, observe() throws, and the catch
+            // below swallowed it - no mutation was ever recorded. `document`
+            // exists from the start and its subtree covers the document
+            // element once it appears.
+            mo.observe(document, {
                 childList: true,
                 subtree: true,
                 attributes: true,
