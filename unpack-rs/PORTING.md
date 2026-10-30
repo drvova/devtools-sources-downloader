@@ -1,17 +1,17 @@
 # PORTING.md - devtools-unpack (JS -> Rust)
 
 Behavior-faithful port of the DevTools sources-downloader unpack engine
-(`extension/src/js/{unpack,packers,jsfuck,v8codecache,jscbytecode,wasm}.js`,
-since replaced by `src/js/unpack-bridge.js` + the compiled `engine.wasm`)
+(`unpack.js` and its pure-transform modules, since replaced by
+`src/js/unpack-bridge.js` + the compiled `engine.wasm`)
 to the `devtools-unpack` crate. Same observable behavior, same test surface:
 every one of the 67 node baseline cases in
-`extension/test/unpack.test.mjs` has a 1:1 Rust
+`test/unpack.test.mjs` has a 1:1 Rust
 twin in `tests/unpack_test.rs` with the same test name (camelCase -> snake_case).
 
 Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 121/121
 (67 integration + 54 lib unit: 44 panel, 10 engine), `cargo clippy
 --all-targets -- -D warnings` clean. Fixtures are referenced in place
-(`env!("CARGO_MANIFEST_DIR")/extension/test/fixtures`),
+(`env!("CARGO_MANIFEST_DIR")/test/fixtures`),
 never copied.
 
 ## Browser integration (wasm bridge)
@@ -176,7 +176,7 @@ asserts (verified against captured node output during the port).
 
 # Panel port (`page.js` -> `src/panel/*`)
 
-The DevTools panel (`extension/src/js/page.js`, 3676 lines) is the extension's
+The DevTools panel (the former `page.js`, 3676 lines) is the extension's
 UI layer: it collects scripts and recon data from the inspected page, builds
 the semantic analysis, and assembles the exported archive. Its DOM and
 `chrome.devtools` half cannot exist in a crate, so the port splits it at the
@@ -247,7 +247,7 @@ substitute (see "Census instead of oracle" below).
 | the three console documents (byte for byte), waterfall, table, capture reason, framework/runtime/analysis exports | `panel::report` |
 | recon artifact set and order, section guards, DOM snapshot fallback, the full export run and merged totals, runtime payload collection | `panel::export` |
 | binary routing of a cached-bytecode resource (V8 code cache -> `cache-header.json`, `strings.json`) | `panel::assets` byte-content tests |
-| the whole export through the real extension: reload, poll, click Download All, and the 63-entry zip asserted from the download directory | `extension/test/browser-e2e.mjs` (Chromium over CDP) |
+| the whole export through the real extension: reload, poll, click Download All, and the 63-entry zip asserted from the download directory | `test/browser-e2e.mjs` (Chromium over CDP) |
 
 ## Panel surface on the wasm bridge
 

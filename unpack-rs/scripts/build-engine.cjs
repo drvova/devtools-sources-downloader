@@ -11,13 +11,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
-// The extension lives inside the crate root (unpack-rs/extension), so the
-// crate is the parent directory.
-const CRATE = path.resolve(ROOT, '..');
+// Flat layout: the extension project and the crate share this folder, so the
+// crate root is the project root.
+const CRATE = ROOT;
 const OUT = path.join(ROOT, '.cache', 'engine.wasm');
 
 if (!fs.existsSync(path.join(CRATE, 'Cargo.toml'))) {
-    console.error('build-engine: unpack-rs crate not found at ' + CRATE);
+    console.error('build-engine: crate not found at ' + CRATE);
     process.exit(1);
 }
 

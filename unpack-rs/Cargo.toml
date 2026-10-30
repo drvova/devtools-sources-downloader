@@ -2,7 +2,7 @@
 name = "devtools-unpack"
 version = "0.1.0"
 edition = "2021"
-description = "Rust port of the DevTools sources-downloader unpack engine (src/js/unpack.js and its pure-transform modules)"
+description = "Rust port of the DevTools sources-downloader unpack engine (the former JavaScript engine and its pure-transform modules)"
 license = "MIT"
 
 [dependencies]

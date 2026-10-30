@@ -5,10 +5,21 @@ and framework state, then exports an unpacked, site-aware package as `sources.zi
 
 ## Layout
 
+Flat project: the Rust crate and this extension share the folder.
+
+- `src/*.rs` (+ `src/panel/`) - the crate: the unpack engine and the panel
+  logic, compiled to `engine.wasm`. `Cargo.toml` declares `src/lib.rs` as its
+  only entry, so the extension files below it are simply not Rust sources.
+- `src/js`, `src/html`, `src/css`, `src/images`, `src/manifest.json` - the
+  extension's sources. The build bundles `src/js` and copies the rest.
 - `dist/` - the loadable extension: rsbuild output holding `manifest.json` plus
   `js/ html/ css/ images/`. Point Chrome's "Load unpacked" at this folder.
-- `src/js/*` is the source; `src/html`, `src/css`, `src/images` and `manifest.json`
-  are copied into `dist/` by the build. Nothing in `dist/` is edited by hand.
+- `test/` - the JS suite (67 cases + the browser e2e); `tests/` - the Rust
+  suite (`cargo test`), which reads this folder's fixtures from `test/fixtures/`.
+- `scripts/` - `build-engine.cjs` builds the crate to wasm, `dev-ext.mjs` and
+  `ext-lib.mjs` drive the Chrome for Testing runs.
+
+Nothing in `dist/` is edited by hand.
 
 ## Commands
 
@@ -34,7 +45,7 @@ once into `.cache/browser/` on first run.
 ## Loading the extension
 
 - **Manual (any Chrome):** open `chrome://extensions`, enable Developer mode,
-  "Load unpacked", select `unpack-rs/extension/dist/`. Open DevTools on any
+  "Load unpacked", select `unpack-rs/dist/`. Open DevTools on any
   page - the downloader is the "Sources Downloader" panel tab.
 - **Dev loop:** `npm run dev:ext` starts the watch build plus a dedicated
   Chrome for Testing window with the extension preloaded; every save rebuilds

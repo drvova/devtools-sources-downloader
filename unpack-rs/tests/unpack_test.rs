@@ -1,4 +1,4 @@
-// Ported one-per-case from extension/test/unpack.test.mjs
+// Ported one-per-case from test/unpack.test.mjs
 // (67 cases). Names, inputs and expectations are 1:1; the JS-runtime-only
 // halves (real eval, WebAssembly oracles, onProgress UI callback) are
 // documented in PORTING.md.
@@ -38,7 +38,7 @@ use devtools_unpack::LIMITS;
 
 fn fixture(name: &str) -> Vec<u8> {
     let path = format!(
-        "{}/extension/test/fixtures/{name}",
+        "{}/test/fixtures/{name}",
         env!("CARGO_MANIFEST_DIR")
     );
     std::fs::read(path).unwrap_or_else(|e| panic!("fixture {name}: {e}"))

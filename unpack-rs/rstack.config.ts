@@ -66,7 +66,7 @@ define.test({
 });
 define.lint(({ js, globalIgnores }) => [
     // Build output (dist/) and tracked fixture data are never lint input.
-    globalIgnores(['dist/**', 'test/fixtures/**']),
+    globalIgnores(['dist/**', 'tests/**', 'test/fixtures/**']),
     js.configs.recommended,
     {
         // House conventions the tree already follows everywhere:
@@ -112,7 +112,12 @@ define.fmt({
         'src/html/**',
         'src/css/**',
         'src/manifest.json',
+        // Fixture data and the port notes are byte-sensitive ground truth:
+        // test/fixtures/** is read by the Rust engine tests, tests/fixtures/**
+        // holds the panel oracles, and PORTING.md is hand-written prose.
         'test/fixtures/**',
+        'tests/fixtures/**',
+        'PORTING.md',
     ],
 });
 
