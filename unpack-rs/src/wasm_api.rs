@@ -353,138 +353,22 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         // returns either a document string, the analysis object, or a list of
         // {path, content} files (binary payloads as {path, base64}) so the
         // extension keeps the zip and the DOM while the logic lives here.
-        "panelBuildSemanticAnalysis" => {
-            let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
-                a.first().cloned().unwrap_or(serde_json::Value::Null),
-            )
-            .map_err(|e| e.to_string())?;
-            let recon = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
-            let runtime_entries = a
-                .get(2)
-                .and_then(|v| v.as_array())
-                .cloned()
-                .unwrap_or_default();
-            let runtime_manifest = a
-                .get(3)
-                .and_then(|v| v.as_array())
-                .cloned()
-                .unwrap_or_default();
-            Ok(panel::analysis::build_semantic_analysis(
-                &assets,
-                if recon.is_null() { None } else { Some(&recon) },
-                &runtime_entries,
-                &runtime_manifest,
-            ))
-        }
-        "panelGenerateInvestigationIndexHTML" => Ok(serde_json::Value::String(
-            panel::report::generate_investigation_index_html(
-                a.first().unwrap_or(&serde_json::Value::Null),
-            ),
-        )),
-        "panelGenerateWaterfallHTML" => Ok(serde_json::Value::String(
-            panel::report::generate_waterfall_html(&arg_array(a, 0)),
-        )),
-        "panelGenerateTable" => Ok(serde_json::Value::String(
-            panel::report::generate_table(&arg_array(a, 0)),
-        )),
-        "panelGenerateDOMSnapshotHTML" => Ok(serde_json::Value::String(
-            panel::artifacts::generate_dom_snapshot_html(
-                &arg_str(a, 0).unwrap_or_default(),
-                a.get(1).unwrap_or(&serde_json::Value::Null),
-            ),
-        )),
+
+
+
+
+
         "panelDescribeCaptureReason" => Ok(serde_json::Value::String(
             panel::report::describe_capture_reason(
                 a.first().filter(|v| !v.is_null()),
                 a.get(1).filter(|v| !v.is_null()),
             ),
         )),
-        "panelExportFrameworkArtifacts" => {
-            let mut files: Vec<serde_json::Value> = Vec::new();
-            {
-                let mut writer = |path: &str, content: &str| {
-                    files.push(serde_json::json!({ "path": path, "content": content }));
-                };
-                panel::report::export_framework_artifacts(
-                    &mut writer,
-                    a.first().filter(|v| !v.is_null()),
-                );
-            }
-            Ok(serde_json::Value::Array(files))
-        }
-        "panelExportRuntimeArtifacts" => {
-            let entries = arg_array(a, 0);
-            let mut files: Vec<serde_json::Value> = Vec::new();
-            let manifest = {
-                let mut writer = |path: &str, bytes: &[u8]| {
-                    files.push(match std::str::from_utf8(bytes) {
-                        Ok(text) => {
-                            serde_json::json!({ "path": path, "content": text })
-                        }
-                        Err(_) => serde_json::json!({
-                            "path": path,
-                            "base64": decoders::encode_base64(bytes),
-                        }),
-                    });
-                };
-                panel::report::export_runtime_artifacts(&mut writer, &entries)
-            };
-            Ok(serde_json::json!({ "files": files, "manifest": manifest }))
-        }
-        "panelExportReadableArtifacts" => {
-            let analysis = a.first().cloned().unwrap_or(serde_json::Value::Null);
-            let mut files: Vec<serde_json::Value> = Vec::new();
-            {
-                let mut writer = |path: &str, content: &str| {
-                    files.push(serde_json::json!({ "path": path, "content": content }));
-                };
-                panel::report::export_readable_artifacts(&mut writer, &analysis);
-            }
-            Ok(serde_json::Value::Array(files))
-        }
-        "panelExportSemanticAnalysis" => {
-            let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
-                a.first().cloned().unwrap_or(serde_json::Value::Null),
-            )
-            .map_err(|e| e.to_string())?;
-            let recon = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
-            let runtime_entries = arg_array(a, 2);
-            let runtime_manifest = arg_array(a, 3);
-            let mut files: Vec<serde_json::Value> = Vec::new();
-            {
-                let mut writer = |path: &str, content: &str| {
-                    files.push(serde_json::json!({ "path": path, "content": content }));
-                };
-                panel::report::export_semantic_analysis(
-                    &mut writer,
-                    &assets,
-                    if recon.is_null() { None } else { Some(&recon) },
-                    &runtime_entries,
-                    &runtime_manifest,
-                );
-            }
-            Ok(serde_json::Value::Array(files))
-        }
-        "panelWriteReconArtifacts" => {
-            let recon = a.first().cloned().unwrap_or(serde_json::Value::Null);
-            let snapshot = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
-            let mut files: Vec<serde_json::Value> = Vec::new();
-            let runtime_entries = {
-                let mut writer = |path: &str, content: &str| {
-                    files.push(serde_json::json!({ "path": path, "content": content }));
-                };
-                panel::export::write_recon_artifacts(
-                    &mut writer,
-                    if recon.is_null() { None } else { Some(&recon) },
-                    if snapshot.is_null() {
-                        None
-                    } else {
-                        Some(&snapshot)
-                    },
-                )
-            };
-            Ok(serde_json::json!({ "files": files, "runtimeEntries": runtime_entries }))
-        }
+
+
+
+
+
         "panelFinalizeZipWithRecon" => {
             let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
                 a.first().cloned().unwrap_or(serde_json::Value::Null),
@@ -544,16 +428,7 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         "sanitizePageTitle" => Ok(serde_json::Value::String(panel::text::sanitize_page_title(
             &arg_str(a, 0).unwrap_or_default(),
         ))),
-        "looksBinaryScript" => {
-            let bytes = match a.get(1) {
-                Some(v) if v.is_array() => Some(arg_bytes(a, 1).unwrap_or_default()),
-                _ => None,
-            };
-            Ok(serde_json::Value::Bool(pipeline::looks_binary_script(
-                &arg_str(a, 0).ok_or("looksBinaryScript: url")?,
-                bytes.as_deref(),
-            )))
-        }
+
         "collectStringLiterals" => {
             let text = arg_str(a, 0).ok_or("collectStringLiterals: text")?;
             let min_length = a
@@ -576,12 +451,7 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         "decodeEscapes" => Ok(serde_json::Value::String(decoders::decode_escapes(
             &arg_str(a, 0).ok_or("decodeEscapes: raw")?,
         ))),
-        "decodeBase64ToBytes" => Ok(match arg_str(a, 0).as_deref().map(decoders::decode_base64_to_bytes) {
-            Some(Some(bytes)) => serde_json::Value::Array(
-                bytes.into_iter().map(serde_json::Value::from).collect(),
-            ),
-            _ => serde_json::Value::Null,
-        }),
+
         "bytesToText" => Ok(serde_json::Value::String(decoders::bytes_to_text(
             &arg_bytes(a, 0).unwrap_or_default(),
         ))),
