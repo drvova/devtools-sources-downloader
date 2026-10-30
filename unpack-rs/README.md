@@ -13,7 +13,10 @@ Flat project: the Rust crate and this extension share the folder.
 - `src/js`, `src/html`, `src/css`, `src/images`, `src/manifest.json` - the
   extension's sources. The build bundles `src/js` and copies the rest.
 - `dist/` - the loadable extension: rsbuild output holding `manifest.json` plus
-  `js/ html/ css/ images/`. Point Chrome's "Load unpacked" at this folder.
+  `js/ html/ css/ images/`. Generated, not committed - run `npm run build`,
+  then point Chrome's "Load unpacked" at this folder.
+- `Cargo.lock` - committed: the engine ships as `dist/js/engine.wasm`, so its
+  dependency set is pinned rather than resolved fresh on every clone.
 - `test/` - the JS suite (67 cases + the browser e2e); `tests/` - the Rust
   suite (`cargo test`), which reads this folder's fixtures from `test/fixtures/`.
 - `scripts/` - `build-engine.cjs` builds the crate to wasm, `dev-ext.mjs` and
@@ -36,7 +39,9 @@ Nothing in `dist/` is edited by hand.
 
 `test:e2e` drives a Chromium browser over the DevTools protocol with a stubbed
 `chrome.devtools` API; it needs Chrome or Edge installed (`test/browser-e2e.mjs` lists
-the paths it looks in), and it uses the _built_ artifacts, so build first.
+the paths it looks in), and it uses the _built_ artifacts, so build first. Every
+entry point that hands `dist/` to Chrome checks it exists first and says so, rather
+than loading an empty extension.
 
 `test:e2e:ext` and `dev:ext` load `dist/` as a real unpacked extension. Branded
 Chrome/Edge ignore `--load-extension`, so both use Chrome for Testing, downloaded
@@ -44,7 +49,8 @@ once into `.cache/browser/` on first run.
 
 ## Loading the extension
 
-- **Manual (any Chrome):** open `chrome://extensions`, enable Developer mode,
+- **Manual (any Chrome):** run `npm run build` first (`dist/` is not
+  committed), then open `chrome://extensions`, enable Developer mode,
   "Load unpacked", select `unpack-rs/dist/`. Open DevTools on any
   page - the downloader is the "Sources Downloader" panel tab.
 - **Dev loop:** `npm run dev:ext` starts the watch build plus a dedicated

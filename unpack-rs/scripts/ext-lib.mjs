@@ -14,6 +14,33 @@ const CFT_ROOT = path.join(ROOT, '.cache', 'browser');
 
 // Unpacked extension id: sha256 of the absolute path (UTF-16LE), first 32
 // hex nibbles mapped onto [a-p]. Verified against Chrome-observed ids.
+// `dist/` is generated (and git-ignored), so every entry point that hands it to
+// Chrome checks it first and names the fix instead of loading an empty extension.
+const DIST_REQUIRED = ['manifest.json', 'js/engine.wasm'];
+
+export function distReady() {
+    return DIST_REQUIRED.every((rel) => fs.existsSync(path.join(DIST, rel)));
+}
+
+export function assertDist() {
+    const missing = DIST_REQUIRED.filter((rel) => !fs.existsSync(path.join(DIST, rel)));
+    if (missing.length > 0) {
+        throw new Error(
+            `dist/${missing[0]} is missing - run \`npm run build\` before loading the extension`,
+        );
+    }
+}
+
+export async function waitForDist(timeoutMs = 180000) {
+    const deadline = Date.now() + timeoutMs;
+    while (!distReady()) {
+        if (Date.now() > deadline) {
+            throw new Error(`dist/ was not built within ${timeoutMs}ms - run \`npm run build\``);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+}
+
 export function unpackedExtensionId(absPath) {
     const hex = crypto.createHash('sha256').update(absPath, 'utf16le').digest('hex');
     return [...hex.slice(0, 32)].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');

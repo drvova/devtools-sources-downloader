@@ -46,11 +46,11 @@ function loadEngineBytesSync() {
         return bytes;
     }
     // Node (test suite): the wasm sits in .cache/ at the extension root.
-    // The specifier is a variable so the bundler does not mistake this
-    // node-only read for a static `new URL(literal, import.meta.url)` asset
-    // reference and emit the wasm a second time.
-    const wasmSpec = '../../.cache/engine.wasm';
-    const wasmPath = fileUrlToNativePath(new URL(wasmSpec, import.meta.url));
+    // The base is a variable so the bundler does not read this node-only read
+    // as a static `new URL(literal, import.meta.url)` asset reference and emit
+    // the wasm a second time (`import.meta.dirname` instead would be mocked).
+    const base = import.meta.url;
+    const wasmPath = fileUrlToNativePath(new URL('../../.cache/engine.wasm', base));
     if (!nodeFs().existsSync(wasmPath)) {
         fail('engine.wasm missing at ' + wasmPath + ' - run npm run build:engine');
     }

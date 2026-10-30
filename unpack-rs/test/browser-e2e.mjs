@@ -23,6 +23,13 @@ const BROWSER_CANDIDATES = [
     'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
 ];
 
+// dist/ is generated and git-ignored: fail with the fix named, not a 404
+for (const rel of ['js/engine.wasm', 'js/page.js']) {
+    if (!fs.existsSync(path.join(DIST, rel))) {
+        throw new Error(`dist/${rel} is missing - run \`npm run build\` first`);
+    }
+}
+
 const SCRIPT_PAYLOAD = 'function packed(){return document.title;}\nconst marker = "packed-once";';
 const RUNTIME_PAYLOAD =
     'function fromEval(){return "runtime";}\nconst runtimeMarker = "runtime-once";';

@@ -10,7 +10,13 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { connect, DIST, ensureChromeForTesting, unpackedExtensionId } from './ext-lib.mjs';
+import {
+    connect,
+    DIST,
+    ensureChromeForTesting,
+    unpackedExtensionId,
+    waitForDist,
+} from './ext-lib.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -62,6 +68,10 @@ async function main() {
         cwd: ROOT,
         stdio: 'inherit',
     });
+
+    // Chrome would load an empty extension if it started before the first pass
+    await waitForDist();
+    console.log('[dev-ext] dist/ ready');
 
     const userDataDir = path.join(ROOT, '.cache', 'ext-profile');
     fs.mkdirSync(userDataDir, { recursive: true });

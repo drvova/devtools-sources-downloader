@@ -13,11 +13,18 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { connect, DIST, ensureChromeForTesting, unpackedExtensionId } from '../scripts/ext-lib.mjs';
+import {
+    assertDist,
+    connect,
+    DIST,
+    ensureChromeForTesting,
+    unpackedExtensionId,
+} from '../scripts/ext-lib.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
+    assertDist();
     const browser = await ensureChromeForTesting();
     const extensionId = unpackedExtensionId(DIST);
     console.log('extension id (from dist path): ' + extensionId);
