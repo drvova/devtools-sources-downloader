@@ -1,8 +1,8 @@
 // Builds the Rust unpack engine for the browser and stages it where the
 // rsbuild copy pattern and the tests pick it up.
 //
-// Output: .cache/engine.wasm  (copied to dist/js/engine.wasm by the build,
-// mirrored into the root js/ layout by scripts/sync.cjs)
+// Output: .cache/engine.wasm, which rstack.config.ts copies into
+// dist/js/engine.wasm as part of the build.
 //
 // Run via: npm run build:engine
 

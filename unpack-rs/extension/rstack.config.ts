@@ -66,7 +66,7 @@ define.test({
 });
 define.lint(({ js, globalIgnores }) => [
     // Build output (dist/) and tracked fixture data are never lint input.
-    globalIgnores(['dist/**', 'js/**', 'html/**', 'css/**', 'images/**', 'test/fixtures/**']),
+    globalIgnores(['dist/**', 'test/fixtures/**']),
     js.configs.recommended,
     {
         // House conventions the tree already follows everywhere:
@@ -109,10 +109,6 @@ define.fmt({
     //   - dist/** : build output
     ignorePatterns: [
         'dist/**',
-        'js/**',
-        'html/**',
-        'css/**',
-        'images/**',
         'src/html/**',
         'src/css/**',
         'src/manifest.json',

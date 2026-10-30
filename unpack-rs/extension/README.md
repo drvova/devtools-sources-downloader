@@ -15,7 +15,7 @@ and framework state, then exports an unpacked, site-aware package as `sources.zi
 | Command                | What it does                                                                                        |
 | ---------------------- | --------------------------------------------------------------------------------------------------- |
 | `npm run build`        | production rsbuild build into `dist/` (the loadable extension)                                      |
-| `npm run dev`          | development build (unminified, source maps) + mirror                                                |
+| `npm run dev`          | development build (unminified, source maps)                                                         |
 | `npm run dev:ext`      | watch build + a dedicated Chrome for Testing window with the extension auto-reloading               |
 | `npm test`             | unit tests for the unpack engine (`test/unpack.test.mjs`)                                           |
 | `npm run test:e2e`     | loads the built bundle in a real browser, clicks Download All, reads the produced zip               |
@@ -34,7 +34,7 @@ once into `.cache/browser/` on first run.
 ## Loading the extension
 
 - **Manual (any Chrome):** open `chrome://extensions`, enable Developer mode,
-  "Load unpacked", select the repository root (or `dist/`). Open DevTools on any
+  "Load unpacked", select `unpack-rs/extension/dist/`. Open DevTools on any
   page - the downloader is the "Sources Downloader" panel tab.
 - **Dev loop:** `npm run dev:ext` starts the watch build plus a dedicated
   Chrome for Testing window with the extension preloaded; every save rebuilds
@@ -65,7 +65,7 @@ Per asset, `_unpack/<slug>/` holds:
 
 ## Unpack engine
 
-`src/js/unpack-bridge.js` + the compiled Rust engine (`js/engine.wasm`, built
+`src/js/unpack-bridge.js` + the compiled Rust engine (`dist/js/engine.wasm`, built
 by `scripts/build-engine.cjs` from the crate at `../`) run the same loop as offline
 unpackers (detect -> route -> transform -> re-detect) but entirely inside the
 DevTools panel: no Python, no sandbox, no toolchain. Each pass scores the
