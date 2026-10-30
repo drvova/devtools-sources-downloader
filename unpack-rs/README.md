@@ -11,7 +11,10 @@ Flat project: the Rust crate and this extension share the folder.
   logic, compiled to `engine.wasm`. `Cargo.toml` declares `src/lib.rs` as its
   only entry, so the extension files below it are simply not Rust sources.
 - `src/js`, `src/html`, `src/css`, `src/images`, `src/manifest.json` - the
-  extension's sources. The build bundles `src/js` and copies the rest.
+  extension's sources. The build bundles `src/js` and copies the rest. What is
+  left in `src/js` is the platform layer only (the inspected page, the panel's
+  DOM, the bridge); the engine writes the archive, so the panel has no runtime
+  JavaScript dependencies and bundles to ~14 kB.
 - `dist/` - the loadable extension: rsbuild output holding `manifest.json` plus
   `js/ html/ css/ images/`. Generated, not committed - run `npm run build`,
   then point Chrome's "Load unpacked" at this folder.

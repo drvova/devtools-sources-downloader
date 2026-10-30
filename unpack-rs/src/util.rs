@@ -36,7 +36,10 @@ pub fn utf16_suffix(text: &str, n: usize) -> &str {
 
 /// `new Date().toISOString()` without a time crate: civil-from-days
 /// (Howard Hinnant's algorithm) over the Unix epoch.
-pub fn iso8601_from_unix_secs(secs: u64) -> String {
+/// Civil date and time for a Unix second count: (year, month, day, hour,
+/// minute, second). Howard Hinnant's `civil_from_days`, which the zip writer
+/// needs for DOS timestamps as much as the reports need for ISO 8601.
+pub fn civil_from_unix_secs(secs: u64) -> (i64, u32, u32, u32, u32, u32) {
     let days = (secs / 86_400) as i64;
     let rem = secs % 86_400;
     let z = days + 719_468;
@@ -49,15 +52,19 @@ pub fn iso8601_from_unix_secs(secs: u64) -> String {
     let d = doy - (153 * mp + 2) / 5 + 1; // [1, 31]
     let m = if mp < 10 { mp + 3 } else { mp - 9 }; // [1, 12]
     let year = if m <= 2 { y + 1 } else { y };
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.000Z",
+    (
         year,
-        m,
-        d,
-        rem / 3600,
-        (rem % 3600) / 60,
-        rem % 60
+        m as u32,
+        d as u32,
+        (rem / 3600) as u32,
+        ((rem % 3600) / 60) as u32,
+        (rem % 60) as u32,
     )
+}
+
+pub fn iso8601_from_unix_secs(secs: u64) -> String {
+    let (year, m, d, hour, minute, second) = civil_from_unix_secs(secs);
+    format!("{year:04}-{m:02}-{d:02}T{hour:02}:{minute:02}:{second:02}.000Z")
 }
 
 pub fn iso8601_now() -> String {

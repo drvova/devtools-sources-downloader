@@ -20,10 +20,13 @@ The extension no longer ships the JavaScript engine. `scripts/build-engine.cjs`
 compiles this crate for `wasm32-unknown-unknown` (release), stages
 `.cache/engine.wasm`, and the rsbuild copy pattern ships it as
 `js/engine.wasm` next to the bundles; `src/js/unpack-bridge.js` replaces the
-old six-file engine and keeps the exact export surface. The 67-case node
-suite runs against the bridge (wasm compiled synchronously at import time via
-`WebAssembly.Module`/`Instance`), so the tests exercise the shipped artifact,
-not a parallel implementation.
+old six-file engine and keeps its export surface (`unpackAssetsIntoZip` became
+`unpackAssetsForZip` + `buildZip` when the archive moved into the engine). The
+67-case node suite runs against the bridge (wasm compiled synchronously at
+import time via `WebAssembly.Module`/`Instance`), so the tests exercise the
+shipped artifact, not a parallel implementation. The panel has no runtime
+JavaScript dependencies at all: `jszip` and `file-saver` are gone, which took
+the panel bundle from 112 kB to 14 kB.
 
 Bridge seams (deliberate, documented):
 
@@ -67,7 +70,7 @@ Bridge seams (deliberate, documented):
 | unpack.js extractBundleModules | `bundler.rs` | |
 | unpack.js findSourceMapRef / parseSourceMap / decodeInlineSourceMap / resolveMapUrl | `sourcemaps.rs` | |
 | unpack.js peelText / applyTransform / decodeURIComponent | `transforms.rs` | `Stage` is shared with pipeline |
-| unpack.js unpackAsset / unpackAssets / unpackAssetsInto / report shape | `pipeline.rs` | zip writer is a closure seam |
+| unpack.js unpackAsset / unpackAssets / unpackAssetsInto / report shape | `pipeline.rs` | `unpack_assets_into` is a writer-closure seam; `build_zip` writes the archive |
 | packers.js (packer, aaencode, jjencode, jsfiretruck, obfuscator.io, string-array) | `packers.rs` | `Refusal` mirrors the JS refusal record |
 | jsfuck.js (detect / decode / interpret) | `jsfuck.rs` | JValue model of the value domain |
 | test/fixtures/jsfuck-encoder.js (JSFuck 0.5.0 encoder, oracle only) | `tests/jsfuck_encoder/mod.rs` | byte-identical output verified against node for encode("Number", ...) in all three modes |
@@ -262,8 +265,10 @@ seams are worth naming:
   report until `util::iso8601_now` read the time through `xu_host_now_ms`
   (the bridge answers `Date.now()`).
 - **Binary payloads cross as base64.** `decoders::encode_base64` is the
-  inverse of the decoder, so runtime payloads can be handed to JSZip's
-  `{ base64: true }` without a lossy UTF-8 round trip.
+  inverse of the decoder, so runtime payloads can be carried as base64 without
+  a lossy UTF-8 round trip. The finished archive is the exception: it crosses
+  through `xu_call_bytes` as raw bytes, which keeps a multi-megabyte archive
+  from inflating by a third on the way to the panel.
 - **Byte content has one field, two shapes.** A script input's `content` is a
   string for text and byte values for a binary asset. `JSON.stringify` turns
   the panel's `Uint8Array` into an index-keyed object while a plain array
@@ -271,6 +276,17 @@ seams are worth naming:
   never has to remember which one it holds.
 
 ## Deliberate differences (panel)
+
+0. **The archive is written by the engine, without directory entries.** The
+   panel collects `[{path, content}]` / `[{path, base64}]` and one call
+   (`buildZip` -> `zip.rs`) returns the finished bytes, replacing JSZip. The
+   writer emits only real files: JSZip also stored an entry for every parent
+   folder, and those carry no information (each file name holds its full
+   path), so an archive of the same files now has fewer entries - the file
+   count drops, the contents do not. `zip::tests::writes_no_directory_entries`
+   pins that, and the browser e2e reads the archive back through its own
+   central-directory walker, so the format is checked by something other than
+   the code that wrote it.
 
 1. **JSON key order is preserved, not sorted.** The crate enables
    `serde_json`'s `preserve_order` feature so object keys keep insertion order,

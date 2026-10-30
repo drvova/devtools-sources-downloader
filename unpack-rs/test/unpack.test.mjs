@@ -24,7 +24,7 @@ import {
     assetSlug,
     unpackAsset,
     unpackAssets,
-    unpackAssetsIntoZip,
+    unpackAssetsForZip,
     sha256Hex,
 } from '../src/js/unpack-bridge.js';
 import { decodeJsfuck, detectJsfuck } from '../src/js/unpack-bridge.js';
@@ -319,23 +319,18 @@ test('helpers: base64 decode and printable ratio', () => {
     assert.ok(printableRatio('\u0000\u0001') < 0.1);
 });
 
-test('zip seam: writes artifacts and a report at the requested root', async () => {
-    const written = {};
-    const zip = {
-        file: (p, c) => {
-            written[p] = c;
-        },
-    };
+test('archive seam: writes artifacts and a report at the requested root', async () => {
     const payload = 'function runtime(){return "eval";}';
     const progress = [];
-    const report = await unpackAssetsIntoZip(
-        zip,
+    const result = await unpackAssetsForZip(
         [{ url: 'eval-payload', content: `eval(atob("${base64Of(payload)}"))` }],
         {
             pathPrefix: '_unpack-runtime',
             onProgress: (done, total) => progress.push(done + '/' + total),
         },
     );
+    const report = result.report;
+    const written = Object.fromEntries(result.files.map((f) => [f.path, f.content]));
     assert.equal(report.root, '_unpack-runtime');
     assert.deepEqual(progress, ['1/1']);
     assert.equal(report.totals.assets, 1);
@@ -690,25 +685,17 @@ const binaryCases = [
         },
     ],
     [
-        'binary pass: zip artifacts are scoped to their own asset root',
+        'binary pass: archive artifacts are scoped to their own asset root',
         async () => {
-            class StubZip {
-                constructor() {
-                    this.files = {};
-                }
-                file(p, c) {
-                    this.files[p] = c;
-                }
-            }
-            const zip = new StubZip();
-            const report = await unpackAssetsIntoZip(
-                zip,
+            const result = await unpackAssetsForZip(
                 [
                     { url: 'https://x/v8.jsc', bytes: loadFixture('v8-codecache.jsc') },
                     { url: 'https://x/jsc.jsc', bytes: loadFixture('jsc-chunk.jsc') },
                 ],
                 { inflate: async (b) => brotliDecompressSync(Buffer.from(b)) },
             );
+            const report = result.report;
+            const zip = { files: Object.fromEntries(result.files.map((f) => [f.path, f.content])) };
             const roots = {};
             for (const p of Object.keys(zip.files)) {
                 if (p.endsWith('/index.json')) continue;

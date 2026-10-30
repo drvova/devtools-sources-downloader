@@ -25,6 +25,7 @@ pub mod transforms;
 pub mod util;
 pub mod v8codecache;
 pub mod wasm;
+pub mod zip;
 
 /// Browser engine seam (wasm exports for unpack-bridge.js); host builds never
 /// compile it and cargo test is unaffected.

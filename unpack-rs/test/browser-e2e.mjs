@@ -346,6 +346,7 @@ async function main() {
         if (!zipPath) throw new Error('no zip landed in the download directory');
         const zip = readZip(fs.readFileSync(zipPath));
         const names = Object.keys(zip).sort();
+        if (process.env.DEBUG_ZIP) console.log('entries:\n  ' + names.join('\n  '));
         const assert = (cond, message) => {
             if (!cond) {
                 console.log('zip entries:\n  ' + names.join('\n  '));

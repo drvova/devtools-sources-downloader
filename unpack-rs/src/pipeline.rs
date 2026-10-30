@@ -140,6 +140,7 @@ pub struct ReportEntry {
     pub modules: usize,
     pub sources: usize,
     pub beautified: bool,
+    #[serde(rename = "sourceMap")]
     pub source_map: Option<SourceMapSummary>,
     pub notes: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -531,7 +532,7 @@ pub struct Report {
     pub totals: Totals,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub root: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "unpackedAt", skip_serializing_if = "Option::is_none")]
     pub unpacked_at: Option<String>,
 }
 
@@ -633,6 +634,36 @@ pub fn unpack_assets(assets: &[Asset], opts: &UnpackOptions) -> BatchResult {
 /// Zip seam: JSZip is the browser route; Rust takes a writer closure that
 /// receives (path, content) pairs. The report lands at `report_path`
 /// (default `{prefix}/index.json`), pretty-printed.
+/// One file the panel collected for the archive. The panel sends text entries
+/// as `content` and binary ones as `base64` - the same shape the engine's own
+/// file lists use, so nothing has to be re-encoded on the way in.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct ZipFile {
+    pub path: String,
+    #[serde(default)]
+    pub content: Option<String>,
+    #[serde(default)]
+    pub base64: Option<String>,
+}
+
+/// Assembles the download archive, replacing the JSZip step the panel used to
+/// run: the engine owns the names and the report, so it owns the archive too.
+/// `now_ms` stamps the entries (the panel passes the host clock).
+pub fn build_zip(files: &[ZipFile], now_ms: i64) -> Result<Vec<u8>, String> {
+    let mut writer = crate::zip::ZipWriter::with_ms(now_ms);
+    for file in files {
+        match &file.base64 {
+            Some(encoded) => {
+                let bytes = crate::decoders::decode_base64_to_bytes(encoded)
+                    .ok_or_else(|| format!("zip entry {}: invalid base64 payload", file.path))?;
+                writer.add(&file.path, &bytes)?;
+            }
+            None => writer.add_text(&file.path, file.content.as_deref().unwrap_or_default())?,
+        }
+    }
+    writer.finish()
+}
+
 pub fn unpack_assets_into(
     writer: &mut dyn FnMut(&str, &str),
     assets: &[Asset],

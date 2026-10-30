@@ -185,6 +185,57 @@ pub extern "C" fn xu_call(
     write_out(serde_json::to_vec(&value).unwrap_or_default(), out_len)
 }
 
+/// Byte-returning dispatcher: `xu_call_bytes(name, argsJson)` for results that
+/// are binary rather than JSON - the archive, which would otherwise cross the
+/// boundary base64-inflated by a third. A null pointer means the call failed.
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub extern "C" fn xu_call_bytes(
+    name_ptr: *const u8,
+    name_len: usize,
+    args_ptr: *const u8,
+    args_len: usize,
+    out_len: *mut usize,
+) -> *const u8 {
+    let name_bytes = unsafe { std::slice::from_raw_parts(name_ptr, name_len) };
+    let name = String::from_utf8_lossy(name_bytes).into_owned();
+    let args = read_json(args_ptr, args_len);
+    let array = match args {
+        serde_json::Value::Array(a) => a,
+        _ => Vec::new(),
+    };
+    let result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatch_bytes(&name, &array)));
+    match result {
+        Ok(Ok(bytes)) => write_out(bytes, out_len),
+        _ => {
+            if !out_len.is_null() {
+                unsafe {
+                    *out_len = 0;
+                }
+            }
+            std::ptr::null()
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn dispatch_bytes(name: &str, array: &[serde_json::Value]) -> Result<Vec<u8>, String> {
+    match name {
+        "buildZip" => {
+            let files: Vec<pipeline::ZipFile> = match array.first() {
+                Some(value) => {
+                    serde_json::from_value(value.clone()).map_err(|e| format!("buildZip: {e}"))?
+                }
+                None => Vec::new(),
+            };
+            let now_ms = array.get(1).and_then(serde_json::Value::as_f64).unwrap_or(0.0) as i64;
+            pipeline::build_zip(&files, now_ms)
+        }
+        other => Err(format!("unknown byte function {other}")),
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 fn arg_str(array: &[serde_json::Value], i: usize) -> Option<String> {
     array.get(i).and_then(|v| v.as_str()).map(String::from)
@@ -625,6 +676,27 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
             Ok(serde_json::json!({
                 "report": batch.report,
                 "files": files_json(batch.files),
+            }))
+        }
+        "unpackAssetsForZip" => {
+            let assets: Vec<HostAsset> =
+                serde_json::from_value(a.first().cloned().unwrap_or(serde_json::Value::Null))
+                    .map_err(|e| format!("unpackAssetsForZip: assets json: {e}"))?;
+            let opts = arg_options(a, 1)?;
+            let native_assets: Vec<Asset> = assets.into_iter().map(|a| a.into_native()).collect();
+            let mut files: Vec<pipeline::File> = Vec::new();
+            let report = {
+                let mut writer = |path: &str, content: &str| {
+                    files.push(pipeline::File {
+                        path: path.to_string(),
+                        content: content.to_string(),
+                    });
+                };
+                pipeline::unpack_assets_into(&mut writer, &native_assets, &opts.into_native(), None)
+            };
+            Ok(serde_json::json!({
+                "report": report,
+                "files": files_json(files),
             }))
         }
         "decodeJsfuck" => serde_json::to_value(jsfuck::decode_jsfuck(&arg_str(a, 0).ok_or("decodeJsfuck: source")?))

@@ -132,6 +132,26 @@ function callRaw(name, argsJson) {
     }
 }
 
+// Binary results (the archive) cross as raw bytes rather than base64-in-JSON.
+function callBytes(name, argsJson) {
+    const [namePtr, nameLen] = allocStr(name);
+    const [argsPtr, argsLen] = allocStr(argsJson);
+    const lenPtr = engine.xu_alloc(4);
+    try {
+        const ptr = engine.xu_call_bytes(namePtr, nameLen, argsPtr, argsLen, lenPtr);
+        if (!ptr) fail(name + ' failed in the engine');
+        const len = new DataView(engine.memory.buffer).getUint32(lenPtr, true);
+        // copy out before freeing: the wasm heap can grow and detach the view
+        const bytes = new Uint8Array(engine.memory.buffer, ptr, len).slice();
+        engine.xu_free(ptr, len);
+        return bytes;
+    } finally {
+        engine.xu_free(namePtr, nameLen);
+        engine.xu_free(argsPtr, argsLen);
+        engine.xu_free(lenPtr, 4);
+    }
+}
+
 function call(name, ...args) {
     if (!engine) fail('engine not initialized');
     const value = callRaw(name, JSON.stringify(args));
@@ -319,14 +339,18 @@ export function unpackAsset(asset, options) {
 export function unpackAssets(assets, options) {
     const opts = options || {};
     const result = call('unpackAssets', serializeAssets(assets), serializeOptions(opts));
-    // The engine runs the batch atomically, so per-asset progress callbacks
-    // are emulated post-hoc: one final (total, total) tick preserves the
-    // callback contract for single-asset batches and updates multi-asset
-    // progress displays at completion.
-    if (typeof opts.onProgress === 'function' && Array.isArray(assets)) {
-        opts.onProgress(assets.length, assets.length);
-    }
+    tickProgress(opts, assets);
     return Promise.resolve(result);
+}
+
+// The engine runs a batch atomically, so per-asset progress callbacks are
+// emulated post-hoc: one final (total, total) tick preserves the callback
+// contract for single-asset batches and updates multi-asset progress displays
+// at completion.
+function tickProgress(options, assets) {
+    if (typeof options.onProgress === 'function' && Array.isArray(assets)) {
+        options.onProgress(assets.length, assets.length);
+    }
 }
 
 // The engine serializes unshared string slots as JSON null; the JS contract
@@ -338,18 +362,19 @@ function repairSharedHoles(table) {
     return table;
 }
 
-export async function unpackAssetsIntoZip(zip, assets, options) {
-    // Mirrors the old JS wrapper exactly: run the engine, write the produced
-    // files into the JSZip, stamp the report, add the report JSON.
+export async function unpackAssetsForZip(assets, options) {
+    // The engine runs the batch, stamps the report (root, generatedBy,
+    // unpackedAt) and returns the files plus the report JSON as one of them.
     const opts = options || {};
-    const prefix = opts.pathPrefix || '_unpack';
-    const result = await unpackAssets(assets, opts);
-    for (const file of result.files) zip.file(file.path, file.content);
-    result.report.generatedBy = 'unpack.js';
-    result.report.root = prefix;
-    result.report.unpackedAt = new Date().toISOString();
-    zip.file(opts.reportPath || prefix + '/index.json', JSON.stringify(result.report, null, 2));
-    return result.report;
+    const result = call('unpackAssetsForZip', serializeAssets(assets), serializeOptions(opts));
+    tickProgress(opts, assets);
+    return Promise.resolve(result);
+}
+
+// The archive is assembled in the engine too (it owns the names and the
+// report), so the panel hands over collected files and gets bytes back.
+export function buildZip(files) {
+    return callBytes('buildZip', JSON.stringify([files, Date.now()]));
 }
 
 export function decodeJsfuck(source) {

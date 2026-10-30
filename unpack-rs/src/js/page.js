@@ -1,5 +1,3 @@
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import {
     looksBinaryScript,
     decodeBase64ToBytes,
@@ -8,16 +6,29 @@ import {
     panelTrackerView,
     panelDescribeCaptureReason,
     panelFinalizeZipWithRecon,
+    buildZip,
 } from './unpack-bridge.js';
 
-// The wasm panel returns [{path, content}] (binary payloads as {path, base64}),
-// so the zip stays here while the assembly runs in Rust.
-function writePanelFiles(zip, files) {
-    for (var i = 0; i < files.length; i++) {
-        var file = files[i];
-        if (file.base64) zip.file(file.path, file.base64, { base64: true });
-        else zip.file(file.path, file.content);
-    }
+// The archive is assembled in the engine: everything here collects
+// [{path, content}] / [{path, base64}] and one call turns it into bytes. The
+// engine's own file lists use that same shape, so they append straight in.
+function collectFiles(target, files) {
+    target.push.apply(target, files);
+}
+
+// Saving is the one part that cannot leave the DOM.
+function saveBytes(name, bytes) {
+    var url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+    var anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    // revoking in the same tick can cancel the download in some builds
+    setTimeout(function () {
+        URL.revokeObjectURL(url);
+    }, 0);
 }
 
 var reloadDebugBtn = document.getElementById('reloadDebugBtn');
@@ -301,7 +312,7 @@ function doDownload() {
     downloadBtn.textContent = 'Downloading...';
     setActivity('info', 'Collecting resources, HTML, recon data, and runtime artifacts...');
     chrome.devtools.inspectedWindow.getResources(function (resources) {
-        var zip = new JSZip();
+        var files = [];
         var pending = resources.length + 1;
         var jsAssets = [];
         var pageSnapshot = { html: '', title: 'page' };
@@ -310,15 +321,17 @@ function doDownload() {
         function checkDone() {
             if (done || pending !== 0) return;
             done = true;
-            collectReconAndFinalize(zip, jsAssets, pageSnapshot);
+            collectReconAndFinalize(files, jsAssets, pageSnapshot);
         }
 
         for (var i = 0; i < resources.length; i++) {
             (function (resource) {
                 resource.getContent(function (content, encoding) {
-                    zip.file(sanitizeFilename(resource.url), content, {
-                        base64: encoding === 'base64',
-                    });
+                    files.push(
+                        encoding === 'base64'
+                            ? { path: sanitizeFilename(resource.url), base64: content }
+                            : { path: sanitizeFilename(resource.url), content: content },
+                    );
                     var urlLo = resource.url.toLowerCase();
                     var binaryBytes = null;
                     if (encoding === 'base64' && content && content.length <= 8 * 1024 * 1024) {
@@ -372,10 +385,10 @@ function doDownload() {
                         if (pageData.html) {
                             pageSnapshot.html = pageData.html;
                             pageSnapshot.title = pageData.title || 'page';
-                            zip.file(
-                                sanitizePageTitle(pageSnapshot.title) + '.html',
-                                pageSnapshot.html,
-                            );
+                            files.push({
+                                path: sanitizePageTitle(pageSnapshot.title) + '.html',
+                                content: pageSnapshot.html,
+                            });
                         }
                     } catch (_) {}
                 }
@@ -386,7 +399,7 @@ function doDownload() {
     });
 }
 
-function collectReconAndFinalize(zip, jsAssets, pageSnapshot) {
+function collectReconAndFinalize(files, jsAssets, pageSnapshot) {
     downloadBtn.textContent = 'Collecting recon data...';
     setActivity('info', 'Collecting recon data from the inspected page...');
     var reconEval =
@@ -409,16 +422,16 @@ function collectReconAndFinalize(zip, jsAssets, pageSnapshot) {
         '})()';
 
     chrome.devtools.inspectedWindow.eval(reconEval, function (result, error) {
-        if (error) return finalizeZipWithRecon(zip, jsAssets, null, pageSnapshot);
+        if (error) return finalizeZipWithRecon(files, jsAssets, null, pageSnapshot);
         try {
-            finalizeZipWithRecon(zip, jsAssets, JSON.parse(result), pageSnapshot);
+            finalizeZipWithRecon(files, jsAssets, JSON.parse(result), pageSnapshot);
         } catch (_) {
-            finalizeZipWithRecon(zip, jsAssets, null, pageSnapshot);
+            finalizeZipWithRecon(files, jsAssets, null, pageSnapshot);
         }
     });
 }
 
-function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
+function finalizeZipWithRecon(files, jsAssets, reconData, pageSnapshot) {
     downloadBtn.textContent = 'Building zip...';
     setActivity('info', 'Building a site-aware export package...');
     var runtimeEntries =
@@ -430,7 +443,7 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
             result = panelFinalizeZipWithRecon(jsAssets, reconData, pageSnapshot, runtimePayloads, {
                 pathPrefix: '_unpack',
             });
-            writePanelFiles(zip, result.files);
+            collectFiles(files, result.files);
         } catch (err) {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download All';
@@ -440,12 +453,20 @@ function finalizeZipWithRecon(zip, jsAssets, reconData, pageSnapshot) {
             );
             return;
         }
-        zip.generateAsync({ type: 'blob' }).then(function (zipContent) {
-            saveAs(zipContent, 'sources.zip');
+        try {
+            saveBytes('sources.zip', buildZip(files));
+        } catch (err) {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download All';
-            setActivity('success', result.summary);
-        });
+            setActivity(
+                'danger',
+                'Archive failed: ' + (err && err.message ? err.message : String(err)),
+            );
+            return;
+        }
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download All';
+        setActivity('success', result.summary);
     });
 }
 
