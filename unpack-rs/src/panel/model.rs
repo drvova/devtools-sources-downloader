@@ -130,7 +130,7 @@ pub fn js_number(value: &Value) -> f64 {
 
 /// `getResourceTime`: the first truthy timestamp field, coerced and required
 /// to be finite.
-pub fn get_resource_time(resource: &Value) -> f64 {
+fn get_resource_time(resource: &Value) -> f64 {
     for key in ["time", "timestamp", "seenAt", "startTime"] {
         let Some(raw) = resource.get(key) else {
             continue;

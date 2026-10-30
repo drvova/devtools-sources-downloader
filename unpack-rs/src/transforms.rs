@@ -17,7 +17,7 @@ use crate::util::{utf16_len, JS_S};
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-pub const DEFAULT_MAX_DEPTH: usize = 8;
+const DEFAULT_MAX_DEPTH: usize = 8;
 const SOURCE_URL_COMMENT: &str = r"//[#@]\s*sourceURL\s*=\s*(\S+)";
 
 static SOURCE_URL_RE: LazyLock<regex::Regex> =
@@ -306,7 +306,7 @@ fn unwrap_reverse(text: &str) -> String {
 
 /// JS applyTransform: routes a tool to its transform; None = the layer did
 /// not yield fresh text.
-pub fn apply_transform(tool: &str, text: &str) -> Option<String> {
+fn apply_transform(tool: &str, text: &str) -> Option<String> {
     match tool {
         "eval-unwrap" => unwrap_eval(text),
         "base64" => {
@@ -347,7 +347,7 @@ pub fn apply_transform(tool: &str, text: &str) -> Option<String> {
 // Shell encodings whose payload only exists at RUNTIME: detected and
 // reported, never transformed. The string-array pass covers the static slice
 // of obfuscator.io output, so it is reported only when it did NOT match.
-pub fn collect_refusals(text: &str) -> Vec<Refusal> {
+fn collect_refusals(text: &str) -> Vec<Refusal> {
     let mut refusals = Vec::new();
     if let Some(aa) = detect_aaencode(text) {
         refusals.push(aa);

@@ -90,7 +90,7 @@ impl Asset {
     }
 }
 /// Injected text fetcher for external source-map resolution.
-pub type FetchText<'a> = Option<&'a dyn Fn(&str) -> Option<String>>;
+type FetchText<'a> = Option<&'a dyn Fn(&str) -> Option<String>>;
 
 pub struct UnpackOptions<'a> {
     pub index: Option<usize>,

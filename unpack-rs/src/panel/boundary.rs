@@ -25,7 +25,7 @@ pub fn array_contains_any(values: &[String], candidates: &[String]) -> bool {
 }
 
 /// `pushBoundaryLabel`.
-pub fn push_boundary_label(matches: &mut Vec<Value>, label: &str, score: f64, reason: Option<&str>) {
+fn push_boundary_label(matches: &mut Vec<Value>, label: &str, score: f64, reason: Option<&str>) {
     for item in matches.iter_mut() {
         if item.get("label").and_then(|v| v.as_str()) == Some(label) {
             let current = item.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
@@ -53,7 +53,7 @@ pub fn push_boundary_label(matches: &mut Vec<Value>, label: &str, score: f64, re
 }
 
 /// `buildBoundarySample`.
-pub fn build_boundary_sample(entry: &Value) -> String {
+fn build_boundary_sample(entry: &Value) -> String {
     let list = |key: &str| -> String {
         entry
             .get(key)
@@ -91,7 +91,7 @@ pub fn build_boundary_sample(entry: &Value) -> String {
 }
 
 /// `buildNetworkBoundarySample`.
-pub fn build_network_boundary_sample(entry: &Value) -> String {
+fn build_network_boundary_sample(entry: &Value) -> String {
     [
         field_str(entry, "type"),
         field_str(entry, "url"),
@@ -106,7 +106,7 @@ pub fn build_network_boundary_sample(entry: &Value) -> String {
 }
 
 /// `stringifyLooseValue`.
-pub fn stringify_loose_value(value: &Value) -> String {
+fn stringify_loose_value(value: &Value) -> String {
     match value {
         Value::String(text) => text.clone(),
         Value::Null => String::new(),
@@ -119,7 +119,7 @@ fn label_regex(pattern: &str) -> regex::Regex {
 }
 
 /// `inferNetworkBoundaryLabels`.
-pub fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
+fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     static AUTH: LazyLock<regex::Regex> = LazyLock::new(|| {
         label_regex(r"auth0|next-auth|firebase/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|token|refresh|clerk|okta|passport")
     });
@@ -196,7 +196,7 @@ fn looks_like_graphql_request(entry: &Value) -> bool {
 }
 
 /// `inferBoundaryLabels`.
-pub fn infer_boundary_labels(
+fn infer_boundary_labels(
     entry: &Value,
     is_runtime: bool,
     classifications: &BTreeMap<String, String>,
@@ -383,7 +383,7 @@ fn boundary_outcome(mut matches: Vec<Value>) -> BoundaryOutcome {
 }
 
 /// `applyBoundaryLabels` on a prepared asset.
-pub fn apply_boundary_labels_asset(asset: &mut ScriptAsset, matches: Vec<Value>) {
+fn apply_boundary_labels_asset(asset: &mut ScriptAsset, matches: Vec<Value>) {
     let outcome = boundary_outcome(matches);
     asset.boundary_details = outcome
         .details
@@ -409,7 +409,7 @@ pub fn apply_boundary_labels_asset(asset: &mut ScriptAsset, matches: Vec<Value>)
 }
 
 /// `applyBoundaryLabels` on a JSON entry (runtime origins, network rows).
-pub fn apply_boundary_labels(entry: &mut Value, matches: Vec<Value>) {
+fn apply_boundary_labels(entry: &mut Value, matches: Vec<Value>) {
     let outcome = boundary_outcome(matches);
     if let Some(map) = entry.as_object_mut() {
         map.insert("boundaryDetails".to_string(), Value::Array(outcome.details));
@@ -426,7 +426,7 @@ pub fn apply_boundary_labels(entry: &mut Value, matches: Vec<Value>) {
 }
 
 /// `countBoundaryLabels` over JSON entries.
-pub fn count_boundary_labels_values(items: &[Value]) -> Counts {
+fn count_boundary_labels_values(items: &[Value]) -> Counts {
     let mut counts = Counts::default();
     for item in items {
         for label in item
@@ -444,7 +444,7 @@ pub fn count_boundary_labels_values(items: &[Value]) -> Counts {
 }
 
 /// `countTaggedEntries` over JSON entries.
-pub fn count_tagged_entries_values(items: &[Value]) -> usize {
+fn count_tagged_entries_values(items: &[Value]) -> usize {
     items
         .iter()
         .filter(|item| {
@@ -457,7 +457,7 @@ pub fn count_tagged_entries_values(items: &[Value]) -> usize {
 }
 
 /// `stripBoundaryEntry`.
-pub fn strip_boundary_entry(entry: &Value, kind: &str) -> Value {
+fn strip_boundary_entry(entry: &Value, kind: &str) -> Value {
     let file_or_url = {
         let file = field_str(entry, "file");
         if !file.is_empty() {
@@ -576,7 +576,7 @@ pub fn build_boundary_labels(
 }
 
 /// `buildNetworkFlowEvents`.
-pub fn build_network_flow_events(recon: Option<&Value>) -> Vec<Value> {
+fn build_network_flow_events(recon: Option<&Value>) -> Vec<Value> {
     let mut operations = collect_network_operations(recon);
     for (index, operation) in operations.iter_mut().enumerate() {
         let kind = field_str(operation, "type");
@@ -613,7 +613,7 @@ pub fn build_network_flow_events(recon: Option<&Value>) -> Vec<Value> {
 }
 
 /// `buildFlowEvent`.
-pub fn build_flow_event(kind: &str, record_id: &str, entry: &Value, approx_time: f64) -> Value {
+fn build_flow_event(kind: &str, record_id: &str, entry: &Value, approx_time: f64) -> Value {
     let label = {
         let explicit = field_str(entry, "label");
         if !explicit.is_empty() {
@@ -685,13 +685,13 @@ pub fn build_flow_event(kind: &str, record_id: &str, entry: &Value, approx_time:
 }
 
 /// The flow-event set with the id lookup the flow builder uses.
-pub struct FlowEvents {
+struct FlowEvents {
     pub events: Vec<Value>,
     pub event_map: BTreeMap<String, Value>,
 }
 
 /// `collectFlowEvents`.
-pub fn collect_flow_events(
+fn collect_flow_events(
     recon_data: Option<&Value>,
     assets: &[ScriptAsset],
     origins: &[RuntimeOrigin],
@@ -777,7 +777,7 @@ pub fn collect_flow_events(
 }
 
 /// `inferFlowRelation`.
-pub fn infer_flow_relation(from_event: &Value, to_event: &Value) -> String {
+fn infer_flow_relation(from_event: &Value, to_event: &Value) -> String {
     let from = field_str(from_event, "kind");
     let to = field_str(to_event, "kind");
     match (from.as_str(), to.as_str()) {
@@ -843,7 +843,7 @@ pub fn matches_any_boundary(entry: &Value, boundaries: &[String]) -> bool {
 }
 
 /// `countSharedValues`.
-pub fn count_shared_values(left: &[String], right: &[String]) -> usize {
+fn count_shared_values(left: &[String], right: &[String]) -> usize {
     left.iter().filter(|value| right.contains(value)).count()
 }
 
@@ -870,7 +870,7 @@ fn event_labels(event: &Value) -> Vec<String> {
 
 /// `addBoundaryFlow`.
 #[allow(clippy::too_many_arguments)]
-pub fn add_boundary_flow(
+fn add_boundary_flow(
     flows: &mut Vec<Value>,
     flow_map: &mut BTreeMap<String, bool>,
     from_event: &Value,
@@ -923,7 +923,7 @@ pub fn add_boundary_flow(
 }
 
 /// `scoreFlowTransition`.
-pub fn score_flow_transition(from_event: &Value, to_event: &Value, delta_ms: Option<f64>) -> f64 {
+fn score_flow_transition(from_event: &Value, to_event: &Value, delta_ms: Option<f64>) -> f64 {
     let from_boundary = field_str(from_event, "primaryBoundary");
     let to_boundary = field_str(to_event, "primaryBoundary");
     let from_id = field_str(from_event, "id");
@@ -991,7 +991,7 @@ pub fn score_flow_transition(from_event: &Value, to_event: &Value, delta_ms: Opt
 }
 
 /// `describeFlowTransition`.
-pub fn describe_flow_transition(from_event: &Value, to_event: &Value, delta_ms: Option<f64>) -> String {
+fn describe_flow_transition(from_event: &Value, to_event: &Value, delta_ms: Option<f64>) -> String {
     let lag = match delta_ms {
         Some(delta) if delta >= 0.0 => format!(" {}ms later", js_round(delta) as i64),
         _ => String::new(),
@@ -1017,7 +1017,7 @@ pub fn describe_flow_transition(from_event: &Value, to_event: &Value, delta_ms: 
 }
 
 /// `summarizeBoundaryTransitions`.
-pub fn summarize_boundary_transitions(flows: &[Value]) -> Vec<Value> {
+fn summarize_boundary_transitions(flows: &[Value]) -> Vec<Value> {
     struct Group {
         from_boundary: String,
         to_boundary: String,
@@ -1085,7 +1085,7 @@ pub fn summarize_boundary_transitions(flows: &[Value]) -> Vec<Value> {
 }
 
 /// `buildBoundaryChains`.
-pub fn build_boundary_chains(flows: &[Value]) -> Vec<Value> {
+fn build_boundary_chains(flows: &[Value]) -> Vec<Value> {
     let mut timed: Vec<&Value> = flows
         .iter()
         .filter(|flow| {
@@ -1182,7 +1182,7 @@ pub fn build_boundary_chains(flows: &[Value]) -> Vec<Value> {
 }
 
 /// `stripFlowTransition`.
-pub fn strip_flow_transition(flow: &Value) -> Value {
+fn strip_flow_transition(flow: &Value) -> Value {
     json!({
         "id": flow.get("id").cloned().unwrap_or(Value::Null),
         "relation": flow.get("relation").cloned().unwrap_or(Value::Null),
@@ -1199,7 +1199,7 @@ pub fn strip_flow_transition(flow: &Value) -> Value {
 
 /// `stripFlowEvent`. The identity fields are copied as-is, so a source that
 /// does not carry one produces no key at all (the JS leaves them `undefined`).
-pub fn strip_flow_event(event: &Value) -> Value {
+fn strip_flow_event(event: &Value) -> Value {
     let mut stripped = Map::new();
     for key in ["id", "recordId", "kind", "label", "primaryBoundary"] {
         if let Some(value) = event.get(key) {
@@ -1652,7 +1652,7 @@ pub fn build_framework_state_summary(framework_state: Option<&Value>) -> Value {
 }
 
 /// `collectFrameworkArtifactPaths`.
-pub fn collect_framework_artifact_paths(framework_state: Option<&Value>) -> Vec<String> {
+fn collect_framework_artifact_paths(framework_state: Option<&Value>) -> Vec<String> {
     let state = match framework_state {
         Some(state) if js_truthy(state) => state,
         _ => return Vec::new(),

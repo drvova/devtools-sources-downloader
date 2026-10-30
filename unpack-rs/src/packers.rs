@@ -582,7 +582,7 @@ fn parse_array_literals(body: &str) -> Option<Vec<String>> {
     }
 }
 
-pub struct StringArrayFound {
+struct StringArrayFound {
     pub array_id: String,
     pub literals: Vec<String>,
     pub decl_range: (usize, usize),
@@ -595,7 +595,7 @@ static STRING_ARRAY_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-pub fn find_string_array(source: &str) -> Option<StringArrayFound> {
+fn find_string_array(source: &str) -> Option<StringArrayFound> {
     let m = STRING_ARRAY_RE.captures(source)?;
     let literals = parse_array_literals(m.get(2).unwrap().as_str())?;
     Some(StringArrayFound {
@@ -607,7 +607,7 @@ pub fn find_string_array(source: &str) -> Option<StringArrayFound> {
 
 /// JS parseIntLiteral: hex accepts a valid prefix (quirk preserved — no
 /// round-trip check on hex), decimal must round-trip exactly.
-pub fn parse_int_literal(raw: &str) -> Option<i64> {
+fn parse_int_literal(raw: &str) -> Option<i64> {
     let t = raw.trim();
     let negative = t.starts_with('-');
     let t = if negative || t.starts_with('+') {
@@ -635,17 +635,12 @@ pub fn parse_int_literal(raw: &str) -> Option<i64> {
     Some(if negative { -d } else { d })
 }
 
-pub struct RotatorFound {
-    pub pivot_index: i64,
+struct RotatorFound {
     pub pivot_value: i64,
     pub iife_range: (usize, usize),
 }
 
-static PIVOT_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"parseInt\([^)]*\(\s*(0x[0-9a-fA-F]+|\d+)\)").unwrap()
-});
-
-pub fn find_rotator(source: &str, array_id: &str) -> Option<RotatorFound> {
+fn find_rotator(source: &str, array_id: &str) -> Option<RotatorFound> {
     let needle = regex_escape(array_id);
     let pattern = format!(
         r"(?ms)\(\s*function\s*\(([^)]*)\)\s*\{{(.+?)\}}\s*\(\s*{needle}\s*,\s*([-+]?0x[0-9a-fA-F]+|\d+)\s*\)\s*\)\s*;"
@@ -657,10 +652,8 @@ pub fn find_rotator(source: &str, array_id: &str) -> Option<RotatorFound> {
         return None;
     }
     let pivot_value = parse_int_literal(m.get(3).unwrap().as_str())?;
-    let pivot_index = find_pivot_index(body);
     let whole = m.get(0).unwrap();
     Some(RotatorFound {
-        pivot_index,
         pivot_value,
         iife_range: (whole.start(), whole.end()),
     })
@@ -673,19 +666,9 @@ fn looks_like_rotator(body: &str) -> bool {
     has_loop && has_push_shift && has_parse_int
 }
 
-fn find_pivot_index(body: &str) -> i64 {
-    let v = PIVOT_RE
-        .captures(body)
-        .and_then(|m| parse_int_literal(m.get(1).unwrap().as_str()));
-    match v {
-        Some(v) if v >= 0 => v,
-        _ => 0,
-    }
-}
-
 /// The runtime loop push/shifts until parseInt(strings[0]) equals the pivot;
 /// find the rotation that satisfies it instead of executing anything.
-pub fn simulate_rotation(strings: &[String], pivot_value: i64) -> (Vec<String>, usize) {
+fn simulate_rotation(strings: &[String], pivot_value: i64) -> (Vec<String>, usize) {
     if strings.is_empty() {
         return (strings.to_vec(), 0);
     }
@@ -726,7 +709,7 @@ fn emit_array_decl(id: &str, literals: &[String]) -> String {
 
 /// Replaces the array declaration with its rotated form and deletes the
 /// rotator IIFE. Order-independent.
-pub fn rebuild_string_array_source(
+fn rebuild_string_array_source(
     source: &str,
     found: &StringArrayFound,
     rotator: &RotatorFound,
@@ -760,12 +743,8 @@ pub fn rebuild_string_array_source(
 
 // ------------------------------------------------- static decoder inlining
 
-pub struct InlineResult {
+struct InlineResult {
     pub source: String,
-    pub decoder_name: Option<String>,
-    pub inlined: usize,
-    pub total: usize,
-    pub refusal: Option<String>,
 }
 
 struct DecoderIndex {
@@ -773,16 +752,12 @@ struct DecoderIndex {
     sign: char,
 }
 
-pub fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
+fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
     let found = match find_decoder_decl(source, array_id) {
         Some(f) => f,
         None => {
             return InlineResult {
                 source: source.to_string(),
-                decoder_name: None,
-                inlined: 0,
-                total: 0,
-                refusal: Some("decoder declaration not found".to_string()),
             }
         }
     };
@@ -791,10 +766,6 @@ pub fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
         None => {
             return InlineResult {
                 source: source.to_string(),
-                decoder_name: Some(found.name),
-                inlined: 0,
-                total: 0,
-                refusal: Some("decoder is not a plain array index (execution required)".to_string()),
             }
         }
     };
@@ -804,10 +775,6 @@ pub fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
         None => {
             return InlineResult {
                 source: source.to_string(),
-                decoder_name: Some(found.name),
-                inlined: 0,
-                total: sites.sites.len(),
-                refusal: Some("array literals unreadable".to_string()),
             }
         }
     };
@@ -828,7 +795,6 @@ pub fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
     events.sort_by_key(|e| e.0);
     let mut out = String::with_capacity(source.len());
     let mut cursor = 0usize;
-    let mut inlined = 0usize;
     for (start, end, arg) in events {
         if start < cursor {
             continue;
@@ -841,7 +807,6 @@ pub fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
                     out.push('\'');
                     out.push_str(&js_quote_escape(&decoded));
                     out.push('\'');
-                    inlined += 1;
                 } else {
                     out.push_str(&source[start..end]);
                 }
@@ -852,10 +817,6 @@ pub fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
     out.push_str(&source[cursor..]);
     InlineResult {
         source: out,
-        decoder_name: Some(found.name),
-        inlined,
-        total: sites.sites.len(),
-        refusal: None,
     }
 }
 

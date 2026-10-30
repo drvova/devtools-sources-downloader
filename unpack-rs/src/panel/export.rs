@@ -135,6 +135,10 @@ pub fn write_recon_artifacts(
     runtime_entries
 }
 
+// Test-only: the shipped path collects runtime payloads in the panel
+// (asynchronously, through inspectedWindow.eval) and hands them to the
+// engine, so this synchronous form is the unit under test.
+#[cfg(test)]
 /// `collectRuntimePayloads`: resolves the text of the runtime entries that
 /// have one on the page, walking the list in order and leaving the rest
 /// untouched.
@@ -143,7 +147,7 @@ pub fn write_recon_artifacts(
 /// `chrome.devtools.inspectedWindow.eval`; here the page read is the `fetch`
 /// seam, which receives the entry's index and returns the payload object (or
 /// nothing when the page has no payload for it).
-pub fn collect_runtime_payloads(
+fn collect_runtime_payloads(
     runtime_entries: &[Value],
     fetch: &mut dyn FnMut(usize) -> Option<Value>,
 ) -> Vec<Value> {

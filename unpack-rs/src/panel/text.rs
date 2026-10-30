@@ -364,7 +364,7 @@ fn js_math_round(value: f64) -> String {
 /// JS `Number.prototype.toFixed`: round to `digits` decimals, ties away from
 /// zero, exactly on the binary value. Rust's own float formatting rounds
 /// ties-to-even and would disagree on inputs like 1.25.
-pub fn js_to_fixed(value: f64, digits: usize) -> String {
+fn js_to_fixed(value: f64, digits: usize) -> String {
     if !value.is_finite() || value.abs() >= 1e21 {
         return js_number_to_string(value);
     }

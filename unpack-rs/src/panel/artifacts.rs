@@ -18,7 +18,7 @@ use crate::panel::view::escape_html;
 use crate::pipeline::Asset;
 
 /// `runtimeFolderName`.
-pub fn runtime_folder_name(kind: &str) -> &'static str {
+fn runtime_folder_name(kind: &str) -> &'static str {
     match kind {
         "eval" => "eval",
         "function" => "function",
@@ -39,7 +39,7 @@ fn mime_matches(pattern: &str, mime_type: &str) -> bool {
 }
 
 /// `runtimeExtension`.
-pub fn runtime_extension(entry: &Value) -> String {
+fn runtime_extension(entry: &Value) -> String {
     static WASM: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"(?i)wasm").unwrap());
     let kind = field_str(entry, "kind");
     let mime_type = field_str(entry, "mimeType");

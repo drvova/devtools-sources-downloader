@@ -15,7 +15,7 @@ use crate::panel::text::js_number_value;
 use crate::util::iso8601_now;
 
 /// `arrayTouchesAny`.
-pub fn array_touches_any(values: &[Value], candidates: &[String]) -> bool {
+fn array_touches_any(values: &[Value], candidates: &[String]) -> bool {
     for value in values {
         if !js_truthy(value) {
             continue;
@@ -39,7 +39,7 @@ fn string_path(value: &Value) -> Vec<Value> {
 }
 
 /// `chainPathTouchesAny`.
-pub fn chain_path_touches_any(chain: &Value, boundaries: &[String]) -> bool {
+fn chain_path_touches_any(chain: &Value, boundaries: &[String]) -> bool {
     if !js_truthy(chain) || chain.get("path").is_none() {
         return false;
     }
@@ -47,7 +47,7 @@ pub fn chain_path_touches_any(chain: &Value, boundaries: &[String]) -> bool {
 }
 
 /// `chainTouchesAnyBoundary`.
-pub fn chain_touches_any_boundary(chain: &Value, boundaries: &[String]) -> bool {
+fn chain_touches_any_boundary(chain: &Value, boundaries: &[String]) -> bool {
     if !js_truthy(chain) {
         return false;
     }
@@ -57,7 +57,7 @@ pub fn chain_touches_any_boundary(chain: &Value, boundaries: &[String]) -> bool 
 }
 
 /// `getBoundaryTitle`.
-pub fn get_boundary_title(boundary: &str) -> String {
+fn get_boundary_title(boundary: &str) -> String {
     let title = match boundary {
         "bootstrap" => "Bootstrap workspace",
         "router" => "Router workspace",
@@ -73,7 +73,7 @@ pub fn get_boundary_title(boundary: &str) -> String {
 }
 
 /// `getBoundaryDescription`.
-pub fn get_boundary_description(boundary: &str) -> String {
+fn get_boundary_description(boundary: &str) -> String {
     let description = match boundary {
         "bootstrap" => {
             "Focus on initial loaders, hydration code, runtime bootstraps, and early execution pivots."
@@ -105,7 +105,7 @@ pub fn get_boundary_description(boundary: &str) -> String {
 }
 
 /// `getBoundaryQuestions`.
-pub fn get_boundary_questions(boundary: &str) -> Vec<String> {
+fn get_boundary_questions(boundary: &str) -> Vec<String> {
     let questions: &[&str] = match boundary {
         "bootstrap" => &[
             "What actually starts the application?",
@@ -156,7 +156,7 @@ pub fn get_boundary_questions(boundary: &str) -> Vec<String> {
 }
 
 /// `getJourneyQuestions`.
-pub fn get_journey_questions(id: &str) -> Vec<String> {
+fn get_journey_questions(id: &str) -> Vec<String> {
     let questions: &[&str] = match id {
         "initial-load" => &[
             "Which chunk booted first?",
@@ -187,7 +187,7 @@ pub fn get_journey_questions(id: &str) -> Vec<String> {
 }
 
 /// `pushFrameworkCollectionEvents`.
-pub fn push_framework_collection_events(
+fn push_framework_collection_events(
     target: &mut Vec<Value>,
     items: Option<&Value>,
     kind: &str,
@@ -259,7 +259,7 @@ pub fn push_framework_collection_events(
 }
 
 /// `buildFrameworkStateEvents`.
-pub fn build_framework_state_events(framework_state: &Value) -> Vec<Value> {
+fn build_framework_state_events(framework_state: &Value) -> Vec<Value> {
     if !js_truthy(framework_state) {
         return Vec::new();
     }
@@ -313,7 +313,7 @@ fn flows_of(analysis: &Value, key: &str) -> Vec<Value> {
 }
 
 /// `buildBoundaryWorkspace`.
-pub fn build_boundary_workspace(boundary: &str, analysis: &Value) -> Value {
+fn build_boundary_workspace(boundary: &str, analysis: &Value) -> Value {
     let chunks: Vec<Value> = items_of(analysis, "chunkMap")
         .into_iter()
         .filter(|item| matches_boundary_entry(item, boundary))
@@ -385,7 +385,7 @@ pub fn build_boundary_workspace(boundary: &str, analysis: &Value) -> Value {
 }
 
 /// `buildFrameworkStateWorkspace`.
-pub fn build_framework_state_workspace(analysis: &Value, existing_workspaces: &[Value]) -> Value {
+fn build_framework_state_workspace(analysis: &Value, existing_workspaces: &[Value]) -> Value {
     let framework_state = analysis
         .get("frameworkState")
         .filter(|v| js_truthy(v))
@@ -495,7 +495,7 @@ pub fn build_framework_state_workspace(analysis: &Value, existing_workspaces: &[
 
 /// `buildJourneyView`.
 #[allow(clippy::too_many_arguments)]
-pub fn build_journey_view(
+fn build_journey_view(
     id: &str,
     title: &str,
     description: &str,
@@ -585,7 +585,7 @@ pub fn build_journey_view(
 }
 
 /// `buildJourneyViews`.
-pub fn build_journey_views(
+fn build_journey_views(
     analysis: &Value,
     workspaces: &[Value],
 ) -> Vec<Value> {

@@ -34,7 +34,7 @@ pub struct Finding {
     pub detail: String,
 }
 
-pub fn gain(text: &str) -> usize {
+fn gain(text: &str) -> usize {
     GAIN_RE.find_iter(text).count()
 }
 

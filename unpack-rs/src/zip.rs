@@ -58,7 +58,7 @@ static CRC_TABLE: LazyLock<[u32; 256]> = LazyLock::new(|| {
 });
 
 /// CRC-32/ISO-HDLC, the checksum zip entries carry.
-pub fn crc32(bytes: &[u8]) -> u32 {
+fn crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
     for byte in bytes {
         let index = ((crc ^ u32::from(*byte)) & 0xFF) as usize;

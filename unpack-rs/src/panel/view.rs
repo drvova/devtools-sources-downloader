@@ -28,7 +28,7 @@ pub fn escape_html(text: &str) -> String {
 }
 
 /// One `<tr>` per row, mirroring `appendResourceRow`.
-pub fn resource_rows_html(items: &[Resource]) -> String {
+fn resource_rows_html(items: &[Resource]) -> String {
     let mut out = String::new();
     for row in items {
         let dot = if row.status == "loaded" {
@@ -71,7 +71,7 @@ pub fn resource_rows_html(items: &[Resource]) -> String {
 }
 
 /// The type filter's `<option>` list, mirroring `updateTypeFilterOptions`.
-pub fn type_options_html(types: &[String]) -> String {
+fn type_options_html(types: &[String]) -> String {
     let mut out = String::from("<option value=\"all\">All types</option>");
     for kind in types {
         out.push_str(&format!(

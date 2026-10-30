@@ -163,7 +163,7 @@ pub fn inflate_brotli_with(
     inflate_brotli_default(bytes)
 }
 
-pub fn inflate_brotli_default(bytes: &[u8]) -> Option<Vec<u8>> {
+fn inflate_brotli_default(bytes: &[u8]) -> Option<Vec<u8>> {
     let mut out = Vec::new();
     brotli::Decompressor::new(bytes, 4096)
         .read_to_end(&mut out)

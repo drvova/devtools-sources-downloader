@@ -32,7 +32,7 @@ pub fn looks_like_graphql_body(body: &Value) -> bool {
 }
 
 /// `normalizeGraphQLPayload`.
-pub fn normalize_graphql_payload(body: &Value) -> Value {
+fn normalize_graphql_payload(body: &Value) -> Value {
     static OPERATION: LazyLock<regex::Regex> = LazyLock::new(|| {
         regex::Regex::new(
             r"(?-u:\b)(query|mutation|subscription)[ \t\n\x0B\f\r]+([A-Za-z0-9_]+)",
@@ -96,7 +96,7 @@ fn value_text(value: &Value) -> String {
 }
 
 /// `parseGraphQLOperation`.
-pub fn parse_graphql_operation(entry: &Value) -> Option<Value> {
+fn parse_graphql_operation(entry: &Value) -> Option<Value> {
     if entry.is_null() {
         return None;
     }

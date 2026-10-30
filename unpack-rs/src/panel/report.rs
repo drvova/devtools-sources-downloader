@@ -161,7 +161,7 @@ pub fn generate_investigation_index_html(investigation: &Value) -> String {
 }
 
 /// `exportReadableArtifacts` with the engine's beautifier.
-pub fn export_readable_artifacts(writer: &mut dyn FnMut(&str, &str), analysis: &Value) {
+fn export_readable_artifacts(writer: &mut dyn FnMut(&str, &str), analysis: &Value) {
     export_readable_artifacts_with(
         writer,
         analysis,
@@ -171,7 +171,7 @@ pub fn export_readable_artifacts(writer: &mut dyn FnMut(&str, &str), analysis: &
 }
 
 /// `exportReadableArtifacts` with an injectable beautifier seam.
-pub fn export_readable_artifacts_with(
+fn export_readable_artifacts_with(
     writer: &mut dyn FnMut(&str, &str),
     analysis: &Value,
     looks_minified: &dyn Fn(&str) -> bool,

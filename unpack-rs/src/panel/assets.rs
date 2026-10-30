@@ -20,12 +20,12 @@ use crate::panel::text::{
 use crate::util::{utf16_len, utf16_prefix, JS_S};
 
 /// `normalizeUrlKey`.
-pub fn normalize_url_key(url: &str) -> String {
+fn normalize_url_key(url: &str) -> String {
     url.split('#').next().unwrap_or("").to_string()
 }
 
 /// `stripUrlVariant`.
-pub fn strip_url_variant(url: &str) -> String {
+fn strip_url_variant(url: &str) -> String {
     normalize_url_key(url)
         .split('?')
         .next()
@@ -43,7 +43,7 @@ pub fn get_bare_file_name(value: &str) -> String {
 }
 
 /// `cleanStackReference`.
-pub fn clean_stack_reference(value: &str) -> String {
+fn clean_stack_reference(value: &str) -> String {
     static TRAILING: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"[),]+$").unwrap());
     static LINE_COL: LazyLock<regex::Regex> =
@@ -56,7 +56,7 @@ pub fn clean_stack_reference(value: &str) -> String {
 }
 
 /// `extractStackRefs`.
-pub fn extract_stack_refs(stack: &str) -> Vec<String> {
+fn extract_stack_refs(stack: &str) -> Vec<String> {
     static REF: LazyLock<regex::Regex> = LazyLock::new(|| {
         regex::Regex::new(r"(https?://[^\s)]+|blob:[^\s)]+)").unwrap()
     });
@@ -85,12 +85,12 @@ pub fn unique_strings(values: &[String]) -> Vec<String> {
 }
 
 /// `countMatches`: count non-overlapping regex matches.
-pub fn count_matches(text: &str, pattern: &regex::Regex) -> usize {
+fn count_matches(text: &str, pattern: &regex::Regex) -> usize {
     pattern.find_iter(text).count()
 }
 
 /// `detectBundlerName`.
-pub fn detect_bundler_name(url: &str, content: &str) -> String {
+fn detect_bundler_name(url: &str, content: &str) -> String {
     let sample = format!("{url}\n{content}").to_lowercase();
     if sample.contains("__webpack_require__")
         || sample.contains("webpackchunk")
@@ -109,7 +109,7 @@ pub fn detect_bundler_name(url: &str, content: &str) -> String {
 }
 
 /// `detectFrameworkHints`.
-pub fn detect_framework_hints(url: &str, content: &str, stack_profile: Option<&Value>) -> Vec<String> {
+fn detect_framework_hints(url: &str, content: &str, stack_profile: Option<&Value>) -> Vec<String> {
     let sample = format!("{url}\n{content}").to_lowercase();
     let mut hints: Vec<String> = Vec::new();
     if sample.contains("__next_data__") || sample.contains("/_next/") {
@@ -151,7 +151,7 @@ pub fn detect_framework_hints(url: &str, content: &str, stack_profile: Option<&V
 }
 
 /// `detectStartupSignals`.
-pub fn detect_startup_signals(url: &str, content: &str) -> Vec<String> {
+fn detect_startup_signals(url: &str, content: &str) -> Vec<String> {
     let sample = format!("{url}\n{content}").to_lowercase();
     let mut signals: Vec<String> = Vec::new();
     if sample.contains("hydrateroot")
@@ -192,7 +192,7 @@ pub fn detect_startup_signals(url: &str, content: &str) -> Vec<String> {
 }
 
 /// `extractRouteHintsFromUrl`.
-pub fn extract_route_hints_from_url(url: &str) -> Vec<String> {
+fn extract_route_hints_from_url(url: &str) -> Vec<String> {
     static SKIP: LazyLock<regex::Regex> = LazyLock::new(|| {
         regex::Regex::new(r"(?i)^(static|assets|chunks|build|dist|js|runtime|vendor)$").unwrap()
     });
@@ -218,7 +218,7 @@ pub fn extract_route_hints_from_url(url: &str) -> Vec<String> {
 }
 
 /// `extractImportSpecifiers`.
-pub fn extract_import_specifiers(content: &str) -> Vec<String> {
+fn extract_import_specifiers(content: &str) -> Vec<String> {
     static PATTERNS: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
         let ws = JS_S;
         vec![
@@ -251,7 +251,7 @@ pub fn extract_import_specifiers(content: &str) -> Vec<String> {
 }
 
 /// `classifyScriptAsset`.
-pub fn classify_script_asset(
+fn classify_script_asset(
     url: &str,
     content: &str,
     bundler: &str,
@@ -283,7 +283,7 @@ pub fn classify_script_asset(
 }
 
 /// `scoreScriptAsset`.
-pub fn score_script_asset(entry: &ScriptAsset) -> f64 {
+fn score_script_asset(entry: &ScriptAsset) -> f64 {
     let mut score = match entry.classification.as_str() {
         "app" => 48.0,
         "runtime" => 34.0,
@@ -364,7 +364,7 @@ pub struct BoundaryDetail {
 /// A navigation-timing record.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Timing {
+struct Timing {
     pub name: String,
     #[serde(default)]
     pub transfer_size: Value,
@@ -486,7 +486,7 @@ mod byte_values_tests {
 }
 
 /// `buildTimingLookup`: full URL and query-stripped URL, first writer wins.
-pub fn build_timing_lookup(timings: &[Timing]) -> BTreeMap<String, Timing> {
+fn build_timing_lookup(timings: &[Timing]) -> BTreeMap<String, Timing> {
     let mut lookup: BTreeMap<String, Timing> = BTreeMap::new();
     for item in timings {
         if item.name.is_empty() {
@@ -845,7 +845,7 @@ pub fn build_runtime_origins(
 }
 
 /// `determineRuntimeOriginType`.
-pub fn determine_runtime_origin_type(entry: &Value) -> String {
+fn determine_runtime_origin_type(entry: &Value) -> String {
     if field(entry, "blobId").is_some() {
         return "blob-derived".to_string();
     }
@@ -875,7 +875,7 @@ pub fn determine_runtime_origin_type(entry: &Value) -> String {
 }
 
 /// `scoreRuntimeEntry`.
-pub fn score_runtime_entry(entry: &Value) -> f64 {
+fn score_runtime_entry(entry: &Value) -> f64 {
     let kind = field_str(entry, "kind");
     let mut score = match kind.as_str() {
         "eval" | "function" => 46.0,

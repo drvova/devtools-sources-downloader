@@ -22,7 +22,7 @@ const MAX_PARSE_DEPTH: u64 = 10_000;
 
 /// A native builtin the fromSource resolver and global object can produce.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Builtin {
+enum Builtin {
     Array,
     Number,
     String_,
@@ -32,26 +32,11 @@ pub enum Builtin {
     Escape,
 }
 
-impl Builtin {
-    pub fn name(self) -> &'static str {
-        match self {
-            Builtin::Array => "Array",
-            Builtin::Number => "Number",
-            Builtin::String_ => "String",
-            Builtin::Boolean => "Boolean",
-            Builtin::RegExp => "RegExp",
-            Builtin::Date => "Date",
-            Builtin::Escape => "escape",
-        }
-    }
-}
-
 /// The interpreter's value model: the subset of ECMAScript values the
 /// canonical JSFuck language can construct.
 #[derive(Debug, Clone, PartialEq)]
-pub enum JValue {
+enum JValue {
     Undefined,
-    Null,
     Bool(bool),
     Num(f64),
     Str(String),
@@ -89,7 +74,7 @@ pub struct JsfuckDecode {
 }
 
 #[derive(Debug)]
-pub struct JsfuckError(pub String);
+struct JsfuckError(pub String);
 
 impl std::fmt::Display for JsfuckError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -98,7 +83,7 @@ impl std::fmt::Display for JsfuckError {
 }
 impl std::error::Error for JsfuckError {}
 
-pub fn longest_operator_chain(source: &str) -> usize {
+fn longest_operator_chain(source: &str) -> usize {
     source
         .chars()
         .fold((0usize, 0usize), |(best, run), c| {
@@ -176,14 +161,13 @@ fn canonical_index(key: &str) -> Option<usize> {
 fn to_display_string(v: &JValue) -> String {
     match v {
         JValue::Undefined => "undefined".to_string(),
-        JValue::Null => "null".to_string(),
         JValue::Bool(b) => b.to_string(),
         JValue::Num(n) => crate::jsnumber::js_number_to_string(*n),
         JValue::Str(s) => s.clone(),
         JValue::Arr(items) => items
             .iter()
             .map(|item| match item {
-                JValue::Undefined | JValue::Null => String::new(),
+                JValue::Undefined => String::new(),
                 other => to_display_string(other),
             })
             .collect::<Vec<_>>()
@@ -218,7 +202,7 @@ fn unwrap_to_primitive(v: &JValue) -> JValue {
             items
                 .iter()
                 .map(|item| match item {
-                    JValue::Undefined | JValue::Null => String::new(),
+                    JValue::Undefined => String::new(),
                     other => to_display_string(other),
                 })
                 .collect::<Vec<_>>()
@@ -241,7 +225,7 @@ fn unwrap_to_primitive(v: &JValue) -> JValue {
 /// ToBoolean over the model.
 fn to_boolean(v: &JValue) -> bool {
     match v {
-        JValue::Undefined | JValue::Null => false,
+        JValue::Undefined => false,
         JValue::Bool(b) => *b,
         JValue::Num(n) => *n != 0.0 && !n.is_nan(),
         JValue::Str(s) => !s.is_empty(),
@@ -253,7 +237,6 @@ fn to_boolean(v: &JValue) -> bool {
 fn to_number(v: &JValue) -> f64 {
     match v {
         JValue::Undefined => f64::NAN,
-        JValue::Null => 0.0,
         JValue::Bool(b) => {
             if *b {
                 1.0
@@ -442,7 +425,7 @@ impl<'a> Interpreter<'a> {
             return Ok(self.read_global_member(&key));
         }
         match base {
-            JValue::Undefined | JValue::Null => Err(JsfuckError(format!(
+            JValue::Undefined => Err(JsfuckError(format!(
                 "jsfuck decode error at {}: member access on {} for key {key:?}",
                 self.pos,
                 to_display_string(base)
@@ -692,7 +675,7 @@ impl<'a> Interpreter<'a> {
                         items
                             .iter()
                             .map(|item| match item {
-                                JValue::Undefined | JValue::Null => String::new(),
+                                JValue::Undefined => String::new(),
                                 other => to_display_string(other),
                             })
                             .collect::<Vec<_>>()
@@ -786,7 +769,6 @@ impl<'a> Interpreter<'a> {
 fn value_type_name(v: &JValue) -> &'static str {
     match v {
         JValue::Undefined => "undefined",
-        JValue::Null => "object",
         JValue::Bool(_) => "boolean",
         JValue::Num(_) => "number",
         JValue::Str(_) => "string",
@@ -902,7 +884,7 @@ fn unescape_literal(raw: &str) -> String {
 
 /// The full interpreter: returns the evaluated value plus the captured
 /// payload (what the program would have executed at an eval/Function seam).
-pub fn interpret_jsfuck(source: &str) -> Result<(JValue, Option<String>), JsfuckError> {
+fn interpret_jsfuck(source: &str) -> Result<(JValue, Option<String>), JsfuckError> {
     let chars: Vec<char> = source.chars().collect();
     let mut interp = Interpreter::new(&chars);
     let value = interp.parse_expression(0)?;

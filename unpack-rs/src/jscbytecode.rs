@@ -208,14 +208,13 @@ pub fn recover_jsc_strings(bytes: &[u8]) -> Vec<String> {
 
 // ------------------------------------------------------- opcode table
 
-pub struct JscOpcodeInfo {
+struct JscOpcodeInfo {
     pub name: String,
     pub operand_bytes: usize,
-    pub has_metadata: bool,
 }
 
-/// id -> (name, operand bytes including metadata, has metadata)
-pub fn jsc_opcode_table() -> &'static Vec<Option<JscOpcodeInfo>> {
+/// id -> (name, operand bytes including metadata)
+fn jsc_opcode_table() -> &'static Vec<Option<JscOpcodeInfo>> {
     static TABLE: LazyLock<Vec<Option<JscOpcodeInfo>>> = LazyLock::new(|| {
         let mut table: Vec<Option<JscOpcodeInfo>> = (0..256).map(|_| None).collect();
         for row in JSC_OPCODE_SOURCE.split('\n') {
@@ -234,7 +233,6 @@ pub fn jsc_opcode_table() -> &'static Vec<Option<JscOpcodeInfo>> {
                 table[id_num] = Some(JscOpcodeInfo {
                     name: name.to_string(),
                     operand_bytes: operand_num + pad_num,
-                    has_metadata: pad_num == 1,
                 });
             }
         }
@@ -303,15 +301,12 @@ fn svarint(bytes: &[u8], at: usize) -> Option<(f64, usize)> {
     Some((signed as f64, next))
 }
 
-pub struct JscTail {
-    pub flags: u8,
+struct JscTail {
     pub record_offset: f64,
     pub arrays: Vec<(&'static str, f64, f64)>, // (name, count, start)
-    pub extras: f64,
-    pub scalars_at: usize,
 }
 
-pub fn parse_jsc_tail(bytes: &[u8], at: usize) -> Option<JscTail> {
+fn parse_jsc_tail(bytes: &[u8], at: usize) -> Option<JscTail> {
     if at < 8 || at + 8 > bytes.len() {
         return None;
     }
@@ -350,22 +345,16 @@ pub fn parse_jsc_tail(bytes: &[u8], at: usize) -> Option<JscTail> {
         }
         arrays.push((name, count, start));
     }
-    let mut extras = 0f64;
     if flags & 4 != 0 {
-        let (e, next) = svarint(bytes, cursor)?;
-        extras = e;
-        cursor = next;
+        svarint(bytes, cursor)?;
     }
     Some(JscTail {
-        flags,
         record_offset,
         arrays,
-        extras,
-        scalars_at: cursor,
     })
 }
 
-pub struct JscOp {
+struct JscOp {
     pub name: &'static str,
 }
 
@@ -404,7 +393,7 @@ fn walk_jsc_ops(bytes: &[u8], start: usize, length: f64, table: &'static [Option
 }
 
 #[derive(Clone)]
-pub struct JscBlockCandidate {
+struct JscBlockCandidate {
     pub record: usize,
     pub gap: usize,
     pub region: i64,
@@ -419,7 +408,7 @@ pub struct JscBlockCandidate {
 /// each fixed record-size gap; a candidate survives only when every positive
 /// array packs before the record, the stream opens on `enter`, walks
 /// exactly, and ends on a transfer of control.
-pub fn bind_jsc_block(bytes: &[u8], record: usize, table: &'static [Option<JscOpcodeInfo>]) -> Vec<JscBlockCandidate> {
+fn bind_jsc_block(bytes: &[u8], record: usize, table: &'static [Option<JscOpcodeInfo>]) -> Vec<JscBlockCandidate> {
     let mut candidates = Vec::new();
     for &gap in &JSC_BLOCK_GAPS {
         let tail = match parse_jsc_tail(bytes, record + gap) {
@@ -650,7 +639,7 @@ pub fn find_jsc_shared_table(bytes: &[u8]) -> Option<JscSharedTable> {
     None
 }
 
-pub fn decode_jsc_slot(
+fn decode_jsc_slot(
     bytes: &[u8],
     field_at: usize,
     slot: u32,
@@ -712,7 +701,7 @@ pub fn decode_jsc_slot(
 }
 
 #[derive(Default, Debug, Clone, serde::Serialize)]
-pub struct JscBlocksPresent {
+struct JscBlocksPresent {
     pub call: bool,
     pub construct: bool,
     pub name: bool,
@@ -721,7 +710,7 @@ pub struct JscBlocksPresent {
     pub metadata: bool,
 }
 
-pub struct JscExecutable {
+struct JscExecutable {
     pub record: usize,
     pub parse_mode: u32,
     pub present: JscBlocksPresent,
@@ -730,10 +719,9 @@ pub struct JscExecutable {
     pub construct_blocks: Option<Vec<JscBlockCandidate>>,
     pub construct_empty: bool,
     pub name: Option<String>,
-    pub end: usize,
 }
 
-pub fn instantiate_jsc_exec(
+fn instantiate_jsc_exec(
     bytes: &[u8],
     record: usize,
     shared: Option<&[Option<String>]>,
@@ -796,13 +784,6 @@ pub fn instantiate_jsc_exec(
         }
         let name_slot = u32(bytes, cursor);
         name = Some(decode_jsc_slot(bytes, cursor, name_slot, shared, 0));
-        cursor += 4;
-    }
-    if present.tdz {
-        cursor += 4;
-    }
-    if present.rare {
-        cursor += 4;
     }
     Some(JscExecutable {
         record,
@@ -813,7 +794,6 @@ pub fn instantiate_jsc_exec(
         construct_blocks,
         construct_empty,
         name,
-        end: cursor,
     })
 }
 
