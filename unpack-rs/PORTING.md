@@ -185,9 +185,9 @@ reads the page or writes to the screen stays in the extension.**
 
 Verification of this half: every ported function has a node oracle captured by
 running the real `page.js` in a harness that loads all 3676 lines with stubbed
-DOM/chrome globals (the harness is local scratch - `extension/.scratch/`,
-untracked - while the captured output it produced is committed under
-`tests/fixtures/panel/*.json`, which is what the tests read). The Rust tests
+DOM/chrome globals. The harness was local scratch and is gone with the port;
+what it produced is committed under `tests/fixtures/panel/*.json`, which is
+what the tests read. The Rust tests
 compare against that captured output, including three whole HTML documents
 byte for byte. Where an oracle was impossible, the test says so and names the
 substitute (see "Census instead of oracle" below).

@@ -65,17 +65,8 @@ define.test({
     testEnvironment: 'node',
 });
 define.lint(({ js, globalIgnores }) => [
-    // Build output (dist/) and tracked data
-    // (fixtures, scratch) are never lint input.
-    globalIgnores([
-        'dist/**',
-        'js/**',
-        'html/**',
-        'css/**',
-        'images/**',
-        'test/fixtures/**',
-        '.scratch/**',
-    ]),
+    // Build output (dist/) and tracked fixture data are never lint input.
+    globalIgnores(['dist/**', 'js/**', 'html/**', 'css/**', 'images/**', 'test/fixtures/**']),
     js.configs.recommended,
     {
         // House conventions the tree already follows everywhere:
@@ -115,7 +106,7 @@ define.fmt({
     //     port verifies byte-identity against these exact files)
     //   - src/{html,css}/** and src/manifest.json : copied byte-for-byte into
     //     the build output, so they are contract data too (src/css is vendored)
-    //   - dist/** and .scratch/** : build output and development scaffolding
+    //   - dist/** : build output
     ignorePatterns: [
         'dist/**',
         'js/**',
@@ -126,7 +117,6 @@ define.fmt({
         'src/css/**',
         'src/manifest.json',
         'test/fixtures/**',
-        '.scratch/**',
     ],
 });
 
