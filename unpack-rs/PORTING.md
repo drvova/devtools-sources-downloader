@@ -208,6 +208,7 @@ substitute (see "Census instead of oracle" below).
 | `page.js` console page, waterfall, table, capture reason, export wrappers | `panel/report.rs` | |
 | `page.js` `writeReconArtifacts` + `finalizeZipWithRecon` | `panel/export.rs` | |
 | `stack-profile.js` page profile: technologies, traits, capture strategy | `panel/stackprofile.rs` | the analysis only - the snapshot is still collected in the page world |
+| the page world's capture rules: redaction pattern, text-MIME pattern, GraphQL URL marker, seven budgets | `panel/policy.rs` | the rules only - the page world still applies them |
 
 ## API map (panel)
 
@@ -254,15 +255,17 @@ substitute (see "Census instead of oracle" below).
 | the three console documents (byte for byte), waterfall, table, capture reason, framework/runtime/analysis exports | `panel::report` |
 | recon artifact set and order, section guards, DOM snapshot fallback, the full export run and merged totals, runtime payload collection | `panel::export` |
 | binary routing of a cached-bytecode resource (V8 code cache -> `cache-header.json`, `strings.json`) | `panel::assets` byte-content tests |
-| the whole export through the real extension: reload, poll, click Download All, and the 63-entry zip asserted from the download directory | `test/browser-e2e.mjs` (Chromium over CDP) |
+| the whole export through the real extension: reload, poll, click Download All, and the 45-entry zip asserted from the download directory | `test/browser-e2e.mjs` (Chromium over CDP) |
+| the injected capture policy: present in the page with the engine's limits and redaction rule, and a runtime capture that only happens under an injected budget | `test/browser-e2e.mjs` (the injected script, evaluated in the page) |
+| the capture policy: both predicate patterns over their captured corpora, the seven limits, the injected object's shape, and a guard that neither page-world module carries a local copy again | `tests/capture_policy_test.rs` |
 | the page profile for 28 snapshots - values and serialized key order - plus a guard that the oracle still spans every detector, trait and strategy | `tests/stack_profile_test.rs` |
 
 ## Panel surface on the wasm bridge
 
-The wasm API carries the panel as well as the engine: four `xu_call` arms -
+The wasm API carries the panel as well as the engine: five `xu_call` arms -
 `panelTrackerView`, `panelDescribeCaptureReason`,
-`panelFinalizeZipWithRecon` and `panelStackProfileAnalyze` - matching the
-bridge's exports. The document
+`panelFinalizeZipWithRecon`, `panelStackProfileAnalyze` and
+`panelCapturePolicy` - matching the bridge's exports. The document
 generators and exporters are not arms: the export run composes them
 internally, so exposing each one individually left ten arms nothing could
 reach, and `looksBinaryScript`/`decodeBase64ToBytes` duplicated the dedicated
@@ -348,6 +351,52 @@ self-source list mentions it any more.
 - **Whole numbers serialize without a decimal point.** `js_number` emits `1600`
   where `serde_json` would write `1600.0`, matching `JSON.stringify` - without
   it the profile compares unequal on representation alone.
+
+## The capture policy (`framework-introspect.js` + `injected.js` -> `panel::policy`)
+
+Both page-world modules carried their own copy of the rules that decide what a
+capture keeps and what it hides: the key-name pattern that redacts a value, the
+MIME pattern that decides text from bytes, the URL marker that makes a request
+GraphQL, and seven budgets. The redaction rule is the load-bearing one - it is
+what keeps a captured token out of the exported archive - and neither test
+suite read it: a grep for `shouldRedactKey` and `MAX_ITEMS` across `test/`
+returned nothing. That is the shape of a rule that drifts quietly.
+
+The rules are data, so they cross as data. `panel::policy` holds them, the
+panel injects the object as `window.__CAPTURE_POLICY__` ahead of the page
+world's first line, and both modules read it:
+
+- `page.js` prepends `window.__CAPTURE_POLICY__ = <json>;` to the injected
+  script, so it is in scope before any page-world code runs and there is no
+  window where a reader finds nothing.
+- `framework-introspect.js` builds `REDACT_RE` from `redactKey` and reads
+  `limits.items` / `limits.keys` / `limits.string` through one `limit(name)`
+  accessor.
+- `injected.js` builds `TEXT_MIME_RE` from `textMime`, reads the four runtime
+  budgets the same way, and takes the GraphQL URL marker from `graphqlUrl`.
+  The body half of that predicate is structural and stays put; it already
+  mirrors `panel::graph::looks_like_graphql_body` exactly.
+
+### Deliberate differences
+
+1. **A missing policy fails closed.** There is no local copy to fall back to,
+   so `limit(name)` answers `0` and the redaction pattern is `.*`: every key
+   redacted, every budget collapsed. A capture that loses its policy is empty
+   and loud rather than quietly unredacted. `limit` also answers `0` for an
+   unknown name, so a renamed key cannot turn into an unbounded slice.
+2. **The patterns are strings, not regex literals.** The engine carries them
+   in the JavaScript form the page compiles (`new RegExp(source, 'i')`), since
+   the page world is the only place they execute. The engine's own view of that
+   vocabulary lives in `panel::graph`, which is why the GraphQL URL marker
+   crosses while the body predicate does not.
+3. **The oracle is the page world's own code.** `tests/fixtures/panel/
+   capture-policy.json` was captured by extracting `shouldRedactKey` and
+   `isTextMime` from the shipped modules, running them over a 64-case corpus,
+   and reading the seven limits out of their declarations - so the vocabulary
+   and its verdicts both come from the code being replaced. The corpus carries
+   the cases a hand-port gets wrong: `tokens` / `jwtoken` / `sessionless`
+   (substring hits), `authorisation` (a near miss that must not redact), empty
+   keys, and MIME parameters (`application/json; charset=utf-8`).
 
 ## Deliberate differences (panel)
 

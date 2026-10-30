@@ -318,6 +318,7 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 "minPayloadLength": l.min_payload_length,
             }))
         }
+        "panelCapturePolicy" => Ok(panel::policy::capture_policy()),
         "panelStackProfileAnalyze" => Ok(panel::stackprofile::analyze(
             a.first().unwrap_or(&serde_json::Value::Null),
         )),

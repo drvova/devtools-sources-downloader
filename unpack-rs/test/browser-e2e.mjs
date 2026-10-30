@@ -377,7 +377,11 @@ async function main() {
                 'return JSON.stringify({status:typeof window.__CAPTURE_STATUS__,' +
                 'stack:typeof window.__STACK_PROFILE__,' +
                 'framework:typeof window.__FRAMEWORK_STATE__,' +
-                'tracker:typeof window.__RESOURCE_TRACKER__});})()',
+                'tracker:typeof window.__RESOURCE_TRACKER__,' +
+                'policy:typeof window.__CAPTURE_POLICY__,' +
+                'policyLimits:Object.keys((window.__CAPTURE_POLICY__||{}).limits||{})' +
+                '.sort().join(","),' +
+                'policyRedact:String((window.__CAPTURE_POLICY__||{}).redactKey||"")});})()',
             returnByValue: true,
         });
         const worldState = JSON.parse(world.result.value || '{}');
@@ -388,6 +392,25 @@ async function main() {
         assert(
             worldState.framework === 'object',
             'framework state must be published (a shadowed refresh leaves it unset)',
+        );
+        // The capture policy is engine-owned and rides in the injected script;
+        // the page world reads it and fails closed without it, so its presence
+        // is what keeps redaction and the budgets live.
+        assert(
+            worldState.policy === 'object',
+            'the injected script must carry the engine capture policy',
+        );
+        assert(
+            worldState.policyLimits ===
+                'items,keys,mutations,runtimeBinary,runtimeItems,runtimeText,string',
+            'the injected policy must carry the engine limits, got ' +
+                worldState.policyLimits,
+        );
+        assert(
+            worldState.policyRedact.indexOf('token') >= 0 &&
+                worldState.policyRedact.indexOf('secret') >= 0,
+            'the injected policy must carry the redaction rule, got ' +
+                JSON.stringify(worldState.policyRedact),
         );
 
         // Re-load the page the way the panel does - the script installed
@@ -417,6 +440,7 @@ async function main() {
         const recon = await cdp.send('Runtime.evaluate', {
             expression:
                 'JSON.stringify({mutations:(((window.__RECON__||{}).mutations)||[]).length,' +
+                'runtime:(((window.__RECON__||{}).runtime)||[]).length,' +
                 'framework:typeof window.__FRAMEWORK_STATE__})',
             returnByValue: true,
         });
@@ -434,6 +458,14 @@ async function main() {
         assert(
             captureState.framework === 'object',
             'the mutation path must refresh the framework state',
+        );
+        // Runtime capture is gated by the injected runtimeItems budget: if the
+        // policy ever stops crossing, this empties before the zip does.
+        assert(
+            captureState.runtime > 0,
+            'runtime capture must record under the injected budget (runtime=' +
+                captureState.runtime +
+                ')',
         );
 
         const unpackRoot = names

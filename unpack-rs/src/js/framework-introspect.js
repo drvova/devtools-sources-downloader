@@ -1,23 +1,28 @@
 (function () {
     'use strict';
 
-    var MAX_ITEMS = 12;
-    var MAX_KEYS = 24;
-    var MAX_STRING = 240;
+    // The capture policy is engine-owned (panel/policy.rs) and injected by the
+    // panel before this file runs (page.js::injectAndReload). There is no local
+    // copy to drift from it, and a missing policy fails closed: every key is
+    // redacted and every limit collapses to zero, which is loud rather than
+    // silently unredacted.
+    var POLICY = window.__CAPTURE_POLICY__ || null;
+    function limit(name) {
+        return POLICY && POLICY.limits ? POLICY.limits[name] || 0 : 0;
+    }
+    var REDACT_RE = new RegExp(POLICY ? POLICY.redactKey : '.*', 'i');
 
     function lower(value) {
         return String(value || '').toLowerCase();
     }
 
     function shouldRedactKey(key) {
-        return /token|secret|password|passwd|cookie|authorization|bearer|jwt|session/i.test(
-            String(key || ''),
-        );
+        return REDACT_RE.test(String(key || ''));
     }
 
     function limitString(value) {
         value = String(value == null ? '' : value);
-        return value.length > MAX_STRING ? value.substring(0, MAX_STRING) + '…' : value;
+        return value.length > limit('string') ? value.substring(0, limit('string')) + '…' : value;
     }
 
     function safeValue(value, depth, seen, keyName) {
@@ -53,18 +58,18 @@
             seen.pop();
             return '[uninspectable]';
         }
-        for (var j = 0; j < keys.length && j < MAX_KEYS; j++) {
+        for (var j = 0; j < keys.length && j < limit('keys'); j++) {
             var key = keys[j];
             out[key] = safeValue(value[key], depth - 1, seen, key);
         }
-        if (keys.length > MAX_KEYS) out.__truncatedKeys = keys.length - MAX_KEYS;
+        if (keys.length > limit('keys')) out.__truncatedKeys = keys.length - limit('keys');
         seen.pop();
         return out;
     }
 
     function safeKeys(value) {
         try {
-            return Object.keys(value || {}).slice(0, MAX_KEYS);
+            return Object.keys(value || {}).slice(0, limit('keys'));
         } catch (_) {
             return [];
         }
@@ -108,7 +113,7 @@
         push('svelte', '[data-sveltekit-preload-data]');
         push('generic', '#root');
         push('generic', '#app');
-        return roots.filter(Boolean).slice(0, MAX_ITEMS);
+        return roots.filter(Boolean).slice(0, limit('items'));
     }
 
     function collectRouterState() {
@@ -124,7 +129,7 @@
         try {
             state.queryKeys = Array.from(new URLSearchParams(location.search || '').keys()).slice(
                 0,
-                MAX_KEYS,
+                limit('keys'),
             );
         } catch (_) {}
         if (window.__NEXT_DATA__) {
@@ -220,7 +225,7 @@
                 window.__NEXT_DATA__.props.pageProps,
                 {},
             );
-        return stores.slice(0, MAX_ITEMS);
+        return stores.slice(0, limit('items'));
     }
 
     function collectQueryCaches() {
@@ -264,7 +269,7 @@
                           ? 'window.__QUERY_CLIENT__'
                           : 'window.__REACT_QUERY_CLIENT__',
                 queryCount: queryItems.length,
-                keys: queryItems.slice(0, MAX_ITEMS).map(function (item) {
+                keys: queryItems.slice(0, limit('items')).map(function (item) {
                     return safeValue(
                         item && item.queryKey
                             ? item.queryKey
@@ -299,7 +304,7 @@
                 preview: safeValue(window.__SWR_DATA__, 2, [], 'swr'),
             });
         }
-        return queries.slice(0, MAX_ITEMS);
+        return queries.slice(0, limit('items'));
     }
 
     function collectHydrationPayloads() {
@@ -348,7 +353,7 @@
                 preview: safeValue(window.__INITIAL_STATE__, 2, [], 'initialState'),
             });
         }
-        return hydration.slice(0, MAX_ITEMS);
+        return hydration.slice(0, limit('items'));
     }
 
     function collectAuthState() {
@@ -386,7 +391,7 @@
                 preview: safeValue(window.__NEXT_DATA__.props.pageProps.session, 2, [], 'session'),
             });
         }
-        return auth.slice(0, MAX_ITEMS);
+        return auth.slice(0, limit('items'));
     }
 
     function collectFrameworkState(options) {

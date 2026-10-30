@@ -20,6 +20,17 @@
 
     var FRAMEWORK_INTROSPECTOR = window.__FRAMEWORK_INTROSPECTOR__ || null;
 
+    // The capture policy is engine-owned (panel/policy.rs) and injected by the
+    // panel before this file runs (page.js::injectAndReload). There is no local
+    // copy to drift from it, and a missing policy fails closed: zero budgets and
+    // no redaction pattern, so nothing is decoded and nothing is kept.
+    var POLICY = window.__CAPTURE_POLICY__ || null;
+    function limit(name) {
+        return POLICY && POLICY.limits ? POLICY.limits[name] || 0 : 0;
+    }
+    var TEXT_MIME_RE = new RegExp(POLICY ? POLICY.textMime : '$^', 'i');
+    var GRAPHQL_URL = POLICY ? POLICY.graphqlUrl : '';
+
     // Mirrors the engine's `default_strategy` (panel/stackprofile.rs): the page
     // world needs usable timings before the panel's analysed profile arrives,
     // and the engine's test pins its defaults to these same values.
@@ -153,7 +164,7 @@
     }
 
     function looksLikeGraphQL(url, body) {
-        if (lower(url).indexOf('graphql') >= 0) return true;
+        if (GRAPHQL_URL && lower(url).indexOf(GRAPHQL_URL) >= 0) return true;
         if (!body) return false;
         if (typeof body === 'string') {
             return (
@@ -395,10 +406,6 @@
         );
     }
 
-    var MAX_MUTATIONS = 500;
-    var MAX_RUNTIME_ITEMS = 200;
-    var MAX_RUNTIME_TEXT = 262144;
-    var MAX_RUNTIME_BINARY = 1048576;
     var textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
     var textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
     var NativeBlob = typeof Blob !== 'undefined' ? Blob : null;
@@ -424,7 +431,7 @@
     }
 
     function captureRuntime(kind, payload) {
-        if (RECON.runtime.length >= MAX_RUNTIME_ITEMS) return null;
+        if (RECON.runtime.length >= limit('runtimeItems')) return null;
         var entry = assign(
             {
                 id: kind + '-' + String(RECON.runtime.length + 1),
@@ -523,26 +530,24 @@
     }
 
     function isTextMime(mimeType) {
-        return /(?:javascript|ecmascript|typescript|json|text|xml|svg|html|css)/i.test(
-            mimeType || '',
-        );
+        return TEXT_MIME_RE.test(mimeType || '');
     }
 
     function limitText(text) {
         text = String(text == null ? '' : text);
         return {
-            text: text.slice(0, MAX_RUNTIME_TEXT),
+            text: text.slice(0, limit('runtimeText')),
             length: text.length,
-            truncated: text.length > MAX_RUNTIME_TEXT,
+            truncated: text.length > limit('runtimeText'),
         };
     }
 
     function limitBytes(bytes) {
         var byteLength = bytes ? bytes.length : 0;
         return {
-            bytes: byteLength > MAX_RUNTIME_BINARY ? bytes.subarray(0, MAX_RUNTIME_BINARY) : bytes,
+            bytes: byteLength > limit('runtimeBinary') ? bytes.subarray(0, limit('runtimeBinary')) : bytes,
             length: byteLength,
-            truncated: byteLength > MAX_RUNTIME_BINARY,
+            truncated: byteLength > limit('runtimeBinary'),
         };
     }
 
@@ -1174,7 +1179,7 @@
     }
 
     function recordMutation(mutation) {
-        if (RECON.mutations.length >= MAX_MUTATIONS) return;
+        if (RECON.mutations.length >= limit('mutations')) return;
         RECON.mutations.push({
             type: mutation.type,
             target: getNodePath(mutation.target),

@@ -462,6 +462,13 @@ export function panelTrackerView(tracker, filters) {
     return call('panelTrackerView', tracker || {}, filters || {});
 }
 
+// The capture policy the page world applies (redaction, text detection,
+// budgets). The panel injects it into the page ahead of its first line, so the
+// page reads one engine-owned source of truth.
+export function panelCapturePolicy() {
+    return call('panelCapturePolicy');
+}
+
 // The page-profile analyzer. The page world collects the snapshot - only it can
 // read the page's globals and DOM - and the panel runs the analysis here and
 // publishes the profile back into the page.
