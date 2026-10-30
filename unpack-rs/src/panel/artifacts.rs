@@ -11,7 +11,6 @@ use std::sync::LazyLock;
 
 use serde_json::Value;
 
-use crate::beautify::{beautify_js, looks_minified};
 use crate::panel::assets::{field_str, js_truthy};
 use crate::panel::model::js_number;
 use crate::panel::text::{format_ms, format_size, js_number_value};
@@ -313,11 +312,6 @@ pub fn generate_dom_snapshot_html(dom_html: &str, page_meta: &Value) -> String {
         escape_html(&url),
         escape_html(dom_html),
     )
-}
-
-/// `buildReadableArtifact` with the engine's beautifier.
-pub fn build_readable_artifact(entry: &Value, record: &Value) -> String {
-    build_readable_artifact_with(entry, record, &looks_minified, &|text| beautify_js(text, None))
 }
 
 /// `buildReadableArtifact` with an injectable beautifier seam (the engine

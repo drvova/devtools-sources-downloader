@@ -11,15 +11,6 @@ pub enum InflateFormat {
     Deflate,
 }
 
-impl InflateFormat {
-    pub fn as_js_str(self) -> &'static str {
-        match self {
-            InflateFormat::Gzip => "gzip",
-            InflateFormat::Deflate => "deflate",
-        }
-    }
-}
-
 /// JS `decodeEscapes(raw)`. Lone surrogates produced by \uXXXX on surrogate
 /// halves degrade to U+FFFD (a JS String can hold them, a Rust String cannot);
 /// ASCII payloads are byte-identical. Two documented divergences: a `\u{`

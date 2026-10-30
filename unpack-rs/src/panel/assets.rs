@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use crate::panel::model::Counts;
 use serde_json::Value;
 
-use crate::jsnumber::js_number_to_string;
 use crate::panel::model::js_number;
 use crate::panel::text::{
     hash_string, js_number_value, js_trim, safe_decode_uri_component, sanitize_filename,
@@ -987,11 +986,6 @@ pub fn build_runtime_summary(origins: &[RuntimeOrigin]) -> Value {
         "linkedToChunks": linked,
         "labeledEntries": labeled,
     })
-}
-
-/// JS number rendering for diagnostics.
-pub fn render_number(value: f64) -> String {
-    js_number_to_string(value)
 }
 
 #[cfg(test)]
