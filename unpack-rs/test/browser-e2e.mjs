@@ -363,6 +363,22 @@ async function main() {
         // injected.js, concatenated by the panel) are otherwise never executed
         // by any test. Run them in this real page and assert what they publish:
         // a shadowed or broken helper shows up here as a missing global.
+        // The framework collector is the last unported producer: it walks live
+        // stores and hands a shaped snapshot to the engine, which reads
+        // router/summary/technologies out of it. Nothing asserted that shape or
+        // the redaction rule, so a drifted key or a dropped pattern degraded the
+        // analysis silently. Plant a Next.js-shaped state so both have
+        // something real to act on.
+        await cdp.send('Runtime.evaluate', {
+            expression:
+                "window.__NEXT_DATA__ = {page:'/demo',buildId:'test-build'," +
+                "props:{pageProps:{title:'demo',sessionToken:'live-secret-value'," +
+                'nested:{deep:{leaf:1}}}},' +
+                "query:{id:'7',sessionToken:'live-query-secret'}};" +
+                "(function(){var r=document.createElement('div');r.id='__next';" +
+                "r.textContent='rendered';document.body.appendChild(r);return 1;})()",
+            returnByValue: true,
+        });
         const injected = await cdp.send('Runtime.evaluate', {
             expression: 'window.__TEST_INJECTED_SCRIPT__ || ""',
             returnByValue: true,
@@ -410,6 +426,59 @@ async function main() {
                 worldState.policyRedact.indexOf('secret') >= 0,
             'the injected policy must carry the redaction rule, got ' +
                 JSON.stringify(worldState.policyRedact),
+        );
+
+        const fw = await cdp.send('Runtime.evaluate', {
+            expression:
+                'JSON.stringify((function(){var s=window.__FRAMEWORK_STATE__||{};' +
+                'var st=(s.stores||[])[0]||{};var r=s.router||{};var p=st.preview||{};' +
+                'return {router:r.framework,route:r.route,' +
+                'queryId:(r.query||{}).id,queryToken:(r.query||{}).sessionToken,' +
+                'rootKinds:(s.roots||[]).map(function(x){return x.kind;}),' +
+                'summaryFramework:(s.summary||{}).routerFramework,' +
+                'storeTitle:p.title,storeToken:p.sessionToken,' +
+                'nestedDeep:((p.nested||{}).deep)};})())',
+            returnByValue: true,
+        });
+        const fwState = JSON.parse(fw.result.value || '{}');
+        console.log('framework state: ' + JSON.stringify(fwState));
+        assert(
+            fwState.router === 'Next.js',
+            'the router collector must name Next.js, got ' + JSON.stringify(fwState.router),
+        );
+        assert(fwState.route === '/demo', 'the router collector must read __NEXT_DATA__.page');
+        assert(
+            fwState.queryId === '7',
+            'the router collector must serialize __NEXT_DATA__.query, got ' +
+                JSON.stringify(fwState.queryId),
+        );
+        assert(
+            fwState.rootKinds.indexOf('next') >= 0,
+            'the root collector must find #__next, got ' + JSON.stringify(fwState.rootKinds),
+        );
+        assert(
+            fwState.summaryFramework === 'Next.js',
+            'the producer summary must agree with the router, got ' +
+                JSON.stringify(fwState.summaryFramework),
+        );
+        assert(
+            fwState.storeTitle === 'demo',
+            'the store preview must carry plain values, got ' + JSON.stringify(fwState.storeTitle),
+        );
+        assert(
+            fwState.storeToken === '[redacted]',
+            'the store preview must redact a token-named key, got ' +
+                JSON.stringify(fwState.storeToken),
+        );
+        assert(
+            fwState.queryToken === '[redacted]',
+            'the router query must redact a token-named key, got ' +
+                JSON.stringify(fwState.queryToken),
+        );
+        assert(
+            fwState.nestedDeep === '[object]',
+            'an object one level past the preview depth stays opaque, got ' +
+                JSON.stringify(fwState.nestedDeep),
         );
 
         // Re-load the page the way the panel does - the script installed

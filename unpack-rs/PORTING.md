@@ -258,6 +258,7 @@ substitute (see "Census instead of oracle" below).
 | the whole export through the real extension: reload, poll, click Download All, and the 45-entry zip asserted from the download directory | `test/browser-e2e.mjs` (Chromium over CDP) |
 | the injected capture policy: present in the page with the engine's limits and redaction rule, and a runtime capture that only happens under an injected budget | `test/browser-e2e.mjs` (the injected script, evaluated in the page) |
 | the capture policy: both predicate patterns over their captured corpora, the seven limits, the injected object's shape, and a guard that neither page-world module carries a local copy again | `tests/capture_policy_test.rs` |
+| the framework snapshot contract: router/roots/summary from a planted Next.js state, redaction on the store preview and the router query, and the preview depth rule | `test/browser-e2e.mjs` (planted state, page world evaluated in the page) |
 | the page profile for 28 snapshots - values and serialized key order - plus a guard that the oracle still spans every detector, trait and strategy | `tests/stack_profile_test.rs` |
 
 ## Panel surface on the wasm bridge
@@ -397,6 +398,35 @@ world's first line, and both modules read it:
    the cases a hand-port gets wrong: `tokens` / `jwtoken` / `sessionless`
    (substring hits), `authorisation` (a near miss that must not redact), empty
    keys, and MIME parameters (`application/json; charset=utf-8`).
+
+## The framework snapshot (`framework-introspect.js` -> consumed by `panel::boundary`)
+
+`framework-introspect.js` is the last producer still in the page world, and the
+one whose *inputs* keep it there. Its shape is pure - `safeValue` recurses over
+plain data, `buildRootDescriptor` builds a plain record, `pushStore` shapes one -
+but every one of them is handed a live object: a framework store, a DOM element,
+`window.history.state`. Moving the shaping would mean moving the walk that feeds
+it, and the walk is the part that needs the VM. That is the same line the
+capture policy landed on, from the other side: there the vocabulary was data and
+crossed; here the vocabulary (root selectors, store candidates, framework
+markers) is data too, but it has no second copy, so moving it would buy nothing
+and cost a round trip per collection.
+
+What it does need is the contract, because the engine reads the snapshot
+directly: `panel::boundary::build_framework_state_summary` takes `router`,
+`summary` and `technologies` out of it and derives the rest. A drifted key or a
+dropped field would degrade the analysis silently, so `test/browser-e2e.mjs`
+plants a Next.js-shaped state before the page world runs and asserts the
+snapshot end to end: the router collector names Next.js and reads
+`__NEXT_DATA__.page`, the root collector finds `#__next`, the producer's summary
+agrees with the router, and the redaction rule fires on both the store preview
+and the router query (`sessionToken` -> `[redacted]`). Making the redaction
+pattern non-matching in `framework-introspect.js` fails it by name, with the
+leaked value in the message.
+
+The preview depth is pinned rather than trusted: `pushStore` previews at depth
+2, so a nested object one level further stays `'[object]'` instead of being
+walked.
 
 ## Deliberate differences (panel)
 
