@@ -20,7 +20,6 @@
     },
     "devDependencies": {
         "@puppeteer/browsers": "^3.2.6",
-        "js-beautify": "^2.0.3",
         "rstack": "^0.8.6"
     },
     "overrides": {
