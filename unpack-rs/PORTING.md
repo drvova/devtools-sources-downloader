@@ -257,8 +257,12 @@ substitute (see "Census instead of oracle" below).
 The wasm API carries the panel as well as the engine: twelve `xu_call` arms
 (`panelBuildSemanticAnalysis`, the four document generators,
 `panelDescribeCaptureReason`, the four exporters, `panelWriteReconArtifacts`
-and `panelFinalizeZipWithRecon`) with matching `unpack-bridge.js` exports. Two
-seams are worth naming:
+and `panelFinalizeZipWithRecon`). The bridge exposes the three the panel
+actually calls - `panelTrackerView`, `panelDescribeCaptureReason` and
+`panelFinalizeZipWithRecon` - because the rest are composed inside the export
+run instead of being reached one at a time; those arms stay reachable through
+the generic dispatcher (`callRaw('panelGenerateTable', [...])`). Two seams are
+worth naming:
 
 - **The clock is a host import.** `wasm32-unknown-unknown` has no clock and
   `SystemTime::now()` panics there, which took out every arm that stamps a

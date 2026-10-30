@@ -466,64 +466,8 @@ export function panelTrackerView(tracker, filters) {
 // files return [{path, content}] (binary payloads as {path, base64}) so the
 // caller keeps the zip while the logic stays in Rust.
 
-export function panelBuildSemanticAnalysis(jsAssets, reconData, runtimeEntries, runtimeManifest) {
-    return call(
-        'panelBuildSemanticAnalysis',
-        jsAssets || [],
-        reconData === undefined ? null : reconData,
-        runtimeEntries || [],
-        runtimeManifest || [],
-    );
-}
-
-export function panelGenerateInvestigationIndexHTML(investigation) {
-    return call('panelGenerateInvestigationIndexHTML', investigation || {});
-}
-
-export function panelGenerateWaterfallHTML(timings) {
-    return call('panelGenerateWaterfallHTML', timings || []);
-}
-
-export function panelGenerateTable(timings) {
-    return call('panelGenerateTable', timings || []);
-}
-
-export function panelGenerateDOMSnapshotHTML(domHtml, pageMeta) {
-    return call('panelGenerateDOMSnapshotHTML', domHtml || '', pageMeta || {});
-}
-
 export function panelDescribeCaptureReason(status, profile) {
     return call('panelDescribeCaptureReason', status || null, profile || null);
-}
-
-export function panelExportFrameworkArtifacts(frameworkState) {
-    return call('panelExportFrameworkArtifacts', frameworkState || null);
-}
-
-export function panelExportRuntimeArtifacts(runtimeEntries) {
-    return call('panelExportRuntimeArtifacts', runtimeEntries || []);
-}
-
-export function panelExportReadableArtifacts(analysis) {
-    return call('panelExportReadableArtifacts', analysis || {});
-}
-
-export function panelExportSemanticAnalysis(jsAssets, reconData, runtimeEntries, runtimeManifest) {
-    return call(
-        'panelExportSemanticAnalysis',
-        jsAssets || [],
-        reconData === undefined ? null : reconData,
-        runtimeEntries || [],
-        runtimeManifest || [],
-    );
-}
-
-export function panelWriteReconArtifacts(reconData, pageSnapshot) {
-    return call(
-        'panelWriteReconArtifacts',
-        reconData === undefined ? null : reconData,
-        pageSnapshot === undefined ? null : pageSnapshot,
-    );
 }
 
 export function panelFinalizeZipWithRecon(
