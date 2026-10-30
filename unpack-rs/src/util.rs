@@ -71,29 +71,35 @@ pub fn iso8601_now() -> String {
     iso8601_from_unix_secs(now_unix_secs())
 }
 
-/// The current time in seconds. `wasm32-unknown-unknown` has no clock, so the
-/// host supplies it (the bridge answers with `Date.now()`); every other target
-/// reads the system clock.
-#[cfg(target_arch = "wasm32")]
-fn now_unix_secs() -> u64 {
-    #[link(wasm_import_module = "env")]
-    extern "C" {
-        fn xu_host_now_ms() -> f64;
+/// The current time in milliseconds. `wasm32-unknown-unknown` has no clock, so
+/// the host supplies it (the bridge answers with `Date.now()`); every other
+/// target reads the system clock.
+pub fn now_unix_millis() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        #[link(wasm_import_module = "env")]
+        extern "C" {
+            fn xu_host_now_ms() -> f64;
+        }
+        let ms = unsafe { xu_host_now_ms() };
+        if ms.is_finite() && ms > 0.0 {
+            ms as u64
+        } else {
+            0
+        }
     }
-    let ms = unsafe { xu_host_now_ms() };
-    if ms.is_finite() && ms > 0.0 {
-        (ms / 1000.0) as u64
-    } else {
-        0
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0)
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+/// The current time in seconds, from the same seam.
 fn now_unix_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
+    now_unix_millis() / 1000
 }
 
 /// Escapes every regex metacharacter, mirroring the JS idiom

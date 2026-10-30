@@ -20,6 +20,7 @@ pub mod export;
 pub mod graph;
 pub mod model;
 pub mod report;
+pub mod stackprofile;
 pub mod text;
 pub mod view;
 pub mod workspace;

@@ -462,6 +462,13 @@ export function panelTrackerView(tracker, filters) {
     return call('panelTrackerView', tracker || {}, filters || {});
 }
 
+// The page-profile analyzer. The page world collects the snapshot - only it can
+// read the page's globals and DOM - and the panel runs the analysis here and
+// publishes the profile back into the page.
+export function panelStackProfileAnalyze(snapshot) {
+    return call('panelStackProfileAnalyze', snapshot || {});
+}
+
 // The panel's computation and artifact assembly. Functions that produce
 // files return [{path, content}] (binary payloads as {path, base64}) so the
 // caller keeps the zip while the logic stays in Rust.

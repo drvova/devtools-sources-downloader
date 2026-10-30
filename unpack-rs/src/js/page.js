@@ -6,6 +6,7 @@ import {
     panelTrackerView,
     panelDescribeCaptureReason,
     panelFinalizeZipWithRecon,
+    panelStackProfileAnalyze,
     buildZip,
 } from './unpack-bridge.js';
 
@@ -59,6 +60,7 @@ var onPollComplete = null;
 var latestTracker = null;
 var latestStackProfile = null;
 var latestCaptureStatus = null;
+var latestStackSnapshotJson = null;
 
 resourceSearch.oninput = renderTrackerView;
 statusFilter.onchange = renderTrackerView;
@@ -127,10 +129,34 @@ function describeCaptureReason(status, profile) {
     return panelDescribeCaptureReason(status, profile);
 }
 
+// The page-profile analysis lives in the engine: the page world collects the
+// snapshot (only it can read the page's globals and DOM), the panel runs it
+// here, and the profile is pushed back into the page so its own readers - the
+// capture strategy, the framework introspector, the export - see the same
+// object they used to compute locally. Re-analysis is skipped while the
+// snapshot is unchanged, which is most polls.
+function publishStackProfile(snapshot) {
+    var json = JSON.stringify(snapshot);
+    if (json !== latestStackSnapshotJson) {
+        latestStackSnapshotJson = json;
+        latestStackProfile = panelStackProfileAnalyze(snapshot);
+        chrome.devtools.inspectedWindow.eval(
+            'window.__STACK_PROFILE__ = ' + JSON.stringify(latestStackProfile) + '; true',
+            function (result, error) {
+                // A navigation mid-write leaves the page without the profile;
+                // dropping the cache makes the next poll publish it again.
+                if (error) latestStackSnapshotJson = null;
+            },
+        );
+    }
+    return latestStackProfile;
+}
+
 function resetTrackerView() {
     latestTracker = null;
     latestStackProfile = null;
     latestCaptureStatus = null;
+    latestStackSnapshotJson = null;
     resourceBody.innerHTML = '';
     stackBadges.innerHTML = '<span class="tag is-light">Detecting stack</span>';
     captureProfileEl.textContent = 'Awaiting detection';
@@ -176,7 +202,6 @@ function injectAndReload(buttonLabel, onComplete) {
     setActivity('info', 'Injecting capture hooks and reloading the inspected page...');
 
     Promise.all([
-        fetchTextAsset(chrome.runtime.getURL('js/stack-profile.js'), 'stack-profile.js'),
         fetchTextAsset(
             chrome.runtime.getURL('js/framework-introspect.js'),
             'framework-introspect.js',
@@ -221,7 +246,7 @@ function startPolling() {
     pollingTimer = setInterval(function () {
         attempts++;
         chrome.devtools.inspectedWindow.eval(
-            'JSON.stringify({ ready: window.__RESOURCE_TRACKER_READY__, data: window.__RESOURCE_TRACKER__, site: { title: document.title || "", url: location.href || "", origin: location.origin || "" }, stackProfile: window.__STACK_PROFILE__ || null, captureStatus: window.__CAPTURE_STATUS__ || null })',
+            'JSON.stringify({ ready: window.__RESOURCE_TRACKER_READY__, data: window.__RESOURCE_TRACKER__, site: { title: document.title || "", url: location.href || "", origin: location.origin || "" }, stackProfile: window.__STACK_PROFILE__ || null, stackSnapshot: window.__STACK_SNAPSHOT__ || null, captureStatus: window.__CAPTURE_STATUS__ || null })',
             function (result, error) {
                 if (error) {
                     if (attempts >= maxAttempts) stopPolling();
@@ -230,8 +255,11 @@ function startPolling() {
                 try {
                     var payload = JSON.parse(result);
                     if (payload.site) renderPageOrigin(payload.site);
-                    if (payload.stackProfile || payload.captureStatus)
-                        renderStackProfile(payload.stackProfile, payload.captureStatus);
+                    var profile = payload.stackSnapshot
+                        ? publishStackProfile(payload.stackSnapshot)
+                        : payload.stackProfile;
+                    if (profile || payload.captureStatus)
+                        renderStackProfile(profile, payload.captureStatus);
                     if (payload.data) renderResults(payload.data);
                     if (!payload.ready && payload.captureStatus && payload.captureStatus.reasonText)
                         setActivity('info', payload.captureStatus.reasonText);

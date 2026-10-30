@@ -207,6 +207,7 @@ substitute (see "Census instead of oracle" below).
 | `page.js` runtime paths, report merging, cookies, inline JSON, recon stats, readable artifacts | `panel/artifacts.rs` | |
 | `page.js` console page, waterfall, table, capture reason, export wrappers | `panel/report.rs` | |
 | `page.js` `writeReconArtifacts` + `finalizeZipWithRecon` | `panel/export.rs` | |
+| `stack-profile.js` page profile: technologies, traits, capture strategy | `panel/stackprofile.rs` | the analysis only - the snapshot is still collected in the page world |
 
 ## API map (panel)
 
@@ -236,6 +237,9 @@ substitute (see "Census instead of oracle" below).
   `exportRuntimeArtifacts` / `exportSemanticAnalysis` -> `panel::report`
 - `collectRuntimePayloads` / `writeReconArtifacts` (the head of
   `finalizeZipWithRecon`) / `finalizeZipWithRecon` -> `panel::export`
+- `analyze` / `buildStrategy` / `createDefaultStrategy` / `VERSION` ->
+  `panel::stackprofile` (`analyze` is the entry point; the two builders are
+  private because only `analyze` calls them)
 - `Object.keys(x).length` guards -> `panel::assets::keys_len`
 
 ## Test map (panel)
@@ -251,12 +255,14 @@ substitute (see "Census instead of oracle" below).
 | recon artifact set and order, section guards, DOM snapshot fallback, the full export run and merged totals, runtime payload collection | `panel::export` |
 | binary routing of a cached-bytecode resource (V8 code cache -> `cache-header.json`, `strings.json`) | `panel::assets` byte-content tests |
 | the whole export through the real extension: reload, poll, click Download All, and the 63-entry zip asserted from the download directory | `test/browser-e2e.mjs` (Chromium over CDP) |
+| the page profile for 28 snapshots - values and serialized key order - plus a guard that the oracle still spans every detector, trait and strategy | `tests/stack_profile_test.rs` |
 
 ## Panel surface on the wasm bridge
 
-The wasm API carries the panel as well as the engine: three `xu_call` arms -
-`panelTrackerView`, `panelDescribeCaptureReason` and
-`panelFinalizeZipWithRecon` - matching the bridge's exports. The document
+The wasm API carries the panel as well as the engine: four `xu_call` arms -
+`panelTrackerView`, `panelDescribeCaptureReason`,
+`panelFinalizeZipWithRecon` and `panelStackProfileAnalyze` - matching the
+bridge's exports. The document
 generators and exporters are not arms: the export run composes them
 internally, so exposing each one individually left ten arms nothing could
 reach, and `looksBinaryScript`/`decodeBase64ToBytes` duplicated the dedicated
@@ -277,6 +283,68 @@ call. Two seams are worth naming:
   the panel's `Uint8Array` into an index-keyed object while a plain array
   stays an array, so `panel::assets::byte_values` accepts both and the caller
   never has to remember which one it holds.
+
+## The page profile (`stack-profile.js` -> `panel::stackprofile`)
+
+`stack-profile.js` was the one page-world module whose work never needed the
+page world. It reads a *snapshot* - resource and script URLs, global flags, DOM
+markers, network and runtime counters - and returns a profile: the detected
+technologies with their confidences and evidence, the traits, and the capture
+strategy derived from them. Nothing in it touches a live object; the two
+`window.` hits a grep finds are string literals inside signal labels. It lived
+in the page world because it was written as a global, not because it needed the
+VM.
+
+The analysis therefore runs in the engine and the page world only collects:
+
+- `injected.js` builds the snapshot - the one part that must read the page's
+  globals and DOM - publishes it as `window.__STACK_SNAPSHOT__`, and keeps
+  reading `window.__STACK_PROFILE__` exactly as before.
+- `page.js` polls that snapshot, calls `panelStackProfileAnalyze`, and writes
+  the profile back into the page, so the page's own readers - the capture
+  strategy, `framework-introspect.js`, the recon export - see the same object
+  they used to compute locally.
+
+The module is deleted, and neither the page-world bundle list nor the exported
+self-source list mentions it any more.
+
+### Deliberate differences
+
+1. **The analysis lands one round trip later than it did.** The profile now
+   arrives from the panel instead of being computed inline. Every capture gate
+   is at least a second wide (`bootDelayMs` 1200-1600, `networkQuietMs`
+   1000-1600) while the panel polls every 500 ms, so the analysed timings are
+   always in place before a gate can fire; until then the page world runs the
+   default strategy it already carried as a fallback.
+2. **The boot placeholder reports `version: 'fallback'`.** `injected.js` seeds
+   an empty profile before the panel answers, and that placeholder no longer
+   has a `VERSION` to read. The engine stamps `1.0.0` on the first analysis, so
+   the placeholder is visible only for the first poll.
+3. **The default strategy is mirrored, not shared.** The page world needs
+   timings before the engine can answer, so `defaultStrategy()` in
+   `injected.js` keeps its own copy of the engine's defaults; the parity test
+   pins the engine side of that pair.
+4. **`generatedAt` comes from the host clock.** The same seam as
+   `util::iso8601_now`: `xu_host_now_ms` on wasm, `SystemTime` elsewhere. The
+   parity test normalizes the field on both sides, since it is the profile's
+   only clock-dependent value.
+
+### Preserved JS quirks
+
+- **`localeCompare` is byte order for this vocabulary.** The tiebreak only runs
+  on equal confidences, and node's `localeCompare` orders all nineteen names
+  exactly as a code-unit comparison does - checked for every tie group that can
+  occur (0.95, 0.9 and 0.88) and pinned by the oracle.
+- **The strategy rules run in order and overwrite each other.** `profile` is
+  whichever rule fired last, and the two conditional rules (`graphql-app`,
+  `static-site`) only take effect while it is still `generic-app`. That is why
+  a Nuxt + GraphQL page is `spa-hydration` rather than `graphql-app`, and why
+  Nuxt + Shopify also stays `spa-hydration`.
+- **`reasons` is replaced only when a rule fires.** With no rule the default
+  single reason survives; with rules, the accumulated list replaces it.
+- **Whole numbers serialize without a decimal point.** `js_number` emits `1600`
+  where `serde_json` would write `1600.0`, matching `JSON.stringify` - without
+  it the profile compares unequal on representation alone.
 
 ## Deliberate differences (panel)
 

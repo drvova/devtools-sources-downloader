@@ -18,13 +18,12 @@
     };
     window.__RECON__ = RECON;
 
-    var STACK_PROFILER = window.__STACK_PROFILER__ || null;
     var FRAMEWORK_INTROSPECTOR = window.__FRAMEWORK_INTROSPECTOR__ || null;
 
+    // Mirrors the engine's `default_strategy` (panel/stackprofile.rs): the page
+    // world needs usable timings before the panel's analysed profile arrives,
+    // and the engine's test pins its defaults to these same values.
     function defaultStrategy() {
-        if (STACK_PROFILER && typeof STACK_PROFILER.defaultStrategy === 'function') {
-            return STACK_PROFILER.defaultStrategy();
-        }
         return {
             profile: 'generic-app',
             bootDelayMs: 1200,
@@ -78,7 +77,9 @@
     };
     window.__CAPTURE_STATUS__ = CAPTURE_STATUS;
     window.__STACK_PROFILE__ = {
-        version: STACK_PROFILER && STACK_PROFILER.version ? STACK_PROFILER.version : 'fallback',
+        // The engine stamps the real version when it answers; this is the
+        // placeholder the page world boots with.
+        version: 'fallback',
         generatedAt: Date.now(),
         technologies: [],
         traits: [],
@@ -293,9 +294,12 @@
                 wasmCount: SIGNALS.wasmCount,
             },
         };
-        if (STACK_PROFILER && typeof STACK_PROFILER.analyze === 'function') {
-            window.__STACK_PROFILE__ = STACK_PROFILER.analyze(snapshot);
-        }
+        // The analysis runs in the panel's engine: publish the snapshot and read
+        // back whatever profile the panel has pushed in. Until it arrives the
+        // default strategy carries the capture, and every readiness gate below is
+        // at least a second wide, so the analysed timings are always in place
+        // before one can fire.
+        window.__STACK_SNAPSHOT__ = snapshot;
         var profile = window.__STACK_PROFILE__ || {};
         CAPTURE_STATUS.profile =
             profile.strategy && profile.strategy.profile ? profile.strategy.profile : 'generic-app';

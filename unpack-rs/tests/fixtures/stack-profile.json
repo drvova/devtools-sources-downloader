@@ -1,0 +1,1964 @@
+{
+    "empty": {
+        "snapshot": {},
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Generic Web App",
+                    "category": "profile",
+                    "confidence": 0.45,
+                    "evidence": [
+                        "Fallback profile"
+                    ]
+                }
+            ],
+            "traits": [
+                "static-ish"
+            ],
+            "confidence": 52,
+            "evidence": {
+                "technologies": {
+                    "Generic Web App": [
+                        "Fallback profile"
+                    ]
+                },
+                "traits": {
+                    "static-ish": [
+                        "Low script and API activity"
+                    ]
+                },
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Generic Web App"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Generic Web App\",\"category\":\"profile\",\"confidence\":0.45,\"evidence\":[\"Fallback profile\"]}],\"traits\":[\"static-ish\"],\"confidence\":52,\"evidence\":{\"technologies\":{\"Generic Web App\":[\"Fallback profile\"]},\"traits\":{\"static-ish\":[\"Low script and API activity\"]},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Generic Web App\"}"
+    },
+    "nextjs-react-webpack": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/_next/static/chunks/main-abc123.js",
+                "https://app.test/react-dom.production.min.js"
+            ],
+            "scriptUrls": [
+                "https://app.test/_next/static/chunks/framework.js"
+            ],
+            "globals": {
+                "nextData": true,
+                "reactDevtoolsHook": true,
+                "webpackChunk": true
+            },
+            "globalsDetected": [
+                "__NEXT_DATA__",
+                "__REACT_DEVTOOLS_GLOBAL_HOOK__"
+            ],
+            "dom": {
+                "hasNextRoot": true,
+                "scriptCount": 24,
+                "mutationCount": 41
+            },
+            "network": {
+                "fetchCount": 22,
+                "xhrCount": 6,
+                "graphqlCount": 0
+            },
+            "runtime": {
+                "runtimeCount": 2
+            },
+            "activity": {
+                "openSockets": 0
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Next.js",
+                    "category": "framework",
+                    "confidence": 0.97,
+                    "evidence": [
+                        "window.__NEXT_DATA__"
+                    ]
+                },
+                {
+                    "name": "Webpack",
+                    "category": "bundler",
+                    "confidence": 0.88,
+                    "evidence": [
+                        "webpackChunk* global"
+                    ]
+                },
+                {
+                    "name": "React",
+                    "category": "library",
+                    "confidence": 0.86,
+                    "evidence": [
+                        "__REACT_DEVTOOLS_GLOBAL_HOOK__"
+                    ]
+                }
+            ],
+            "traits": [
+                "api-heavy",
+                "dynamic-dom",
+                "spa-hydration"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Next.js": [
+                        "window.__NEXT_DATA__"
+                    ],
+                    "Webpack": [
+                        "webpackChunk* global"
+                    ],
+                    "React": [
+                        "__REACT_DEVTOOLS_GLOBAL_HOOK__"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ],
+                    "dynamic-dom": [
+                        "Sustained DOM mutation activity"
+                    ],
+                    "api-heavy": [
+                        "High XHR/fetch volume"
+                    ]
+                },
+                "globals": [
+                    "__NEXT_DATA__",
+                    "__REACT_DEVTOOLS_GLOBAL_HOOK__"
+                ],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected",
+                    "Bundler markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Next.js, Webpack, React"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Next.js\",\"category\":\"framework\",\"confidence\":0.97,\"evidence\":[\"window.__NEXT_DATA__\"]},{\"name\":\"Webpack\",\"category\":\"bundler\",\"confidence\":0.88,\"evidence\":[\"webpackChunk* global\"]},{\"name\":\"React\",\"category\":\"library\",\"confidence\":0.86,\"evidence\":[\"__REACT_DEVTOOLS_GLOBAL_HOOK__\"]}],\"traits\":[\"api-heavy\",\"dynamic-dom\",\"spa-hydration\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"Next.js\":[\"window.__NEXT_DATA__\"],\"Webpack\":[\"webpackChunk* global\"],\"React\":[\"__REACT_DEVTOOLS_GLOBAL_HOOK__\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"],\"dynamic-dom\":[\"Sustained DOM mutation activity\"],\"api-heavy\":[\"High XHR/fetch volume\"]},\"globals\":[\"__NEXT_DATA__\",\"__REACT_DEVTOOLS_GLOBAL_HOOK__\"],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\",\"Bundler markers detected\"]},\"summary\":\"spa-hydration | Next.js, Webpack, React\"}"
+    },
+    "nuxt-graphql-apollo": {
+        "snapshot": {
+            "scriptUrls": [
+                "https://app.test/_nuxt/app.js"
+            ],
+            "globals": {
+                "nuxt": true,
+                "apolloClient": true
+            },
+            "globalsDetected": [
+                "__APOLLO_CLIENT__"
+            ],
+            "dom": {
+                "hasNuxtRoot": true,
+                "scriptCount": 14,
+                "mutationCount": 3
+            },
+            "network": {
+                "graphqlCount": 3,
+                "graphqlEndpoints": [
+                    "https://app.test/graphql",
+                    "https://app.test/apollo/graphql"
+                ],
+                "fetchCount": 4
+            },
+            "runtime": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Nuxt",
+                    "category": "framework",
+                    "confidence": 0.95,
+                    "evidence": [
+                        "#__nuxt"
+                    ]
+                },
+                {
+                    "name": "GraphQL",
+                    "category": "protocol",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "GraphQL requests observed"
+                    ]
+                },
+                {
+                    "name": "Apollo",
+                    "category": "data",
+                    "confidence": 0.82,
+                    "evidence": [
+                        "__APOLLO_CLIENT__"
+                    ]
+                }
+            ],
+            "traits": [
+                "graphql-heavy",
+                "spa-hydration"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Nuxt": [
+                        "#__nuxt"
+                    ],
+                    "GraphQL": [
+                        "GraphQL requests observed"
+                    ],
+                    "Apollo": [
+                        "__APOLLO_CLIENT__"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ],
+                    "graphql-heavy": [
+                        "GraphQL endpoints observed"
+                    ]
+                },
+                "globals": [
+                    "__APOLLO_CLIENT__"
+                ],
+                "endpoints": [
+                    "https://app.test/graphql",
+                    "https://app.test/apollo/graphql"
+                ]
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1600,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": true,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected",
+                    "GraphQL traffic detected"
+                ]
+            },
+            "summary": "spa-hydration | Nuxt, GraphQL, Apollo"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Nuxt\",\"category\":\"framework\",\"confidence\":0.95,\"evidence\":[\"#__nuxt\"]},{\"name\":\"GraphQL\",\"category\":\"protocol\",\"confidence\":0.9,\"evidence\":[\"GraphQL requests observed\"]},{\"name\":\"Apollo\",\"category\":\"data\",\"confidence\":0.82,\"evidence\":[\"__APOLLO_CLIENT__\"]}],\"traits\":[\"graphql-heavy\",\"spa-hydration\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"Nuxt\":[\"#__nuxt\"],\"GraphQL\":[\"GraphQL requests observed\"],\"Apollo\":[\"__APOLLO_CLIENT__\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"],\"graphql-heavy\":[\"GraphQL endpoints observed\"]},\"globals\":[\"__APOLLO_CLIENT__\"],\"endpoints\":[\"https://app.test/graphql\",\"https://app.test/apollo/graphql\"]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1600,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":true,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\",\"GraphQL traffic detected\"]},\"summary\":\"spa-hydration | Nuxt, GraphQL, Apollo\"}"
+    },
+    "vue-devtools-hook": {
+        "snapshot": {
+            "globals": {
+                "vueDevtoolsHook": true
+            },
+            "globalsDetected": [
+                "__VUE_DEVTOOLS_GLOBAL_HOOK__"
+            ],
+            "dom": {
+                "hasVueApp": true,
+                "scriptCount": 9,
+                "mutationCount": 12
+            },
+            "network": {
+                "fetchCount": 3
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Vue",
+                    "category": "framework",
+                    "confidence": 0.84,
+                    "evidence": [
+                        "__VUE_DEVTOOLS_GLOBAL_HOOK__"
+                    ]
+                }
+            ],
+            "traits": [
+                "spa-hydration"
+            ],
+            "confidence": 91,
+            "evidence": {
+                "technologies": {
+                    "Vue": [
+                        "__VUE_DEVTOOLS_GLOBAL_HOOK__"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ]
+                },
+                "globals": [
+                    "__VUE_DEVTOOLS_GLOBAL_HOOK__"
+                ],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Vue"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Vue\",\"category\":\"framework\",\"confidence\":0.84,\"evidence\":[\"__VUE_DEVTOOLS_GLOBAL_HOOK__\"]}],\"traits\":[\"spa-hydration\"],\"confidence\":91,\"evidence\":{\"technologies\":{\"Vue\":[\"__VUE_DEVTOOLS_GLOBAL_HOOK__\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"]},\"globals\":[\"__VUE_DEVTOOLS_GLOBAL_HOOK__\"],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Vue\"}"
+    },
+    "vue-mount-markers": {
+        "snapshot": {
+            "globals": {
+                "vue": true
+            },
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Vue",
+                    "category": "framework",
+                    "confidence": 0.84,
+                    "evidence": [
+                        "Vue mount markers"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 88,
+            "evidence": {
+                "technologies": {
+                    "Vue": [
+                        "Vue mount markers"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Vue"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Vue\",\"category\":\"framework\",\"confidence\":0.84,\"evidence\":[\"Vue mount markers\"]}],\"traits\":[],\"confidence\":88,\"evidence\":{\"technologies\":{\"Vue\":[\"Vue mount markers\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Vue\"}"
+    },
+    "angular-ng-version": {
+        "snapshot": {
+            "globals": {},
+            "dom": {
+                "hasNgVersion": true,
+                "scriptCount": 11,
+                "mutationCount": 5
+            },
+            "network": {
+                "fetchCount": 2
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Angular",
+                    "category": "framework",
+                    "confidence": 0.85,
+                    "evidence": [
+                        "[ng-version]"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 89,
+            "evidence": {
+                "technologies": {
+                    "Angular": [
+                        "[ng-version]"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Angular"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Angular\",\"category\":\"framework\",\"confidence\":0.85,\"evidence\":[\"[ng-version]\"]}],\"traits\":[],\"confidence\":89,\"evidence\":{\"technologies\":{\"Angular\":[\"[ng-version]\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Angular\"}"
+    },
+    "sveltekit-astro-tie": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/_app/immutable/entry.js",
+                "https://app.test/_astro/page.js"
+            ],
+            "globals": {
+                "svelteKit": true
+            },
+            "globalsDetected": [
+                "__SVELTEKIT_APP_VERSION__"
+            ],
+            "dom": {
+                "hasSvelteData": true,
+                "hasAstroIsland": true,
+                "scriptCount": 10,
+                "mutationCount": 8
+            },
+            "network": {
+                "fetchCount": 1
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Astro",
+                    "category": "framework",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "<astro-island>"
+                    ]
+                },
+                {
+                    "name": "SvelteKit",
+                    "category": "framework",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "__SVELTEKIT_APP_VERSION__"
+                    ]
+                }
+            ],
+            "traits": [
+                "spa-hydration"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Astro": [
+                        "<astro-island>"
+                    ],
+                    "SvelteKit": [
+                        "__SVELTEKIT_APP_VERSION__"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ]
+                },
+                "globals": [
+                    "__SVELTEKIT_APP_VERSION__"
+                ],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Astro, SvelteKit"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Astro\",\"category\":\"framework\",\"confidence\":0.9,\"evidence\":[\"<astro-island>\"]},{\"name\":\"SvelteKit\",\"category\":\"framework\",\"confidence\":0.9,\"evidence\":[\"__SVELTEKIT_APP_VERSION__\"]}],\"traits\":[\"spa-hydration\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"Astro\":[\"<astro-island>\"],\"SvelteKit\":[\"__SVELTEKIT_APP_VERSION__\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"]},\"globals\":[\"__SVELTEKIT_APP_VERSION__\"],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\"]},\"summary\":\"spa-hydration | Astro, SvelteKit\"}"
+    },
+    "remix-webpack-wasm-tie": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/app.chunk.7f3a1b.js"
+            ],
+            "globals": {
+                "remix": true,
+                "webpackJsonp": true
+            },
+            "globalsDetected": [
+                "__remixContext"
+            ],
+            "dom": {
+                "hasRemixData": true,
+                "scriptCount": 18,
+                "mutationCount": 30
+            },
+            "network": {
+                "fetchCount": 6,
+                "xhrCount": 2
+            },
+            "runtime": {
+                "wasmCount": 2,
+                "workerCount": 3,
+                "runtimeCount": 9
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Remix",
+                    "category": "framework",
+                    "confidence": 0.88,
+                    "evidence": [
+                        "__remixContext"
+                    ]
+                },
+                {
+                    "name": "WebAssembly",
+                    "category": "runtime",
+                    "confidence": 0.88,
+                    "evidence": [
+                        "WASM bytes captured"
+                    ]
+                },
+                {
+                    "name": "Webpack",
+                    "category": "bundler",
+                    "confidence": 0.88,
+                    "evidence": [
+                        "Chunk naming"
+                    ]
+                }
+            ],
+            "traits": [
+                "dynamic-dom",
+                "runtime-generated-code",
+                "spa-hydration",
+                "wasm-heavy",
+                "worker-heavy"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Remix": [
+                        "__remixContext"
+                    ],
+                    "WebAssembly": [
+                        "WASM bytes captured"
+                    ],
+                    "Webpack": [
+                        "Chunk naming"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ],
+                    "dynamic-dom": [
+                        "Sustained DOM mutation activity"
+                    ],
+                    "worker-heavy": [
+                        "Worker runtime observed"
+                    ],
+                    "wasm-heavy": [
+                        "WebAssembly runtime observed"
+                    ],
+                    "runtime-generated-code": [
+                        "In-memory code generation observed"
+                    ]
+                },
+                "globals": [
+                    "__remixContext"
+                ],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "worker-runtime-heavy",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1800,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 2200,
+                "maxCaptureMs": 24000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected",
+                    "Worker or WebAssembly activity detected",
+                    "Bundler markers detected"
+                ]
+            },
+            "summary": "worker-runtime-heavy | Remix, WebAssembly, Webpack"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Remix\",\"category\":\"framework\",\"confidence\":0.88,\"evidence\":[\"__remixContext\"]},{\"name\":\"WebAssembly\",\"category\":\"runtime\",\"confidence\":0.88,\"evidence\":[\"WASM bytes captured\"]},{\"name\":\"Webpack\",\"category\":\"bundler\",\"confidence\":0.88,\"evidence\":[\"Chunk naming\"]}],\"traits\":[\"dynamic-dom\",\"runtime-generated-code\",\"spa-hydration\",\"wasm-heavy\",\"worker-heavy\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"Remix\":[\"__remixContext\"],\"WebAssembly\":[\"WASM bytes captured\"],\"Webpack\":[\"Chunk naming\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"],\"dynamic-dom\":[\"Sustained DOM mutation activity\"],\"worker-heavy\":[\"Worker runtime observed\"],\"wasm-heavy\":[\"WebAssembly runtime observed\"],\"runtime-generated-code\":[\"In-memory code generation observed\"]},\"globals\":[\"__remixContext\"],\"endpoints\":[]},\"strategy\":{\"profile\":\"worker-runtime-heavy\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1800,\"socketQuietMs\":2200,\"workerGraceMs\":2200,\"maxCaptureMs\":24000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\",\"Worker or WebAssembly activity detected\",\"Bundler markers detected\"]},\"summary\":\"worker-runtime-heavy | Remix, WebAssembly, Webpack\"}"
+    },
+    "vite-preamble": {
+        "snapshot": {
+            "globals": {
+                "vitePreamble": true
+            },
+            "globalsDetected": [
+                "__vite_plugin_react_preamble_installed__"
+            ],
+            "dom": {
+                "scriptCount": 8
+            },
+            "network": {
+                "fetchCount": 5
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Vite",
+                    "category": "bundler",
+                    "confidence": 0.95,
+                    "evidence": [
+                        "__vite_plugin_react_preamble_installed__"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Vite": [
+                        "__vite_plugin_react_preamble_installed__"
+                    ]
+                },
+                "traits": {},
+                "globals": [
+                    "__vite_plugin_react_preamble_installed__"
+                ],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Bundler markers detected"
+                ]
+            },
+            "summary": "generic-app | Vite"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Vite\",\"category\":\"bundler\",\"confidence\":0.95,\"evidence\":[\"__vite_plugin_react_preamble_installed__\"]}],\"traits\":[],\"confidence\":99,\"evidence\":{\"technologies\":{\"Vite\":[\"__vite_plugin_react_preamble_installed__\"]},\"traits\":{},\"globals\":[\"__vite_plugin_react_preamble_installed__\"],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Bundler markers detected\"]},\"summary\":\"generic-app | Vite\"}"
+    },
+    "vite-hashed-assets": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/assets/index.3f9a1c2b.js"
+            ],
+            "globals": {},
+            "dom": {
+                "scriptCount": 7
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Vite",
+                    "category": "bundler",
+                    "confidence": 0.72,
+                    "evidence": [
+                        "Hashed /assets/ bundles"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 76,
+            "evidence": {
+                "technologies": {
+                    "Vite": [
+                        "Hashed /assets/ bundles"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Bundler markers detected"
+                ]
+            },
+            "summary": "generic-app | Vite"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Vite\",\"category\":\"bundler\",\"confidence\":0.72,\"evidence\":[\"Hashed /assets/ bundles\"]}],\"traits\":[],\"confidence\":76,\"evidence\":{\"technologies\":{\"Vite\":[\"Hashed /assets/ bundles\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Bundler markers detected\"]},\"summary\":\"generic-app | Vite\"}"
+    },
+    "parcel-relay": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/parcel/bundle.js"
+            ],
+            "globals": {
+                "relay": true
+            },
+            "globalsDetected": [
+                "__RELAY_DEVTOOLS_HOOK__"
+            ],
+            "network": {
+                "graphqlEndpoints": [
+                    "https://app.test/relay/graphql"
+                ],
+                "fetchCount": 3
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Relay",
+                    "category": "data",
+                    "confidence": 0.76,
+                    "evidence": [
+                        "__RELAY_DEVTOOLS_HOOK__"
+                    ]
+                },
+                {
+                    "name": "Parcel",
+                    "category": "bundler",
+                    "confidence": 0.67,
+                    "evidence": [
+                        "Parcel URL marker"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 84,
+            "evidence": {
+                "technologies": {
+                    "Relay": [
+                        "__RELAY_DEVTOOLS_HOOK__"
+                    ],
+                    "Parcel": [
+                        "Parcel URL marker"
+                    ]
+                },
+                "traits": {},
+                "globals": [
+                    "__RELAY_DEVTOOLS_HOOK__"
+                ],
+                "endpoints": [
+                    "https://app.test/relay/graphql"
+                ]
+            },
+            "strategy": {
+                "profile": "graphql-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1600,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": true,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "GraphQL traffic detected",
+                    "Bundler markers detected"
+                ]
+            },
+            "summary": "graphql-app | Relay, Parcel"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Relay\",\"category\":\"data\",\"confidence\":0.76,\"evidence\":[\"__RELAY_DEVTOOLS_HOOK__\"]},{\"name\":\"Parcel\",\"category\":\"bundler\",\"confidence\":0.67,\"evidence\":[\"Parcel URL marker\"]}],\"traits\":[],\"confidence\":84,\"evidence\":{\"technologies\":{\"Relay\":[\"__RELAY_DEVTOOLS_HOOK__\"],\"Parcel\":[\"Parcel URL marker\"]},\"traits\":{},\"globals\":[\"__RELAY_DEVTOOLS_HOOK__\"],\"endpoints\":[\"https://app.test/relay/graphql\"]},\"strategy\":{\"profile\":\"graphql-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1600,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":true,\"prioritizeSourceMaps\":true,\"reasons\":[\"GraphQL traffic detected\",\"Bundler markers detected\"]},\"summary\":\"graphql-app | Relay, Parcel\"}"
+    },
+    "wordpress-static": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/wp-content/themes/x/style.css"
+            ],
+            "dom": {
+                "metaGenerator": "wordpress 6.4",
+                "scriptCount": 4
+            },
+            "network": {
+                "fetchCount": 1,
+                "xhrCount": 0
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "WordPress",
+                    "category": "platform",
+                    "confidence": 0.94,
+                    "evidence": [
+                        "generator meta tag"
+                    ]
+                }
+            ],
+            "traits": [
+                "static-ish"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "WordPress": [
+                        "generator meta tag"
+                    ]
+                },
+                "traits": {
+                    "static-ish": [
+                        "Low script and API activity"
+                    ]
+                },
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "static-site",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1000,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "CMS or commerce platform markers detected"
+                ]
+            },
+            "summary": "static-site | WordPress"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"WordPress\",\"category\":\"platform\",\"confidence\":0.94,\"evidence\":[\"generator meta tag\"]}],\"traits\":[\"static-ish\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"WordPress\":[\"generator meta tag\"]},\"traits\":{\"static-ish\":[\"Low script and API activity\"]},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"static-site\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1000,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"CMS or commerce platform markers detected\"]},\"summary\":\"static-site | WordPress\"}"
+    },
+    "shopify-nuxt-tie": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://cdn.shopify.com/s/files/1/x.js"
+            ],
+            "globals": {
+                "shopify": true,
+                "nuxt": true
+            },
+            "globalsDetected": [
+                "window.Shopify"
+            ],
+            "dom": {
+                "hasShopify": true,
+                "hasNuxtRoot": true,
+                "scriptCount": 15
+            },
+            "network": {
+                "fetchCount": 7
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Nuxt",
+                    "category": "framework",
+                    "confidence": 0.95,
+                    "evidence": [
+                        "#__nuxt"
+                    ]
+                },
+                {
+                    "name": "Shopify",
+                    "category": "platform",
+                    "confidence": 0.95,
+                    "evidence": [
+                        "window.Shopify"
+                    ]
+                }
+            ],
+            "traits": [
+                "spa-hydration"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Nuxt": [
+                        "#__nuxt"
+                    ],
+                    "Shopify": [
+                        "window.Shopify"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ]
+                },
+                "globals": [
+                    "window.Shopify"
+                ],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1100,
+                "mutationQuietMs": 1000,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected",
+                    "CMS or commerce platform markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Nuxt, Shopify"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Nuxt\",\"category\":\"framework\",\"confidence\":0.95,\"evidence\":[\"#__nuxt\"]},{\"name\":\"Shopify\",\"category\":\"platform\",\"confidence\":0.95,\"evidence\":[\"window.Shopify\"]}],\"traits\":[\"spa-hydration\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"Nuxt\":[\"#__nuxt\"],\"Shopify\":[\"window.Shopify\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"]},\"globals\":[\"window.Shopify\"],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1100,\"mutationQuietMs\":1000,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\",\"CMS or commerce platform markers detected\"]},\"summary\":\"spa-hydration | Nuxt, Shopify\"}"
+    },
+    "socket-heavy": {
+        "snapshot": {
+            "globals": {},
+            "dom": {
+                "scriptCount": 12,
+                "mutationCount": 60
+            },
+            "network": {
+                "websocketCount": 2,
+                "sseCount": 1,
+                "fetchCount": 30,
+                "xhrCount": 12
+            },
+            "runtime": {},
+            "activity": {
+                "openSockets": 3
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Generic Web App",
+                    "category": "profile",
+                    "confidence": 0.45,
+                    "evidence": [
+                        "Fallback profile"
+                    ]
+                }
+            ],
+            "traits": [
+                "api-heavy",
+                "dynamic-dom",
+                "socket-heavy"
+            ],
+            "confidence": 58,
+            "evidence": {
+                "technologies": {
+                    "Generic Web App": [
+                        "Fallback profile"
+                    ]
+                },
+                "traits": {
+                    "dynamic-dom": [
+                        "Sustained DOM mutation activity"
+                    ],
+                    "socket-heavy": [
+                        "WebSocket or SSE activity"
+                    ],
+                    "api-heavy": [
+                        "High XHR/fetch volume"
+                    ]
+                },
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "socket-streaming",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 3600,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 22000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Socket or SSE activity detected"
+                ]
+            },
+            "summary": "socket-streaming | Generic Web App"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Generic Web App\",\"category\":\"profile\",\"confidence\":0.45,\"evidence\":[\"Fallback profile\"]}],\"traits\":[\"api-heavy\",\"dynamic-dom\",\"socket-heavy\"],\"confidence\":58,\"evidence\":{\"technologies\":{\"Generic Web App\":[\"Fallback profile\"]},\"traits\":{\"dynamic-dom\":[\"Sustained DOM mutation activity\"],\"socket-heavy\":[\"WebSocket or SSE activity\"],\"api-heavy\":[\"High XHR/fetch volume\"]},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"socket-streaming\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":3600,\"workerGraceMs\":1200,\"maxCaptureMs\":22000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Socket or SSE activity detected\"]},\"summary\":\"socket-streaming | Generic Web App\"}"
+    },
+    "service-worker": {
+        "snapshot": {
+            "globals": {
+                "serviceWorkerController": true
+            },
+            "dom": {
+                "scriptCount": 5
+            },
+            "network": {
+                "fetchCount": 2,
+                "xhrCount": 1
+            },
+            "runtime": {
+                "serviceWorkerCount": 1,
+                "runtimeCount": 8
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Service Worker",
+                    "category": "runtime",
+                    "confidence": 0.8,
+                    "evidence": [
+                        "serviceWorker activity"
+                    ]
+                }
+            ],
+            "traits": [
+                "runtime-generated-code",
+                "static-ish"
+            ],
+            "confidence": 90,
+            "evidence": {
+                "technologies": {
+                    "Service Worker": [
+                        "serviceWorker activity"
+                    ]
+                },
+                "traits": {
+                    "runtime-generated-code": [
+                        "In-memory code generation observed"
+                    ],
+                    "static-ish": [
+                        "Low script and API activity"
+                    ]
+                },
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Service Worker"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Service Worker\",\"category\":\"runtime\",\"confidence\":0.8,\"evidence\":[\"serviceWorker activity\"]}],\"traits\":[\"runtime-generated-code\",\"static-ish\"],\"confidence\":90,\"evidence\":{\"technologies\":{\"Service Worker\":[\"serviceWorker activity\"]},\"traits\":{\"runtime-generated-code\":[\"In-memory code generation observed\"],\"static-ish\":[\"Low script and API activity\"]},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Service Worker\"}"
+    },
+    "low-activity": {
+        "snapshot": {
+            "dom": {
+                "scriptCount": 3
+            },
+            "network": {
+                "fetchCount": 0,
+                "xhrCount": 0
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Generic Web App",
+                    "category": "profile",
+                    "confidence": 0.45,
+                    "evidence": [
+                        "Fallback profile"
+                    ]
+                }
+            ],
+            "traits": [
+                "static-ish"
+            ],
+            "confidence": 52,
+            "evidence": {
+                "technologies": {
+                    "Generic Web App": [
+                        "Fallback profile"
+                    ]
+                },
+                "traits": {
+                    "static-ish": [
+                        "Low script and API activity"
+                    ]
+                },
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Generic Web App"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Generic Web App\",\"category\":\"profile\",\"confidence\":0.45,\"evidence\":[\"Fallback profile\"]}],\"traits\":[\"static-ish\"],\"confidence\":52,\"evidence\":{\"technologies\":{\"Generic Web App\":[\"Fallback profile\"]},\"traits\":{\"static-ish\":[\"Low script and API activity\"]},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Generic Web App\"}"
+    },
+    "nextjs-url-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/_next/static/x.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Next.js",
+                    "category": "framework",
+                    "confidence": 0.97,
+                    "evidence": [
+                        "/_next/ assets"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Next.js": [
+                        "/_next/ assets"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Next.js"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Next.js\",\"category\":\"framework\",\"confidence\":0.97,\"evidence\":[\"/_next/ assets\"]}],\"traits\":[],\"confidence\":99,\"evidence\":{\"technologies\":{\"Next.js\":[\"/_next/ assets\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\"]},\"summary\":\"spa-hydration | Next.js\"}"
+    },
+    "react-url-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/react@18.2.0.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "React",
+                    "category": "library",
+                    "confidence": 0.86,
+                    "evidence": [
+                        "React bundle markers"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 90,
+            "evidence": {
+                "technologies": {
+                    "React": [
+                        "React bundle markers"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | React"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"React\",\"category\":\"library\",\"confidence\":0.86,\"evidence\":[\"React bundle markers\"]}],\"traits\":[],\"confidence\":90,\"evidence\":{\"technologies\":{\"React\":[\"React bundle markers\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | React\"}"
+    },
+    "nuxt-url-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/_nuxt/app.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Nuxt",
+                    "category": "framework",
+                    "confidence": 0.95,
+                    "evidence": [
+                        "/_nuxt/ assets"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Nuxt": [
+                        "/_nuxt/ assets"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Nuxt"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Nuxt\",\"category\":\"framework\",\"confidence\":0.95,\"evidence\":[\"/_nuxt/ assets\"]}],\"traits\":[],\"confidence\":99,\"evidence\":{\"technologies\":{\"Nuxt\":[\"/_nuxt/ assets\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\"]},\"summary\":\"spa-hydration | Nuxt\"}"
+    },
+    "angular-global": {
+        "snapshot": {
+            "globals": {
+                "angular": true
+            },
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Angular",
+                    "category": "framework",
+                    "confidence": 0.85,
+                    "evidence": [
+                        "Angular global markers"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 89,
+            "evidence": {
+                "technologies": {
+                    "Angular": [
+                        "Angular global markers"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "Generic adaptive profile"
+                ]
+            },
+            "summary": "generic-app | Angular"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Angular\",\"category\":\"framework\",\"confidence\":0.85,\"evidence\":[\"Angular global markers\"]}],\"traits\":[],\"confidence\":89,\"evidence\":{\"technologies\":{\"Angular\":[\"Angular global markers\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"Generic adaptive profile\"]},\"summary\":\"generic-app | Angular\"}"
+    },
+    "sveltekit-url-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/_app/immutable/entry.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "SvelteKit",
+                    "category": "framework",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "SvelteKit asset markers"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 94,
+            "evidence": {
+                "technologies": {
+                    "SvelteKit": [
+                        "SvelteKit asset markers"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected"
+                ]
+            },
+            "summary": "spa-hydration | SvelteKit"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"SvelteKit\",\"category\":\"framework\",\"confidence\":0.9,\"evidence\":[\"SvelteKit asset markers\"]}],\"traits\":[],\"confidence\":94,\"evidence\":{\"technologies\":{\"SvelteKit\":[\"SvelteKit asset markers\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\"]},\"summary\":\"spa-hydration | SvelteKit\"}"
+    },
+    "astro-url-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/_astro/page.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Astro",
+                    "category": "framework",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "/_astro/ assets"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 94,
+            "evidence": {
+                "technologies": {
+                    "Astro": [
+                        "/_astro/ assets"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Astro"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Astro\",\"category\":\"framework\",\"confidence\":0.9,\"evidence\":[\"/_astro/ assets\"]}],\"traits\":[],\"confidence\":94,\"evidence\":{\"technologies\":{\"Astro\":[\"/_astro/ assets\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\"]},\"summary\":\"spa-hydration | Astro\"}"
+    },
+    "remix-dom-only": {
+        "snapshot": {
+            "globals": {},
+            "dom": {
+                "hasRemixData": true,
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Remix",
+                    "category": "framework",
+                    "confidence": 0.88,
+                    "evidence": [
+                        "Remix DOM markers"
+                    ]
+                }
+            ],
+            "traits": [
+                "spa-hydration"
+            ],
+            "confidence": 95,
+            "evidence": {
+                "technologies": {
+                    "Remix": [
+                        "Remix DOM markers"
+                    ]
+                },
+                "traits": {
+                    "spa-hydration": [
+                        "Framework hydration markers"
+                    ]
+                },
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "spa-hydration",
+                "bootDelayMs": 1600,
+                "networkQuietMs": 1500,
+                "mutationQuietMs": 1800,
+                "runtimeQuietMs": 1400,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": true,
+                "captureFrameworkState": true,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Hydration-oriented framework markers detected"
+                ]
+            },
+            "summary": "spa-hydration | Remix"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Remix\",\"category\":\"framework\",\"confidence\":0.88,\"evidence\":[\"Remix DOM markers\"]}],\"traits\":[\"spa-hydration\"],\"confidence\":95,\"evidence\":{\"technologies\":{\"Remix\":[\"Remix DOM markers\"]},\"traits\":{\"spa-hydration\":[\"Framework hydration markers\"]},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"spa-hydration\",\"bootDelayMs\":1600,\"networkQuietMs\":1500,\"mutationQuietMs\":1800,\"runtimeQuietMs\":1400,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":true,\"captureFrameworkState\":true,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Hydration-oriented framework markers detected\"]},\"summary\":\"spa-hydration | Remix\"}"
+    },
+    "webpack-regex-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/webpack/runtime.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Webpack",
+                    "category": "bundler",
+                    "confidence": 0.88,
+                    "evidence": [
+                        "Chunk naming"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 92,
+            "evidence": {
+                "technologies": {
+                    "Webpack": [
+                        "Chunk naming"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "generic-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": true,
+                "reasons": [
+                    "Bundler markers detected"
+                ]
+            },
+            "summary": "generic-app | Webpack"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Webpack\",\"category\":\"bundler\",\"confidence\":0.88,\"evidence\":[\"Chunk naming\"]}],\"traits\":[],\"confidence\":92,\"evidence\":{\"technologies\":{\"Webpack\":[\"Chunk naming\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"generic-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":true,\"reasons\":[\"Bundler markers detected\"]},\"summary\":\"generic-app | Webpack\"}"
+    },
+    "wordpress-wpcontent-only": {
+        "snapshot": {
+            "resourceUrls": [
+                "https://app.test/wp-includes/js/wp.js"
+            ],
+            "dom": {
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "WordPress",
+                    "category": "platform",
+                    "confidence": 0.94,
+                    "evidence": [
+                        "wp-content assets"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 98,
+            "evidence": {
+                "technologies": {
+                    "WordPress": [
+                        "wp-content assets"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "static-site",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1000,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "CMS or commerce platform markers detected"
+                ]
+            },
+            "summary": "static-site | WordPress"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"WordPress\",\"category\":\"platform\",\"confidence\":0.94,\"evidence\":[\"wp-content assets\"]}],\"traits\":[],\"confidence\":98,\"evidence\":{\"technologies\":{\"WordPress\":[\"wp-content assets\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"static-site\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1000,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"CMS or commerce platform markers detected\"]},\"summary\":\"static-site | WordPress\"}"
+    },
+    "shopify-assets-only": {
+        "snapshot": {
+            "dom": {
+                "hasShopify": true,
+                "scriptCount": 9
+            },
+            "network": {}
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "Shopify",
+                    "category": "platform",
+                    "confidence": 0.95,
+                    "evidence": [
+                        "Shopify asset markers"
+                    ]
+                }
+            ],
+            "traits": [],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "Shopify": [
+                        "Shopify asset markers"
+                    ]
+                },
+                "traits": {},
+                "globals": [],
+                "endpoints": []
+            },
+            "strategy": {
+                "profile": "static-site",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1000,
+                "mutationQuietMs": 1000,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": false,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "CMS or commerce platform markers detected"
+                ]
+            },
+            "summary": "static-site | Shopify"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"Shopify\",\"category\":\"platform\",\"confidence\":0.95,\"evidence\":[\"Shopify asset markers\"]}],\"traits\":[],\"confidence\":99,\"evidence\":{\"technologies\":{\"Shopify\":[\"Shopify asset markers\"]},\"traits\":{},\"globals\":[],\"endpoints\":[]},\"strategy\":{\"profile\":\"static-site\",\"bootDelayMs\":1200,\"networkQuietMs\":1000,\"mutationQuietMs\":1000,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":false,\"prioritizeSourceMaps\":false,\"reasons\":[\"CMS or commerce platform markers detected\"]},\"summary\":\"static-site | Shopify\"}"
+    },
+    "apollo-endpoints-only": {
+        "snapshot": {
+            "network": {
+                "graphqlCount": 1,
+                "graphqlEndpoints": [
+                    "https://app.test/apollo/graphql"
+                ]
+            },
+            "dom": {
+                "scriptCount": 9
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "GraphQL",
+                    "category": "protocol",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "GraphQL requests observed"
+                    ]
+                },
+                {
+                    "name": "Apollo",
+                    "category": "data",
+                    "confidence": 0.82,
+                    "evidence": [
+                        "Apollo/GraphQL markers"
+                    ]
+                }
+            ],
+            "traits": [
+                "graphql-heavy"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "GraphQL": [
+                        "GraphQL requests observed"
+                    ],
+                    "Apollo": [
+                        "Apollo/GraphQL markers"
+                    ]
+                },
+                "traits": {
+                    "graphql-heavy": [
+                        "GraphQL endpoints observed"
+                    ]
+                },
+                "globals": [],
+                "endpoints": [
+                    "https://app.test/apollo/graphql"
+                ]
+            },
+            "strategy": {
+                "profile": "graphql-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1600,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": true,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "GraphQL traffic detected"
+                ]
+            },
+            "summary": "graphql-app | GraphQL, Apollo"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"GraphQL\",\"category\":\"protocol\",\"confidence\":0.9,\"evidence\":[\"GraphQL requests observed\"]},{\"name\":\"Apollo\",\"category\":\"data\",\"confidence\":0.82,\"evidence\":[\"Apollo/GraphQL markers\"]}],\"traits\":[\"graphql-heavy\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"GraphQL\":[\"GraphQL requests observed\"],\"Apollo\":[\"Apollo/GraphQL markers\"]},\"traits\":{\"graphql-heavy\":[\"GraphQL endpoints observed\"]},\"globals\":[],\"endpoints\":[\"https://app.test/apollo/graphql\"]},\"strategy\":{\"profile\":\"graphql-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1600,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":true,\"prioritizeSourceMaps\":false,\"reasons\":[\"GraphQL traffic detected\"]},\"summary\":\"graphql-app | GraphQL, Apollo\"}"
+    },
+    "relay-endpoints-only": {
+        "snapshot": {
+            "network": {
+                "graphqlCount": 1,
+                "graphqlEndpoints": [
+                    "https://app.test/relay/graphql"
+                ]
+            },
+            "dom": {
+                "scriptCount": 9
+            }
+        },
+        "profile": {
+            "version": "1.0.0",
+            "generatedAt": 1767225600000,
+            "technologies": [
+                {
+                    "name": "GraphQL",
+                    "category": "protocol",
+                    "confidence": 0.9,
+                    "evidence": [
+                        "GraphQL requests observed"
+                    ]
+                },
+                {
+                    "name": "Relay",
+                    "category": "data",
+                    "confidence": 0.76,
+                    "evidence": [
+                        "Relay markers"
+                    ]
+                }
+            ],
+            "traits": [
+                "graphql-heavy"
+            ],
+            "confidence": 99,
+            "evidence": {
+                "technologies": {
+                    "GraphQL": [
+                        "GraphQL requests observed"
+                    ],
+                    "Relay": [
+                        "Relay markers"
+                    ]
+                },
+                "traits": {
+                    "graphql-heavy": [
+                        "GraphQL endpoints observed"
+                    ]
+                },
+                "globals": [],
+                "endpoints": [
+                    "https://app.test/relay/graphql"
+                ]
+            },
+            "strategy": {
+                "profile": "graphql-app",
+                "bootDelayMs": 1200,
+                "networkQuietMs": 1600,
+                "mutationQuietMs": 1200,
+                "runtimeQuietMs": 1000,
+                "socketQuietMs": 2200,
+                "workerGraceMs": 1200,
+                "maxCaptureMs": 18000,
+                "preferHydratedDom": false,
+                "captureFrameworkState": false,
+                "captureGraphQLOps": true,
+                "prioritizeSourceMaps": false,
+                "reasons": [
+                    "GraphQL traffic detected"
+                ]
+            },
+            "summary": "graphql-app | GraphQL, Relay"
+        },
+        "profileText": "{\"version\":\"1.0.0\",\"generatedAt\":1767225600000,\"technologies\":[{\"name\":\"GraphQL\",\"category\":\"protocol\",\"confidence\":0.9,\"evidence\":[\"GraphQL requests observed\"]},{\"name\":\"Relay\",\"category\":\"data\",\"confidence\":0.76,\"evidence\":[\"Relay markers\"]}],\"traits\":[\"graphql-heavy\"],\"confidence\":99,\"evidence\":{\"technologies\":{\"GraphQL\":[\"GraphQL requests observed\"],\"Relay\":[\"Relay markers\"]},\"traits\":{\"graphql-heavy\":[\"GraphQL endpoints observed\"]},\"globals\":[],\"endpoints\":[\"https://app.test/relay/graphql\"]},\"strategy\":{\"profile\":\"graphql-app\",\"bootDelayMs\":1200,\"networkQuietMs\":1600,\"mutationQuietMs\":1200,\"runtimeQuietMs\":1000,\"socketQuietMs\":2200,\"workerGraceMs\":1200,\"maxCaptureMs\":18000,\"preferHydratedDom\":false,\"captureFrameworkState\":false,\"captureGraphQLOps\":true,\"prioritizeSourceMaps\":false,\"reasons\":[\"GraphQL traffic detected\"]},\"summary\":\"graphql-app | GraphQL, Relay\"}"
+    }
+}

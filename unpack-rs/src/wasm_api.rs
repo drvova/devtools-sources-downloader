@@ -318,6 +318,9 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 "minPayloadLength": l.min_payload_length,
             }))
         }
+        "panelStackProfileAnalyze" => Ok(panel::stackprofile::analyze(
+            a.first().unwrap_or(&serde_json::Value::Null),
+        )),
         "panelTrackerView" => {
             let tracker = a.get(0).cloned().unwrap_or(serde_json::Value::Null);
             let filters = a

@@ -15,7 +15,6 @@ define.app({
             devtools: './src/js/devtools.js',
             page: './src/js/page.js',
             injected: './src/js/injected.js',
-            'stack-profile': './src/js/stack-profile.js',
             'framework-introspect': './src/js/framework-introspect.js',
         },
     },
