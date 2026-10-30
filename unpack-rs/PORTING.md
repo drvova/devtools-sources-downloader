@@ -295,11 +295,22 @@ seams are worth naming:
    `finalizeZipWithRecon`) call the bridge, file-producing calls return
    `[{path, content}]` (binary payloads as `{path, base64}`) and the file goes
    straight into the zip, and the 99 local copies of ported logic were deleted
-   (3676 lines to 606). What is left in `page.js` is the platform layer and
-   the per-cell formatting helpers the DOM calls on every render
-   (`sanitizePathPart`, `sanitizeFilename`, `normalizeUrlCandidate`, …), which
-   keep their Rust twins in `panel::text` rather than crossing the boundary
-   per cell.
+   (3676 lines to 606, then to 501 once the text helpers went too). What is
+   left in `page.js` is only the platform layer: the DOM, `chrome.devtools`
+   and the zip writer.
+
+   The text helpers (`hashString` and the `sanitizeFilename` chain) are gone
+   from the panel as well: they name the archive's raw writes and the page
+   snapshot, so they now run in Rust behind the bridge
+   (`sanitizeFilename`/`sanitizePageTitle`). They are called a handful of
+   times per export, so the boundary costs nothing, and the names the archive
+   gets can no longer drift from the names the ported reports use.
+   `tests/text_helpers.rs` pins both against an oracle captured from the
+   shipped `page.js` (`tests/fixtures/text-helpers.json`, 59 cases), which is
+   how a real divergence surfaced: the Rust twin added a suffix for a URL
+   ending in a bare `#` or `?`, because the `url` crate reports an empty
+   query/fragment as `Some("")` while `new URL(...).search`/`.hash` are `''`
+   and therefore falsy in the original's `if (parsed.search || parsed.hash)`.
 3. **The beautifier is an injectable seam.** `buildReadableArtifact` calls the
    engine's `looksMinified`/`beautifyJs`; the port defaults to
    `beautify::{looks_minified, beautify_js}` and takes both as parameters in

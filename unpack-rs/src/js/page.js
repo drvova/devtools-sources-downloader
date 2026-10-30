@@ -3,6 +3,8 @@ import { saveAs } from 'file-saver';
 import {
     looksBinaryScript,
     decodeBase64ToBytes,
+    sanitizeFilename,
+    sanitizePageTitle,
     panelTrackerView,
     panelDescribeCaptureReason,
     panelFinalizeZipWithRecon,
@@ -282,114 +284,6 @@ function renderTrackerView() {
     resourceBody.innerHTML = view.rowsHtml;
     resourceList.style.display = view.showList ? 'block' : 'none';
     emptyState.style.display = view.showEmpty ? 'block' : 'none';
-}
-
-function hashString(text) {
-    var hash = 0;
-    text = String(text || '');
-    for (var i = 0; i < text.length; i++) {
-        hash = (hash << 5) - hash + text.charCodeAt(i);
-        hash |= 0;
-    }
-    return Math.abs(hash).toString(16);
-}
-
-function safeDecodeURIComponent(value) {
-    try {
-        return decodeURIComponent(value);
-    } catch (_) {
-        return value;
-    }
-}
-
-function sanitizePathPart(value, fallback) {
-    value = String(value || '').trim();
-    value = value.replace(/[\\:*?"<>|]/g, '_');
-    if (!value) value = fallback || '_';
-    return value.length > 100 ? value.substring(0, 100) : value;
-}
-
-function appendPathSuffix(path, suffix) {
-    var dot = path.lastIndexOf('.');
-    var slash = path.lastIndexOf('/');
-    if (dot > slash) return path.substring(0, dot) + suffix + path.substring(dot);
-    return path + suffix;
-}
-
-function normalizeUrlCandidate(url) {
-    var value = String(url || '').trim();
-    if (!value || /^data:/i.test(value)) return value;
-    value = value.replace(/\\+/g, '/');
-    value = value.replace(/^([a-z][a-z0-9+.-]*):\/(?!\/)/i, '$1://');
-    value = value.replace(/^([a-z][a-z0-9+.-]*):\/\/+?/i, '$1://');
-    return value;
-}
-
-function sanitizeFilename(url) {
-    if (!url) return 'unknown/resource';
-    url = normalizeUrlCandidate(url);
-    if (url.indexOf('data:') === 0) {
-        var mimeMatch = url.match(/^data:([^;,]+)/);
-        var ext = 'data';
-        if (mimeMatch) {
-            var mimeParts = mimeMatch[1].split('/');
-            if (mimeParts.length === 2) ext = mimeParts[1];
-        }
-        return 'inline/' + hashString(url) + '.' + ext;
-    }
-
-    var blobMatch = /^blob:(.+)$/i.exec(url);
-    if (blobMatch) return appendPathSuffix(sanitizeFilename(blobMatch[1]), '__blob');
-
-    var parsed = null;
-    try {
-        parsed = new URL(url);
-    } catch (_) {}
-
-    if (!parsed) {
-        var rawValue = String(url).replace(/[?#].*$/, '');
-        var rawParts = rawValue.split(/[\/]+/);
-        var cleaned = [];
-        var offset = 0;
-        if (rawParts.length > 1 && /^[a-z][a-z0-9+.-]*:$/i.test(rawParts[0])) {
-            var looseProtocol = rawParts[0].slice(0, -1).toLowerCase();
-            if (looseProtocol !== 'http' && looseProtocol !== 'https')
-                cleaned.push(sanitizePathPart(looseProtocol, 'scheme'));
-            cleaned.push(sanitizePathPart(safeDecodeURIComponent(rawParts[1]), 'host'));
-            offset = 2;
-        }
-        for (var i = offset; i < rawParts.length; i++) {
-            if (!rawParts[i]) continue;
-            cleaned.push(sanitizePathPart(safeDecodeURIComponent(rawParts[i]), '_'));
-        }
-        return cleaned.join('/') || 'unknown/resource';
-    }
-
-    var segments = [];
-    var protocol = sanitizePathPart(parsed.protocol.replace(':', ''), 'scheme');
-    if (protocol !== 'http' && protocol !== 'https') segments.push(protocol);
-    if (parsed.host) segments.push(sanitizePathPart(parsed.host, 'host'));
-
-    var pathname = parsed.pathname || '/';
-    if (pathname.charAt(pathname.length - 1) === '/') pathname += 'index.html';
-    var pathParts = pathname.split('/');
-    for (var j = 0; j < pathParts.length; j++) {
-        if (!pathParts[j]) continue;
-        segments.push(sanitizePathPart(safeDecodeURIComponent(pathParts[j]), '_'));
-    }
-    if (!segments.length) segments.push('unknown');
-
-    var name = segments.join('/');
-    if (parsed.search || parsed.hash)
-        name = appendPathSuffix(
-            name,
-            '__' + hashString((parsed.search || '') + (parsed.hash || '')).substring(0, 8),
-        );
-    return name;
-}
-
-function sanitizePageTitle(title) {
-    return (title || 'page').replace(/[\\/:*?"<>|]/g, '_').substring(0, 100) || 'page';
 }
 
 function doDownload() {

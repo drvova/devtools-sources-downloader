@@ -248,12 +248,17 @@ pub fn sanitize_filename(url: &str) -> String {
             }
 
             let mut name = segments.join("/");
+            // `new URL('https://x/a?')` reports an EMPTY search and hash, which
+            // are falsy in the original's `if (parsed.search || parsed.hash)`,
+            // so a bare '?' or '#' must not produce a suffix.
             let search = parsed
                 .query()
+                .filter(|q| !q.is_empty())
                 .map(|q| format!("?{q}"))
                 .unwrap_or_default();
             let hash = parsed
                 .fragment()
+                .filter(|f| !f.is_empty())
                 .map(|f| format!("#{f}"))
                 .unwrap_or_default();
             if !search.is_empty() || !hash.is_empty() {

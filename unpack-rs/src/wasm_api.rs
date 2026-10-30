@@ -487,6 +487,12 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
             },
             None => serde_json::Value::Null,
         }),
+        "sanitizeFilename" => Ok(serde_json::Value::String(panel::text::sanitize_filename(
+            &arg_str(a, 0).unwrap_or_default(),
+        ))),
+        "sanitizePageTitle" => Ok(serde_json::Value::String(panel::text::sanitize_page_title(
+            &arg_str(a, 0).unwrap_or_default(),
+        ))),
         "looksBinaryScript" => {
             let bytes = match a.get(1) {
                 Some(v) if v.is_array() => Some(arg_bytes(a, 1).unwrap_or_default()),

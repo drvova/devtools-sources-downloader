@@ -379,6 +379,12 @@ async function main() {
             readAsset(binaryRoot, 'strings.json').includes('hi from cache'),
             'binary strings not recovered from the V8 cache',
         );
+        // The raw resource writes and the page snapshot are named by the text
+        // helpers (sanitizeFilename / sanitizePageTitle), which now run in Rust
+        // behind the bridge - pin the names they produce.
+        assert(has('demo.test/app/bundle.js'), 'raw script path must keep its sanitized name');
+        assert(has('demo.test/app/chunk.jsc'), 'raw binary path must keep its sanitized name');
+        assert(has('demo.html'), 'page snapshot must keep its sanitized title');
         assert(has('_analysis/chunk-map.json'), 'existing analysis artifacts must survive');
         assert(has('_unpack-runtime/index.json'), 'runtime payload unpack report missing');
 

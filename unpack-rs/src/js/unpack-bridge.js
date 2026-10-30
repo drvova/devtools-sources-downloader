@@ -202,6 +202,16 @@ export function sha256HexBytes(bytes) {
     return Promise.resolve(call('sha256HexBytes', Array.from(bytes || [])));
 }
 
+// Zip-path naming lives in Rust (panel::text) so the archive the panel writes
+// and the paths the ported reports name cannot drift apart.
+export function sanitizeFilename(url) {
+    return call('sanitizeFilename', String(url || ''));
+}
+
+export function sanitizePageTitle(title) {
+    return call('sanitizePageTitle', String(title || ''));
+}
+
 export function looksBinaryScript(url, bytes) {
     const encoded = textEncoder.encode(url);
     const ptr = engine.xu_alloc(encoded.length);
