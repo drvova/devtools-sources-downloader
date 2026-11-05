@@ -9,6 +9,8 @@ verdicts with timings instead of one long shell `&&` chain.
 tools/cl/
   package.lisp     all packages up front, so every file's symbols resolve at read time
   util.lisp        paths, subprocesses, logging, HTTP/1.1 byte helpers, JSON
+  sexp.lisp        the toolchain's own data format: read/write/round-trip
+  vovas.sexp       the gate definition, as data
   ws.lisp          RFC 6455 WebSocket client (masking, fragmentation, ping/pong, close)
   http.lisp        HTTP/1.1 client for Chrome's /json endpoints
   chrome.lisp      Chrome for Testing: cache discovery, download, DevToolsActivePort
@@ -105,6 +107,55 @@ name — `panel registered in UI.panels: FAIL (elements)` — and exit 1.
 It is deliberately **not** part of `vovas check`: it needs a real browser window
 (DevTools does not open in headless), so the gate stays headless and this runs on
 demand, or in a job that has a display.
+
+## Data files are sexps
+
+Anything this toolchain reads or writes for itself is a Lisp form — symbols,
+strings, numbers, nested lists. No JSON, no schema.
+
+```lisp
+;; tools/cl/vovas.sexp — the gate, as data
+(:gate
+ (:step "lint+format (rs check)"
+        :npm ("run" "check")
+        :fast t)
+ (:step "clippy"
+        :cargo ("clippy" "--all-targets" "--" "-D" "warnings")
+        :fast t))
+```
+
+`vovas check` reads that file instead of carrying the steps in code, so adding,
+reordering or gating a step is an edit to data. A run records itself the same
+way, in `unpack-rs/.cache/gate.sexp`:
+
+```lisp
+(:gate-run (:at 4002900941) (:fast t)
+ (:steps (:step "lint+format (rs check)" :exit 0)
+         (:step "rust tests (cargo test)" :exit 0)
+         (:step "clippy" :exit 0)))
+```
+
+**The format is closed on purpose.** Reading binds `*READ-EVAL*` to `NIL`, so a
+data file can never execute code (`#.(print 1)` is refused), and it reads in the
+`vovas.sexp` package, which `:use`s CL so `t` and `nil` are the real booleans —
+the same arrangement an `.asd` file has.
+
+Every symbol must be a **keyword**, `t`, or `nil`. A bare symbol is refused:
+
+```
+sexp: bare symbol: GATE is a bare symbol; write it as :gate
+```
+
+That is not pedantry. Reading `step` in a package that uses CL yields
+`CL:STEP` — the stepper macro — so the data would compare unequal to `:step`
+with nothing visible in the file to explain it. Keywords cannot collide.
+
+`sexp-selftest` round-trips a form containing every type the format allows,
+including both escapes and an embedded newline, and `vovas check` runs it before
+reading the gate: a broken reader can never silently misread a data file.
+
+JSON remains only where the wire demands it — the DevTools Protocol and the
+extension's `manifest.json`, both of which Chrome defines.
 
 ## Design notes
 

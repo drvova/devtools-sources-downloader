@@ -1,5 +1,12 @@
 ;;;; package.lisp — all packages up front so every file's symbols resolve at read time.
 
+;; Data files are read in this package: it USEs CL, so `t` and `nil` are the
+;; real booleans, and bare symbols intern here instead of polluting a real
+;; package. Keywords keep their colon, exactly as in an .asd file.
+(defpackage :vovas.sexp
+  (:use :cl)
+  (:documentation "Home package for sexp data files."))
+
 (defpackage :vovas.tools.util
   (:nicknames :vtu)
   (:use :cl)
@@ -28,7 +35,14 @@
    #:file-size
    ;; text
    #:url-encode
-   ;; json
+   ;; sexp data files (the toolchain's own format)
+   #:read-sexp
+   #:read-sexp-file
+   #:write-sexp-file
+   #:sexp-string
+   #:sexp-selftest
+   #:sexp-error
+   ;; json (wire only: the DevTools Protocol and Chrome's manifest.json)
    #:json-parse
    #:json-stringify
    #:json-obj))

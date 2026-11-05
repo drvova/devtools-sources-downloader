@@ -7,6 +7,7 @@
   :serial t
   :components ((:file "package")
                (:file "util")
+               (:file "sexp")
                (:file "ws")
                (:file "http")
                (:file "chrome")

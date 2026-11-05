@@ -63,27 +63,64 @@ Returns 0 on success, 1 on failure."
 
 ;;; ---------- check ----------
 
+(defun gate-file ()
+  "The gate definition: tools/cl/vovas.sexp."
+  (uiop:merge-pathnames* "tools/cl/vovas.sexp" (repo-root)))
+
+(defun gate-report-file ()
+  "Where a gate run records its own result, as a sexp file."
+  (uiop:merge-pathnames* "unpack-rs/.cache/gate.sexp" (repo-root)))
+
+(defun gate-step-argv (label opts)
+  "Resolve one step's runner and argv. A step names exactly one of npm or cargo."
+  (let ((npm (getf opts :npm))
+        (cargo (getf opts :cargo)))
+    (cond ((and npm cargo)
+           (error "gate step ~s names both npm and cargo" label))
+          (npm (vovas.tools.util:npm-argv npm))
+          (cargo (vovas.tools.util:cargo-argv cargo))
+          (t (error "gate step ~s names neither npm nor cargo" label)))))
+
+(defun gate-steps (&key fast)
+  "The gate as data, read from tools/cl/vovas.sexp.
+Each step is (step \"label\" npm (args) [fast t]) or with cargo.
+Returns an alist of (label . argv), in file order, filtered by FAST."
+  (let* ((path (gate-file))
+         (form (vovas.tools.util:read-sexp-file path)))
+    (unless (and (consp form) (eq (first form) :gate))
+      (error "~a must be a (gate ...) form" path))
+    (loop for spec in (rest form)
+          do (unless (and (consp spec) (eq (first spec) :step))
+               (error "~a: expected (step ...), got ~s" path spec))
+          ;; every step is validated even when FAST filters it out, so a broken
+          ;; entry can never hide behind the filter
+          append (let* ((label (second spec))
+                        (opts (cddr spec))
+                        (argv (gate-step-argv label opts)))
+                   (when (or (not fast) (getf opts :fast))
+                     (list (cons label argv)))))))
+
 (defun check (&key fast)
   "The gate, decomposed from npm run verify: per-step verdicts, fail-fast.
-FAST runs lint + rust tests + clippy only. Returns 0/1."
-  (let* ((steps (list
-                 (cons "lint+format (rs check)" (vovas.tools.util:npm-argv '("run" "check")))
-                 (cons "rust tests (cargo test)" (vovas.tools.util:cargo-argv '("test")))
-                 (cons "clippy" (vovas.tools.util:cargo-argv
-                                 '("clippy" "--all-targets" "--" "-D" "warnings")))))
-         (steps (if fast
-                    steps
-                    (append steps
-                            (list (cons "js tests (npm test)" (vovas.tools.util:npm-argv '("test")))
-                                  (cons "build (npm run build)" (vovas.tools.util:npm-argv '("run" "build")))
-                                  (cons "e2e (npm run test:e2e)" (vovas.tools.util:npm-argv '("run" "test:e2e")))
-                                  (cons "extension e2e" (vovas.tools.util:npm-argv '("run" "test:e2e:ext")))))))
-         (failed nil))
+The steps live in tools/cl/vovas.sexp; FAST keeps only those marked (fast t).
+Writes the run to unpack-rs/.cache/gate.sexp. Returns 0/1."
+  ;; a data format that is never round-tripped is a format waiting to break
+  (vovas.tools.util:sexp-selftest)
+  (let ((steps (gate-steps :fast fast))
+        (results nil)
+        (failed nil))
     (dolist (step steps)
       (let ((code (vovas.tools.util:run-step (car step) (cdr step) :cwd (unpack-rs-dir))))
+        (push (list :step (car step) :exit code) results)
         (unless (zerop code)
           (setf failed t)
           (return))))
+    (vovas.tools.util:write-sexp-file
+     (gate-report-file)
+     (list :gate-run
+           (list :at (get-universal-time))
+           (list :fast (and fast t))
+           (cons :steps (nreverse results))))
     (format t "[vovas] check: ~a~%" (if failed "FAIL" "PASS"))
     (force-output)
     (if failed 1 0)))
