@@ -71,6 +71,7 @@
    #:use
    #:new-tab
    #:parse-ws-url
+   #:connect-target
    ;; interaction
    #:call
    #:eval*
@@ -79,12 +80,14 @@
    ;; state
    #:*browser*
    ;; selftest
-   #:smoke-test))
+   #:smoke-test
+   ;; panel verification
+   #:panel-check))
 
 (defpackage :vovas.tools
   (:nicknames :vt)
   (:use :cl)
   (:import-from :vovas.tools.util
    #:repo-root #:log-line #:json-parse #:npm-argv)
-  (:import-from :vovas.cdp #:smoke-test)
+  (:import-from :vovas.cdp #:smoke-test #:panel-check)
   (:export #:main #:build #:check #:pack))

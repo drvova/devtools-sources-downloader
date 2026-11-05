@@ -13,6 +13,7 @@ tools/cl/
   http.lisp        HTTP/1.1 client for Chrome's /json endpoints
   chrome.lisp      Chrome for Testing: cache discovery, download, DevToolsActivePort
   cdp.lisp         launch/attach, targets, evaluate, navigate, screenshot, smoke test
+  panel.lisp       verify the extension's DevTools panel actually registers
   tasks.lisp       build / check / pack, mirroring npm run verify
   main.lisp        CLI dispatch (also the saved-image toplevel)
   run.lisp         dev entry point
@@ -29,6 +30,7 @@ sbcl --script tools/cl/run.lisp check        # the whole gate, per-step verdicts
 sbcl --script tools/cl/run.lisp check --fast # lint + cargo test + clippy only
 sbcl --script tools/cl/run.lisp pack         # dist/ -> dist-<version>.zip
 sbcl --script tools/cl/run.lisp smoke        # end-to-end CDP selftest
+sbcl --script tools/cl/run.lisp panel        # the extension's DevTools panel registers
 sbcl --script tools/cl/run.lisp version
 ```
 
@@ -67,6 +69,42 @@ extension's DevTools panel is a browser surface, and being able to poke at a
 live one — evaluate an expression, screenshot, iterate — without writing a
 throwaway script each time is the whole value. `(vcdp:smoke-test)` is the same
 machinery as `vovas smoke`, so the client is proven on every run.
+
+## `panel` — the check nothing else made
+
+`test/browser-e2e-extension.mjs` loads the built extension and opens
+`html/page.html` **directly**, then asserts the off-panel guard
+(`DevTools API unavailable`). That is the opposite of the question: it proves the
+page degrades gracefully outside DevTools, and says nothing about whether
+`chrome.devtools.panels.create` produces a tab in a real DevTools window.
+
+`vovas panel` answers that. It launches Chrome for Testing with
+`--load-extension=dist`, waits for the extension to settle, opens a page **after**
+that settle (the startup tab's DevTools opens before registration and never gets
+the panel), then asks the frontend for its own panel registry:
+
+```js
+Object.keys(UI.panels)
+// => "elements,chrome-extension://nnlmok…SourcesDownloader"
+```
+
+Five checks: the extension's `devtools.html` loaded, a DevTools window opened,
+the panel is in `UI.panels`, the registered page boots at the extension origin,
+and a screenshot of the DevTools window is captured.
+
+**Why not scrape the tab strip.** Two approaches fail here and both look like
+"the panel is missing": the strip overflows into a chevron on any laptop-width
+window (the panel becomes a bare `1` badge), and the DevTools UI lives behind
+shadow roots, so `querySelectorAll` and even `DOM.performSearch` with
+`pierce: true` return nothing. The registry is the frontend's own answer and is
+immune to both.
+
+The check is proven non-vacuous: blanking `dist/js/devtools.js` makes it fail by
+name — `panel registered in UI.panels: FAIL (elements)` — and exit 1.
+
+It is deliberately **not** part of `vovas check`: it needs a real browser window
+(DevTools does not open in headless), so the gate stays headless and this runs on
+demand, or in a job that has a display.
 
 ## Design notes
 

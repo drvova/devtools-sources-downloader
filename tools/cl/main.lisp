@@ -8,6 +8,7 @@
   check [--fast]  the gate (lint, cargo test, clippy; --fast skips js/build/e2e)~@
   pack            zip dist/ into dist-<version>.zip~@
   smoke           end-to-end selftest of the CDP client~@
+  panel           verify the extension's DevTools panel registers~@
   version         print versions~%~
 ~%~
 REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
@@ -30,6 +31,8 @@ REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
            (pack))
           ((string= cmd "smoke")
            (if (smoke-test) 0 1))
+          ((string= cmd "panel")
+           (panel-check))
           ((string= cmd "version")
            (format t "vovas-tools on ~a ~a (~a)~%"
                    (lisp-implementation-type)

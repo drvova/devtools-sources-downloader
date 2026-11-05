@@ -27,6 +27,7 @@ sbcl --script tools/cl/run.lisp check --fast # lint + cargo test + clippy only
 sbcl --script tools/cl/run.lisp build        # wasm + bundle, then verify dist/
 sbcl --script tools/cl/run.lisp pack         # dist/ -> dist-<version>.zip
 sbcl --script tools/cl/run.lisp smoke        # end-to-end Chrome DevTools Protocol selftest
+sbcl --script tools/cl/run.lisp panel        # the extension's DevTools panel registers
 sbcl --load   tools/cl/run.lisp              # REPL: (vcdp:launch) (vcdp:tabs) (vcdp:eval* "...")
 ```
 

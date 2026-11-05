@@ -24,12 +24,16 @@
 
 ;;; ---------- lifecycle ----------
 
-(defun launch (&key headless (wait-seconds 30))
+(defun launch (&key headless (wait-seconds 30) extra-args profile-name)
   "Launch Chrome for Testing with a fresh profile and --remote-debugging-port=0.
-Returns the browser handle (also bound to *browser*)."
+EXTRA-ARGS are appended before the initial URL (extension loading, window size).
+PROFILE-NAME picks the profile directory under .cache/cdp-profile, so a caller
+that needs a stable profile can name one. Returns the browser handle (also bound
+to *browser*)."
   (let* ((chrome (ensure-chrome))
          (udd (uiop:merge-pathnames*
-               (format nil "unpack-rs/.cache/cdp-profile/~d/" (get-universal-time))
+               (format nil "unpack-rs/.cache/cdp-profile/~a/"
+                       (or profile-name (format nil "~d" (get-universal-time))))
                (repo-root)))
          (argv (append (list (namestring chrome)
                              "--remote-debugging-port=0"
@@ -37,6 +41,7 @@ Returns the browser handle (also bound to *browser*)."
                              "--no-first-run"
                              "--no-default-browser-check")
                        (when headless (list "--headless=new"))
+                       extra-args
                        (list "about:blank"))))
     (log-line "launching ~a" chrome)
     (let ((proc (uiop:launch-program argv :output nil :error-output nil)))

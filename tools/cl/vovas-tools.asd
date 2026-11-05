@@ -11,5 +11,6 @@
                (:file "http")
                (:file "chrome")
                (:file "cdp")
+               (:file "panel")
                (:file "tasks")
                (:file "main")))
