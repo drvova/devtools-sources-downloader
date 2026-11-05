@@ -21,27 +21,31 @@
       (let ((manifest-path (uiop:merge-pathnames* "manifest.json" (dist-dir))))
         (check "manifest.json exists" (probe-file manifest-path))
         (when (probe-file manifest-path)
-          (let ((m (vovas.tools.util:json-parse
+          (let ((m (vovas.tools.util:json-decode
                     (uiop:read-file-string manifest-path))))
-            (check "manifest name" (gethash "name" m) (gethash "name" m))
-            (check "manifest version" (gethash "version" m) (gethash "version" m))
-            (check "manifest_version 3" (eql (gethash "manifest_version" m) 3))
-            (let ((csp (gethash "content_security_policy" m)))
+            (check "manifest name" (getf m :name) (getf m :name))
+            (check "manifest version" (getf m :version) (getf m :version))
+            ;; manifest.json is snake_case, and the converter only turns CASE
+            ;; boundaries into hyphens, so these keys keep their underscores.
+            (check "manifest_version 3" (eql (getf m :manifest_version) 3))
+            (let ((csp (getf m :content_security_policy :absent)))
               ;; MV3's default CSP already allows wasm; an explicit policy must
               ;; carry wasm-unsafe-eval or the engine will not instantiate.
-              (if csp
-                  (check "csp allows wasm"
-                         (search "wasm-unsafe-eval"
-                                 (or (gethash "extension_pages" csp) ""))
-                         (gethash "extension_pages" csp))
-                  (check "csp allows wasm" t "default MV3 policy")))
-            (let ((icons (gethash "icons" m)))
+              ;; :absent is distinct from an empty policy, so a renamed key can
+              ;; never masquerade as "no policy declared"
+              (cond ((eq csp :absent)
+                     (check "csp allows wasm" t "default MV3 policy"))
+                    (t
+                     (let ((pages (getf csp :extension_pages)))
+                       (check "csp allows wasm"
+                              (and pages (search "wasm-unsafe-eval" pages))
+                              (or pages "no extension_pages"))))))
+            (let ((icons (getf m :icons)))
               (when icons
-                (maphash (lambda (size path)
-                           (declare (ignore size))
-                           (check (format nil "icon ~a" path)
-                                  (probe-file (uiop:merge-pathnames* path (dist-dir)))))
-                         icons)))))
+                (loop for rest on icons by #'cddr
+                      for path = (second rest)
+                      do (check (format nil "icon ~a" path)
+                                (probe-file (uiop:merge-pathnames* path (dist-dir)))))))))
         (let ((wasm (uiop:merge-pathnames* "js/engine.wasm" (dist-dir))))
           (check "engine.wasm exists" (probe-file wasm))
           (when (probe-file wasm)
@@ -106,6 +110,7 @@ The steps live in tools/cl/vovas.sexp; FAST keeps only those marked (fast t).
 Writes the run to unpack-rs/.cache/gate.sexp. Returns 0/1."
   ;; a data format that is never round-tripped is a format waiting to break
   (vovas.tools.util:sexp-selftest)
+  (vovas.tools.util:json-selftest)
   (let ((steps (gate-steps :fast fast))
         (results nil)
         (failed nil))
@@ -132,9 +137,9 @@ Writes the run to unpack-rs/.cache/gate.sexp. Returns 0/1."
   (let* ((manifest-path (uiop:merge-pathnames* "manifest.json" (dist-dir))))
     (unless (probe-file manifest-path)
       (error "no manifest.json in ~a - run vovas build first" (dist-dir)))
-    (let* ((version (gethash "version"
-                            (vovas.tools.util:json-parse
-                             (uiop:read-file-string manifest-path))))
+    (let* ((version (getf (vovas.tools.util:json-decode
+                           (uiop:read-file-string manifest-path))
+                          :version))
            (zip (uiop:merge-pathnames* (format nil "dist-~a.zip" version)
                                        (unpack-rs-dir))))
       (multiple-value-bind (code out err)

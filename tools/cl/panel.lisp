@@ -23,21 +23,21 @@
 
 (defun extension-frame-targets (browser)
   "Targets for the extension's devtools page (the page Chrome loads per window)."
-  (loop for tt across (tabs browser)
-        when (and (string= (gethash "type" tt) "iframe")
-                  (search "/html/devtools.html" (or (gethash "url" tt) "")))
+  (loop for tt in (tabs browser)
+        when (and (string= (getf tt :type) "iframe")
+                  (search "/html/devtools.html" (or (getf tt :url) "")))
           collect tt))
 
 (defun devtools-window-targets (browser)
   "Targets for the DevTools frontend pages."
-  (loop for tt across (tabs browser)
-        when (and (string= (gethash "type" tt) "page")
-                  (search "devtools_app.html" (or (gethash "url" tt) "")))
+  (loop for tt in (tabs browser)
+        when (and (string= (getf tt :type) "page")
+                  (search "devtools_app.html" (or (getf tt :url) "")))
           collect tt))
 
 (defun extension-id-of (target)
   "chrome-extension://<id>/html/devtools.html -> <id>."
-  (let ((url (or (gethash "url" target) "")))
+  (let ((url (or (getf target :url) "")))
     (when (search "chrome-extension://" url)
       (let ((start (length "chrome-extension://"))
             (end (position #\/ url :start (length "chrome-extension://"))))
@@ -115,7 +115,7 @@ registry. Returns 0 when every check passes, 1 otherwise."
                                      (progn
                                        (connect-target browser
                                                        (or (find-if (lambda (tt)
-                                                                      (string= (gethash "type" tt) "page"))
+                                                                      (string= (getf tt :type) "page"))
                                                                     (tabs browser))
                                                            (first (tabs browser))))
                                        (new-tab (format nil "chrome-extension://~a/html/page.html" ext-id)

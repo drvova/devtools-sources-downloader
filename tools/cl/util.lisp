@@ -207,18 +207,92 @@ Returns the exit code."
               (format t "--- stderr ---~%~a---~%" err)))
         code))))
 
-;;; ---------- json ----------
+;;; ---------- json: the wire boundary ----------
+;; JSON exists in exactly two places, both Chrome's: the DevTools Protocol and
+;; the extension's manifest.json. Everything above this boundary is Lisp data —
+;; objects are plists keyed by keywords, arrays are lists — so call sites read
+;; like the data they carry instead of building hash-tables by hand.
 
-(defun json-parse (s)
-  (com.inuoe.jzon:parse s))
+(defun json-key->keyword (name)
+  "camelCase JSON key -> lisp-case keyword: exceptionDetails -> :EXCEPTION-DETAILS."
+  (let ((out (make-string-output-stream)))
+    (loop for ch across name
+          for i from 0
+          do (cond ((upper-case-p ch)
+                    (when (plusp i) (write-char #\- out))
+                    (write-char (char-downcase ch) out))
+                   (t (write-char ch out))))
+    (intern (string-upcase (get-output-stream-string out)) :keyword)))
 
-(defun json-stringify (v)
-  (com.inuoe.jzon:stringify v))
+(defun keyword->json-key (keyword)
+  ":EXCEPTION-DETAILS -> exceptionDetails. The inverse of JSON-KEY->KEYWORD."
+  (let ((out (make-string-output-stream))
+        (upcase-next nil))
+    (loop for ch across (string-downcase (symbol-name keyword))
+          do (cond ((char= ch #\-) (setf upcase-next t))
+                   (upcase-next (write-char (char-upcase ch) out)
+                                (setf upcase-next nil))
+                   (t (write-char ch out))))
+    (get-output-stream-string out)))
 
-(defun json-obj (&rest pairs)
-  "Build a JSON object (hash-table keyed by lowercase strings) from
-alternating keyword keys and values."
-  (let ((h (make-hash-table :test 'equal)))
-    (loop for (k v) on pairs by #'cddr
-          do (setf (gethash (string-downcase (string k)) h) v))
-    h))
+(defun json->lisp (value)
+  "Parsed JSON -> Lisp data. Objects become plists, arrays become lists.
+JSON null and false both become NIL: every consumer here asks 'is it there',
+and neither answer is a value."
+  (cond ((eq value 'null) nil)
+        ((hash-table-p value)
+         (loop for k being the hash-keys of value using (hash-value v)
+               collect (json-key->keyword k)
+               collect (json->lisp v)))
+        ((and (vectorp value) (not (stringp value)))
+         (loop for v across value collect (json->lisp v)))
+        (t value)))
+
+(defun lisp->json (value)
+  "Lisp data -> what jzon serializes. A plist becomes an object, any other list
+an array, a keyword its name as a string, T true, NIL false. CL:NULL (jzon's own
+null marker) passes through untouched."
+  (cond ((eq value 'null) value)
+        ((null value) nil)
+        ((eq value t) t)
+        ((keywordp value) (string-downcase (symbol-name value)))
+        ((stringp value) value)
+        ((numberp value) value)
+        ((and (consp value) (keywordp (first value)))
+         (let ((h (make-hash-table :test 'equal)))
+           (loop for (k v) on value by #'cddr
+                 do (setf (gethash (keyword->json-key k) h) (lisp->json v)))
+           h))
+        ((listp value) (coerce (mapcar #'lisp->json value) 'vector))
+        ((vectorp value) (coerce (mapcar #'lisp->json value) 'vector))
+        (t value)))
+
+(defun json-decode (string)
+  "Parse JSON into Lisp data: plists for objects, lists for arrays."
+  (json->lisp (com.inuoe.jzon:parse string)))
+
+(defun json-encode (value)
+  "Serialize Lisp data to JSON: plists become objects, lists become arrays."
+  (com.inuoe.jzon:stringify (lisp->json value)))
+
+(defparameter *json-selftest-keys*
+  '("id" "url" "type" "title" "webSocketDebuggerUrl" "devtoolsFrontendUrl"
+    "exceptionDetails" "returnByValue" "awaitPromise" "nodeId" "backendNodeId"
+    "isChromeForTesting" "securityOrigin" "targetType" "can_dock")
+  "Real keys this toolchain reads, so the case conversion is proven against the
+protocol rather than against a convenient example.")
+
+(defun json-selftest ()
+  "Prove the wire boundary both ways: key case round-trips for every key we use,
+and a representative form survives encode/decode."
+  (dolist (key *json-selftest-keys*)
+    (let ((back (keyword->json-key (json-key->keyword key))))
+      (unless (string= back key)
+        (error "json key round trip: ~s -> ~s" key back))))
+  (let* ((form (list :id 3 :method "Page.navigate"
+                     :params (list :url "about:blank" :pierce t
+                                   :depth -1 :tags (list "a" "b"))))
+         (back (json-decode (json-encode form))))
+    (unless (equal back form)
+      (error "json form round trip: ~s -> ~s" form back)))
+  t)

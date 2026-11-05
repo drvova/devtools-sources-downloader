@@ -42,10 +42,13 @@
    #:sexp-string
    #:sexp-selftest
    #:sexp-error
-   ;; json (wire only: the DevTools Protocol and Chrome's manifest.json)
-   #:json-parse
-   #:json-stringify
-   #:json-obj))
+   ;; json: the wire boundary only (DevTools Protocol, Chrome's manifest.json).
+   ;; Objects decode to plists and encode from plists, so call sites read as data.
+   #:json-decode
+   #:json-encode
+   #:json-selftest
+   #:json-key->keyword
+   #:keyword->json-key))
 
 (defpackage :vovas.cdp.ws
   (:use :cl)
@@ -70,7 +73,7 @@
   (:use :cl)
   (:import-from :vovas.tools.util
    #:repo-root #:find-on-path #:log-line
-   #:json-parse #:json-stringify #:json-obj #:url-encode)
+   #:json-decode #:json-encode #:url-encode)
   (:import-from :vovas.cdp.ws
    #:ws-connect #:ws-send-text #:ws-read-message #:ws-close #:ws-open-p)
   (:import-from :vovas.cdp.http #:http-request)
@@ -102,6 +105,6 @@
   (:nicknames :vt)
   (:use :cl)
   (:import-from :vovas.tools.util
-   #:repo-root #:log-line #:json-parse #:npm-argv)
+   #:repo-root #:log-line #:json-decode #:npm-argv)
   (:import-from :vovas.cdp #:smoke-test #:panel-check)
   (:export #:main #:build #:check #:pack))

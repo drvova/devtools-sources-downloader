@@ -92,13 +92,13 @@ No-op for attached browsers beyond closing the connection."
 ;;; ---------- targets ----------
 
 (defun tabs (&optional (browser *browser*))
-  "All targets (/json/list) as a vector of hash-tables."
+  "All targets (/json/list) as a list of plists."
   (check-browser browser)
   (multiple-value-bind (status body)
       (http-request "127.0.0.1" (browser-port browser) "GET" "/json/list")
     (unless (= status 200)
       (error "tabs: HTTP ~a" status))
-    (vovas.tools.util:json-parse body)))
+    (vovas.tools.util:json-decode body)))
 
 (defun parse-ws-url (url)
   "ws://host:port/path -> (values host port path)"
@@ -118,15 +118,15 @@ No-op for attached browsers beyond closing the connection."
 (defun connect-target (browser target)
   "Open (and remember) the websocket connection to TARGET, replacing any
 previous connection."
-  (let ((ws-url (gethash "webSocketDebuggerUrl" target)))
+  (let ((ws-url (getf target :web-socket-debugger-url)))
     (unless ws-url
-      (error "target has no webSocketDebuggerUrl: ~a" (gethash "url" target)))
+      (error "target has no webSocketDebuggerUrl: ~a" (getf target :url)))
     (multiple-value-bind (host port path) (parse-ws-url ws-url)
       (when (browser-conn browser)
         (ignore-errors (ws-close (cdp-conn-ws (browser-conn browser)))))
       (setf (browser-conn browser)
             (make-cdp-conn :ws (ws-connect host port path) :next-id 0))))
-  (values (gethash "url" target) (gethash "title" target)))
+  (values (getf target :url) (getf target :title)))
 
 (defun use (selector &optional (browser *browser*))
   "Connect to the target whose id/url/title contains SELECTOR, or to the
@@ -136,25 +136,25 @@ first page target when SELECTOR is NIL."
          (target (if selector
                      (find-if (lambda (tt)
                                 (some (lambda (field)
-                                        (and (gethash field tt)
-                                             (search selector (gethash field tt)
+                                        (and (getf tt field)
+                                             (search selector (getf tt field)
                                                      :test #'char-equal)))
-                                      (list "id" "url" "title")))
+                                      (list :id :url :title)))
                               targets)
-                     (find-if (lambda (tt) (string= (gethash "type" tt) "page")) targets))))
+                     (find-if (lambda (tt) (string= (getf tt :type) "page")) targets))))
     (unless target
       (error "no target matching ~s" selector))
     (connect-target browser target)))
 
 (defun new-tab (url &optional (browser *browser*))
-  "Open a new tab and connect to it. Returns the target hash-table."
+  "Open a new tab and connect to it. Returns the target plist."
   (check-browser browser)
   (multiple-value-bind (status body)
       (http-request "127.0.0.1" (browser-port browser) "PUT"
                     (format nil "/json/new?~a" (url-encode url)))
     (unless (= status 200)
       (error "new-tab: HTTP ~a: ~a" status body))
-    (let ((target (vovas.tools.util:json-parse body)))
+    (let ((target (vovas.tools.util:json-decode body)))
       (connect-target browser target)
       target)))
 
@@ -175,18 +175,19 @@ Transport errors drop the cached connection so the next call reconnects."
     (handler-case
         (let ((id (incf (cdp-conn-next-id conn))))
           (ws-send-text (cdp-conn-ws conn)
-                        (vovas.tools.util:json-stringify
-                         (vovas.tools.util:json-obj :id id :method method
-                                                    :params (or params (vovas.tools.util:json-obj)))))
+                        (vovas.tools.util:json-encode
+                         (if params
+                             (list :id id :method method :params params)
+                             (list :id id :method method))))
           (loop
-            (let* ((resp (vovas.tools.util:json-parse
+            (let* ((resp (vovas.tools.util:json-decode
                           (ws-read-message (cdp-conn-ws conn))))
-                   (rid (gethash "id" resp)))
+                   (rid (getf resp :id)))
               (when (and rid (eql rid id))
-                (let ((err (gethash "error" resp)))
+                (let ((err (getf resp :error)))
                   (when err
-                    (error "CDP ~a failed: ~a" method (vovas.tools.util:json-stringify err))))
-                (return (gethash "result" resp))))))
+                    (error "CDP ~a failed: ~a" method (vovas.tools.util:json-encode err))))
+                (return (getf resp :result))))))
       (error (e)
         (setf (browser-conn browser) nil)
         (error e)))))
@@ -195,21 +196,20 @@ Transport errors drop the cached connection so the next call reconnects."
   "Evaluate EXPR in the current target with returnByValue.
 Returns (values value type); signals on JS exceptions."
   (let* ((result (call browser "Runtime.evaluate"
-                       (vovas.tools.util:json-obj
-                        :expression expr :return-by-value t :await-promise t)))
-         (details (gethash "exceptionDetails" result)))
+                       (list :expression expr :return-by-value t :await-promise t)))
+         (details (getf result :exception-details)))
     (when details
-      (let ((exc (gethash "exception" details)))
+      (let ((exc (getf details :exception)))
         (error "evaluate failed: ~a"
-               (or (and exc (gethash "description" exc))
-                   (gethash "text" details)
-                   (vovas.tools.util:json-stringify details)))))
-    (let ((r (gethash "result" result)))
-      (values (gethash "value" r) (gethash "type" r)))))
+               (or (and exc (getf exc :description))
+                   (getf details :text)
+                   (vovas.tools.util:json-encode details)))))
+    (let ((r (getf result :result)))
+      (values (getf r :value) (getf r :type)))))
 
 (defun nav (url &key (browser *browser*) (timeout-seconds 10))
   "Navigate the current target to URL and wait for document.readyState=complete."
-  (call browser "Page.navigate" (vovas.tools.util:json-obj :url url))
+  (call browser "Page.navigate" (list :url url))
   (loop repeat (* timeout-seconds 5)
         do (sleep 0.2)
            (multiple-value-bind (v ok)
@@ -220,9 +220,8 @@ Returns (values value type); signals on JS exceptions."
 
 (defun shot (&key file (browser *browser*))
   "Capture a PNG of the current target. Returns (values path bytes-written)."
-  (let* ((result (call browser "Page.captureScreenshot"
-                       (vovas.tools.util:json-obj :format "png")))
-         (data (gethash "data" result)))
+  (let* ((result (call browser "Page.captureScreenshot" (list :format "png")))
+         (data (getf result :data)))
     (unless data
       (error "captureScreenshot returned no data"))
     (let* ((bytes (cl-base64:base64-string-to-usb8-array data))
@@ -267,8 +266,8 @@ launch, list tabs, open a page with known content, evaluate JS (including a
              (multiple-value-bind (target tab-ok)
                  (try (new-tab "data:text/html,<title>vovas cdp smoke</title><h1>hi</h1>"
                                browser))
-               (check "new-tab" (and tab-ok target (gethash "id" target))
-                      (and tab-ok (gethash "id" target)))
+               (check "new-tab" (and tab-ok target (getf target :id))
+                      (and tab-ok (getf target :id)))
                (when target
                  (let ((ready nil))
                    (loop repeat 25

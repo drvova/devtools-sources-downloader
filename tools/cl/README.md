@@ -155,7 +155,24 @@ including both escapes and an embedded newline, and `vovas check` runs it before
 reading the gate: a broken reader can never silently misread a data file.
 
 JSON remains only where the wire demands it — the DevTools Protocol and the
-extension's `manifest.json`, both of which Chrome defines.
+extension's `manifest.json`, both of which Chrome defines — and it stops at one
+boundary. `json-decode` returns plists and `json-encode` takes them, so call
+sites read as data:
+
+```lisp
+(call browser "Runtime.evaluate"
+      (list :expression "2+2" :return-by-value t :await-promise t))
+;; => (:RESULT (:TYPE "number" :VALUE 4) :EXCEPTION-DETAILS NIL)
+```
+
+Keys convert at that boundary: a JSON `camelCase` key becomes a `:LISP-CASE`
+keyword and back (`returnByValue` ↔ `:RETURN-BY-VALUE`). **Only case boundaries
+become hyphens** — `manifest.json`'s `manifest_version` stays `:MANIFEST_VERSION`,
+because inventing a hyphen there would make the encode direction ambiguous
+(`:MANIFEST-VERSION` would have to guess between `manifestVersion` and
+`manifest_version`). `json-selftest` round-trips every key this toolchain reads,
+and `vovas check` runs it, so a drifted key fails the gate instead of quietly
+reading NIL.
 
 ## Design notes
 
