@@ -12,3 +12,7 @@ desktop.ini
 
 # Chrome for Testing download + dev extension profile
 .cache/
+
+# SBCL toolchain artifacts: the saved image and release zips are build output
+tools/cl/vovas.exe
+unpack-rs/dist-*.zip

@@ -19,6 +19,21 @@ cd unpack-rs && npm run build       # wasm + extension bundle into dist/ (genera
 cd unpack-rs && npm test            # 67 cases against the wasm bridge
 ```
 
+Or drive the same work from SBCL, with per-step verdicts and a live browser REPL:
+
+```
+sbcl --script tools/cl/run.lisp check        # the whole gate, one verdict per step
+sbcl --script tools/cl/run.lisp check --fast # lint + cargo test + clippy only
+sbcl --script tools/cl/run.lisp build        # wasm + bundle, then verify dist/
+sbcl --script tools/cl/run.lisp pack         # dist/ -> dist-<version>.zip
+sbcl --script tools/cl/run.lisp smoke        # end-to-end Chrome DevTools Protocol selftest
+sbcl --load   tools/cl/run.lisp              # REPL: (vcdp:launch) (vcdp:tabs) (vcdp:eval* "...")
+```
+
+`tools/cl/` also carries a from-scratch WebSocket + HTTP client for the DevTools
+Protocol, so the extension's panel can be driven and screenshotted directly.
+Details and design notes: `tools/cl/README.md`.
+
 `dist/` is generated and not committed - `npm run build` before loading the
 extension. The engine's `Cargo.lock` is committed, so the wasm is built from a
 pinned dependency set.

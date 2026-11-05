@@ -1,0 +1,113 @@
+# tools/cl — the SBCL toolchain
+
+A Common Lisp (SBCL) driver for this repo: the build/check/pack pipeline plus a
+Chrome DevTools Protocol client. It replaces nothing — `npm run verify` still
+works — but it gives you a **live REPL against a real browser** and per-step
+verdicts with timings instead of one long shell `&&` chain.
+
+```
+tools/cl/
+  package.lisp     all packages up front, so every file's symbols resolve at read time
+  util.lisp        paths, subprocesses, logging, HTTP/1.1 byte helpers, JSON
+  ws.lisp          RFC 6455 WebSocket client (masking, fragmentation, ping/pong, close)
+  http.lisp        HTTP/1.1 client for Chrome's /json endpoints
+  chrome.lisp      Chrome for Testing: cache discovery, download, DevToolsActivePort
+  cdp.lisp         launch/attach, targets, evaluate, navigate, screenshot, smoke test
+  tasks.lisp       build / check / pack, mirroring npm run verify
+  main.lisp        CLI dispatch (also the saved-image toplevel)
+  run.lisp         dev entry point
+  make-image.lisp  build tools/cl/vovas.exe
+  vovas-tools.asd  the ASDF system
+```
+
+## Use it
+
+```bash
+# from the repo root
+sbcl --script tools/cl/run.lisp build        # wasm + bundle, then verify dist/
+sbcl --script tools/cl/run.lisp check        # the whole gate, per-step verdicts
+sbcl --script tools/cl/run.lisp check --fast # lint + cargo test + clippy only
+sbcl --script tools/cl/run.lisp pack         # dist/ -> dist-<version>.zip
+sbcl --script tools/cl/run.lisp smoke        # end-to-end CDP selftest
+sbcl --script tools/cl/run.lisp version
+```
+
+First run pulls `usocket`, `babel`, `com.inuoe.jzon`, `cl-base64`, `ironclad`
+through Quicklisp and compiles them (a minute or two); after that it is instant.
+
+Build the standalone binary once and drop the `sbcl` prefix:
+
+```bash
+sbcl --noinform --non-interactive --script tools/cl/make-image.lisp
+./tools/cl/vovas.exe check
+```
+
+`vovas.exe` locates the repo root by walking up from its own path, so it works
+from any directory inside the checkout — and from outside it, too.
+
+## The REPL is the point
+
+```bash
+sbcl --load tools/cl/run.lisp
+```
+
+```lisp
+(vcdp:launch :headless t)          ; or (vcdp:attach 9222) to a browser you already run
+(vcdp:tabs)                        ; every target as a hash-table
+(vcdp:use "example")               ; connect to the target whose id/url/title matches
+(vcdp:nav "http://localhost:3000")
+(vcdp:eval* "document.title")      ; => value, type
+(vcdp:shot :file "shot.png")
+(vcdp:call "Network.enable")       ; anything not wrapped yet
+(vcdp:kill)
+```
+
+This is the reason to have it in Lisp rather than another shell script: an
+extension's DevTools panel is a browser surface, and being able to poke at a
+live one — evaluate an expression, screenshot, iterate — without writing a
+throwaway script each time is the whole value. `(vcdp:smoke-test)` is the same
+machinery as `vovas smoke`, so the client is proven on every run.
+
+## Design notes
+
+**No dependencies beyond Quicklisp staples.** The WebSocket and HTTP clients are
+~350 lines total. They exist because the only thing needed is loopback CDP:
+text frames, no TLS, no compression, no extensions. Anything that needs TLS
+(Chrome downloads) goes through `powershell`, which owns the system trust store.
+
+**One source of truth per job.** `read-headers`, `read-exactly`,
+`read-until-double-crlf` and `crlf-join` live in `util.lisp` and are imported by
+`ws.lisp` and `http.lisp`; neither re-implements them.
+
+**`run-program` normalizes two SBCL traps** so no call site has to know about
+them:
+
+- `uiop:run-program` returns `(values stdout stderr exit-code)` — the reverse of
+  what every caller expects. `run-program` returns `(values exit-code stdout
+  stderr)`.
+- `uiop:run-program :cwd` is **silently ignored** on SBCL 2.6.9: the child runs
+  in the parent's directory and you get a confusing `Missing script: "check"`
+  from npm instead of an error. `run-program` calls `sb-ext:run-program` with
+  `:directory`, which honours it.
+
+**Strings are not constants.** `defconstant` on a string mints a fresh object per
+compile, so reloading the fasl signals `DEFCONSTANT-UNEQL` even for identical
+text. String config values are `defparameter`.
+
+**The smoke test flushes every verdict.** A harness that buffers its output
+cannot name the step that hung. It also uses an explicit `try` macro returning
+`(values value ok-p)` rather than `ignore-errors`, whose second value is the
+*body's* second value — which made three correct checks report `FAIL (4)`.
+
+## Adding a command
+
+`main.lisp` dispatches on the first argument; `tasks.lisp` holds the pipeline
+steps. A step is one `run-step` call:
+
+```lisp
+(vovas.tools.util:run-step "label" argv :cwd (unpack-rs-dir))
+```
+
+It prints the command, times it, prints `OK`/`FAIL`, and on failure dumps
+stdout and stderr. Non-zero exits never signal, so a failing step is a value you
+can branch on.

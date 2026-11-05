@@ -50,7 +50,11 @@ export async function ensureChromeForTesting() {
     // @puppeteer/browsers installs to <cacheDir>/chrome/<platform>-<version>/chrome-win64/
     const chromeRoot = path.join(CFT_ROOT, 'chrome');
     const existing = fs.existsSync(chromeRoot)
-        ? fs.readdirSync(chromeRoot).filter((d) => d.startsWith('win64-')).sort().pop()
+        ? fs
+              .readdirSync(chromeRoot)
+              .filter((d) => d.startsWith('win64-'))
+              .sort()
+              .pop()
         : null;
     if (existing) {
         const exe = path.join(chromeRoot, existing, 'chrome-win64', 'chrome.exe');

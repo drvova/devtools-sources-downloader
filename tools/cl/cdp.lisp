@@ -1,0 +1,296 @@
+;;;; cdp.lisp — Chrome DevTools Protocol client: launch/attach, targets,
+;;;; evaluate, screenshots. The REPL-facing surface of the toolchain.
+
+(in-package :vovas.cdp)
+
+(defstruct (browser (:constructor %make-browser))
+  "A running Chrome with remote debugging."
+  process
+  port
+  user-data-dir
+  conn)
+
+(defstruct (cdp-conn (:constructor make-cdp-conn))
+  "One WebSocket connection to one target."
+  ws
+  next-id)
+
+(defvar *browser* nil
+  "Default browser handle, set by LAUNCH/ATTACH and consumed by the REPL-facing functions.")
+
+(defun check-browser (browser)
+  (unless browser
+    (error "no browser: call (vcdp:launch) or (vcdp:attach port) first")))
+
+;;; ---------- lifecycle ----------
+
+(defun launch (&key headless (wait-seconds 30))
+  "Launch Chrome for Testing with a fresh profile and --remote-debugging-port=0.
+Returns the browser handle (also bound to *browser*)."
+  (let* ((chrome (ensure-chrome))
+         (udd (uiop:merge-pathnames*
+               (format nil "unpack-rs/.cache/cdp-profile/~d/" (get-universal-time))
+               (repo-root)))
+         (argv (append (list (namestring chrome)
+                             "--remote-debugging-port=0"
+                             (format nil "--user-data-dir=~a" (namestring udd))
+                             "--no-first-run"
+                             "--no-default-browser-check")
+                       (when headless (list "--headless=new"))
+                       (list "about:blank"))))
+    (log-line "launching ~a" chrome)
+    (let ((proc (uiop:launch-program argv :output nil :error-output nil)))
+      (let ((port (loop repeat (* wait-seconds 10)
+                        for port = (read-port-file
+                                    (uiop:merge-pathnames* "DevToolsActivePort" udd))
+                        when port return port
+                        do (sleep 0.1))))
+        (unless port
+          (ignore-errors (uiop:terminate-process proc :urgent t))
+          (error "chrome did not report a debug port within ~as" wait-seconds))
+        (log-line "chrome up on port ~a" port)
+        (setf *browser* (%make-browser :process proc :port port :user-data-dir udd))))))
+
+(defun attach (port)
+  "Attach to an already-running Chrome with remote debugging on PORT."
+  (multiple-value-bind (status body)
+      (http-request "127.0.0.1" port "GET" "/json/version")
+    (declare (ignore body))
+    (unless (= status 200)
+      (error "no chrome with remote debugging on port ~a (HTTP ~a)" port status)))
+  (setf *browser* (%make-browser :process nil :port port)))
+
+(defun kill (&optional (browser *browser*))
+  "Terminate a launched browser, close connections, remove its profile.
+No-op for attached browsers beyond closing the connection."
+  (when browser
+    (when (browser-conn browser)
+      (ignore-errors (ws-close (cdp-conn-ws (browser-conn browser)))))
+    (when (browser-process browser)
+      (ignore-errors (uiop:terminate-process (browser-process browser) :urgent t)))
+    (when (browser-user-data-dir browser)
+      (sleep 0.3)
+      (ignore-errors (uiop:delete-directory-tree
+                      (browser-user-data-dir browser) :validate t)))
+    (when (eq *browser* browser)
+      (setf *browser* nil)))
+  (values))
+
+(defmacro with-browser ((&key headless attach) &body body)
+  "Run BODY with a fresh browser (or an attached one), killed afterwards."
+  (let ((b (gensym "BROWSER"))
+        (port (gensym "PORT")))
+    `(let* ((,port ,attach)
+            (,b (if ,port (attach ,port) (launch :headless ,headless))))
+       (unwind-protect (progn ,@body) (kill ,b)))))
+
+;;; ---------- targets ----------
+
+(defun tabs (&optional (browser *browser*))
+  "All targets (/json/list) as a vector of hash-tables."
+  (check-browser browser)
+  (multiple-value-bind (status body)
+      (http-request "127.0.0.1" (browser-port browser) "GET" "/json/list")
+    (unless (= status 200)
+      (error "tabs: HTTP ~a" status))
+    (vovas.tools.util:json-parse body)))
+
+(defun parse-ws-url (url)
+  "ws://host:port/path -> (values host port path)"
+  (unless (uiop:string-prefix-p "ws://" url)
+    (error "not a ws:// url: ~a" url))
+  (let* ((rest (subseq url 5))
+         (slash (position #\/ rest))
+         (hostport (if slash (subseq rest 0 slash) rest))
+         (path (if slash (subseq rest slash) "/"))
+         (colon (position #\: hostport :from-end t)))
+    (unless colon
+      (error "no port in ws url: ~a" url))
+    (values (subseq hostport 0 colon)
+            (parse-integer (subseq hostport (1+ colon)))
+            path)))
+
+(defun connect-target (browser target)
+  "Open (and remember) the websocket connection to TARGET, replacing any
+previous connection."
+  (let ((ws-url (gethash "webSocketDebuggerUrl" target)))
+    (unless ws-url
+      (error "target has no webSocketDebuggerUrl: ~a" (gethash "url" target)))
+    (multiple-value-bind (host port path) (parse-ws-url ws-url)
+      (when (browser-conn browser)
+        (ignore-errors (ws-close (cdp-conn-ws (browser-conn browser)))))
+      (setf (browser-conn browser)
+            (make-cdp-conn :ws (ws-connect host port path) :next-id 0))))
+  (values (gethash "url" target) (gethash "title" target)))
+
+(defun use (selector &optional (browser *browser*))
+  "Connect to the target whose id/url/title contains SELECTOR, or to the
+first page target when SELECTOR is NIL."
+  (check-browser browser)
+  (let* ((targets (tabs browser))
+         (target (if selector
+                     (find-if (lambda (tt)
+                                (some (lambda (field)
+                                        (and (gethash field tt)
+                                             (search selector (gethash field tt)
+                                                     :test #'char-equal)))
+                                      (list "id" "url" "title")))
+                              targets)
+                     (find-if (lambda (tt) (string= (gethash "type" tt) "page")) targets))))
+    (unless target
+      (error "no target matching ~s" selector))
+    (connect-target browser target)))
+
+(defun new-tab (url &optional (browser *browser*))
+  "Open a new tab and connect to it. Returns the target hash-table."
+  (check-browser browser)
+  (multiple-value-bind (status body)
+      (http-request "127.0.0.1" (browser-port browser) "PUT"
+                    (format nil "/json/new?~a" (url-encode url)))
+    (unless (= status 200)
+      (error "new-tab: HTTP ~a: ~a" status body))
+    (let ((target (vovas.tools.util:json-parse body)))
+      (connect-target browser target)
+      target)))
+
+(defun ensure-connection (browser)
+  (check-browser browser)
+  (or (browser-conn browser)
+      (progn
+        (use nil browser)
+        (or (browser-conn browser)
+            (error "could not attach to any page target")))))
+
+;;; ---------- protocol ----------
+
+(defun call (browser method &optional params)
+  "One CDP command/response round trip. Returns the result object.
+Transport errors drop the cached connection so the next call reconnects."
+  (let ((conn (ensure-connection browser)))
+    (handler-case
+        (let ((id (incf (cdp-conn-next-id conn))))
+          (ws-send-text (cdp-conn-ws conn)
+                        (vovas.tools.util:json-stringify
+                         (vovas.tools.util:json-obj :id id :method method
+                                                    :params (or params (vovas.tools.util:json-obj)))))
+          (loop
+            (let* ((resp (vovas.tools.util:json-parse
+                          (ws-read-message (cdp-conn-ws conn))))
+                   (rid (gethash "id" resp)))
+              (when (and rid (eql rid id))
+                (let ((err (gethash "error" resp)))
+                  (when err
+                    (error "CDP ~a failed: ~a" method (vovas.tools.util:json-stringify err))))
+                (return (gethash "result" resp))))))
+      (error (e)
+        (setf (browser-conn browser) nil)
+        (error e)))))
+
+(defun eval* (expr &key (browser *browser*))
+  "Evaluate EXPR in the current target with returnByValue.
+Returns (values value type); signals on JS exceptions."
+  (let* ((result (call browser "Runtime.evaluate"
+                       (vovas.tools.util:json-obj
+                        :expression expr :return-by-value t :await-promise t)))
+         (details (gethash "exceptionDetails" result)))
+    (when details
+      (let ((exc (gethash "exception" details)))
+        (error "evaluate failed: ~a"
+               (or (and exc (gethash "description" exc))
+                   (gethash "text" details)
+                   (vovas.tools.util:json-stringify details)))))
+    (let ((r (gethash "result" result)))
+      (values (gethash "value" r) (gethash "type" r)))))
+
+(defun nav (url &key (browser *browser*) (timeout-seconds 10))
+  "Navigate the current target to URL and wait for document.readyState=complete."
+  (call browser "Page.navigate" (vovas.tools.util:json-obj :url url))
+  (loop repeat (* timeout-seconds 5)
+        do (sleep 0.2)
+           (multiple-value-bind (v ok)
+               (ignore-errors (eval* "document.readyState" :browser browser))
+             (when (and ok (stringp v) (string= v "complete"))
+               (return t)))
+        finally (error "navigation to ~a did not settle within ~as" url timeout-seconds)))
+
+(defun shot (&key file (browser *browser*))
+  "Capture a PNG of the current target. Returns (values path bytes-written)."
+  (let* ((result (call browser "Page.captureScreenshot"
+                       (vovas.tools.util:json-obj :format "png")))
+         (data (gethash "data" result)))
+    (unless data
+      (error "captureScreenshot returned no data"))
+    (let* ((bytes (cl-base64:base64-string-to-usb8-array data))
+           (path (or file
+                     (uiop:merge-pathnames*
+                      (format nil "unpack-rs/.cache/cdp-shot-~d.png" (get-universal-time))
+                      (repo-root)))))
+      (with-open-file (f path :direction :output :if-exists :supersede
+                              :element-type '(unsigned-byte 8))
+        (write-sequence bytes f))
+      (values path (length bytes)))))
+
+;;; ---------- selftest ----------
+
+(defmacro try (form)
+  "Evaluate FORM, returning (values first-value ok-p). An error yields
+(values nil nil). Unlike IGNORE-ERRORS this reports success explicitly, so a
+check can never mistake a returned value for an error flag."
+  `(handler-case (values ,form t)
+     (error () (values nil nil))))
+
+(defun smoke-test ()
+  "End-to-end selftest of the CDP client against a headless Chrome:
+launch, list tabs, open a page with known content, evaluate JS (including a
+1MB payload), screenshot. Prints one line per check and a final verdict."
+  (let ((checks 0)
+        (ok t)
+        (browser (launch :headless t)))
+    (flet ((check (name condition &optional detail)
+             (if condition
+                 (progn (incf checks)
+                        (format t "[vovas] smoke ~a: OK~@[ (~a)~]~%" name detail))
+                 (progn (setf ok nil)
+                        (format t "[vovas] smoke ~a: FAIL~@[ (~a)~]~%" name detail)))
+             ;; a harness that buffers its verdicts cannot name a hang
+             (force-output)))
+      (unwind-protect
+           (progn
+             (multiple-value-bind (ts tabs-ok) (try (tabs browser))
+               (check "tabs" (and tabs-ok ts (plusp (length ts)))
+                      (and tabs-ok (length ts))))
+             (multiple-value-bind (target tab-ok)
+                 (try (new-tab "data:text/html,<title>vovas cdp smoke</title><h1>hi</h1>"
+                               browser))
+               (check "new-tab" (and tab-ok target (gethash "id" target))
+                      (and tab-ok (gethash "id" target)))
+               (when target
+                 (let ((ready nil))
+                   (loop repeat 25
+                         do (multiple-value-bind (v okp)
+                                (try (eval* "document.readyState" :browser browser))
+                              (when (and okp (stringp v) (string= v "complete"))
+                                (setf ready t)
+                                (return)))
+                            (sleep 0.2))
+                   (check "page ready" ready))
+                 (multiple-value-bind (v okp) (try (eval* "2+2" :browser browser))
+                   (check "evaluate 2+2" (and okp (eql v 4)) v))
+                 (multiple-value-bind (v okp) (try (eval* "document.title" :browser browser))
+                   (check "evaluate title" (and okp (stringp v)
+                                                (search "vovas cdp smoke" v))
+                          v))
+                 (multiple-value-bind (v okp)
+                     (try (eval* "(new Array(1000000)).fill('x').join('')"
+                                 :browser browser))
+                   (check "1MB payload" (and okp (stringp v) (= (length v) 1000000))
+                          (and (stringp v) (length v))))
+                 (multiple-value-bind (path okp) (try (shot :browser browser))
+                   (let ((size (and okp path (ignore-errors
+                                               (vovas.tools.util:file-size path)))))
+                     (check "screenshot" (and okp path (> (or size 0) 1000))
+                            (and path size)))))))
+        (kill browser)))
+    (format t "[vovas] smoke: ~a (~d checks)~%" (if ok "OK" "FAILED") checks)
+    (force-output)
+    ok))
