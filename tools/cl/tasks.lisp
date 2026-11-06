@@ -69,15 +69,63 @@ Returns 0 on success, 1 on failure."
   "Where a gate run records its own result, as a sexp file."
   (uiop:merge-pathnames* "gate.sexp" (cache-dir)))
 
+(defun vovas-argv (args)
+  "Re-invoke this toolchain. For gate steps that npm cannot reach."
+  (append (list (namestring (or sb-ext:*runtime-pathname* "sbcl"))
+                "--noinform" "--script"
+                (namestring (uiop:merge-pathnames*
+                             "run.lisp"
+                             (asdf:system-source-directory "vovas-tools"))))
+          args))
+
 (defun gate-step-argv (label opts)
-  "Resolve one step's runner and argv. A step names exactly one of npm or cargo."
+  "Resolve one step's runner and argv. A step names exactly one runner."
   (let ((npm (getf opts :npm))
-        (cargo (getf opts :cargo)))
-    (cond ((and npm cargo)
-           (error "gate step ~s names both npm and cargo" label))
-          (npm (vovas.tools.util:npm-argv npm))
+        (cargo (getf opts :cargo))
+        (vovas (getf opts :vovas)))
+    (unless (= 1 (count-if #'identity (list npm cargo vovas)))
+      (error "gate step ~s must name exactly one of npm, cargo or vovas" label))
+    (cond (npm (vovas.tools.util:npm-argv npm))
           (cargo (vovas.tools.util:cargo-argv cargo))
-          (t (error "gate step ~s names neither npm nor cargo" label)))))
+          (t (vovas-argv vovas)))))
+
+(defun verify-chain-argv ()
+  "The argv of `npm run verify` in unpack-rs/package.json, normalized.
+`rs <args>` is the local runner that `npm run <args>` invokes, so it becomes the
+npm form the gate spells; without that rule the two chains cannot be compared."
+  (let* ((pkg (uiop:merge-pathnames* "package.json" (unpack-rs-dir)))
+         (scripts (getf (vovas.tools.util:json-decode
+                         (uiop:read-file-string pkg))
+                        :scripts))
+         (chain (getf scripts :verify)))
+    (unless (stringp chain)
+      (error "~a has no scripts.verify" pkg))
+    (loop for segment in (vovas.tools.util:split-on #\& chain)
+          for words = (remove "" (vovas.tools.util:split-on #\Space segment)
+                              :test #'string=)
+          when words
+            collect (cond ((string= (first words) "npm")
+                           (vovas.tools.util:npm-argv (rest words)))
+                          ((string= (first words) "cargo")
+                           (vovas.tools.util:cargo-argv (rest words)))
+                          ((string= (first words) "rs")
+                           (vovas.tools.util:npm-argv (cons "run" (rest words))))
+                          (t (error "verify chain: unknown runner in ~s" segment))))))
+
+(defun gate-selftest ()
+  "Refuse a gate that has drifted from the verify chain it mirrors.
+The gate may run MORE than verify - it has steps npm cannot reach - but every
+step verify runs must be present, in order, with the same argv."
+  (let* ((form (vovas.tools.util:read-sexp-file (gate-file)))
+         (gate (loop for spec in (rest form)
+                     collect (gate-step-argv (second spec) (cddr spec))))
+         (verify (verify-chain-argv))
+         (shared (min (length gate) (length verify))))
+    (unless (equal (subseq gate 0 shared) verify)
+      (error "the gate has drifted from `npm run verify`:~%  gate:   ~s~%  verify: ~s"
+             (subseq gate 0 shared) verify))
+    (format t "[vovas] gate mirrors the verify chain (~d shared steps)~%" shared)
+    (force-output)))
 
 (defun gate-steps (&key fast)
   "The gate as data, read from tools/cl/vovas.sexp.
@@ -105,6 +153,7 @@ Writes the run to unpack-rs/.cache/gate.sexp. Returns 0/1."
   ;; a data format that is never round-tripped is a format waiting to break
   (vovas.tools.util:sexp-selftest)
   (vovas.tools.util:json-selftest)
+  (gate-selftest)
   (let ((steps (gate-steps :fast fast))
         (results nil)
         (failed nil))

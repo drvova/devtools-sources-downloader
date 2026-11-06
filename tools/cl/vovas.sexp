@@ -6,9 +6,10 @@
 ;;
 ;; Order matters: the first failing step stops the run.
 ;;
-;; This list mirrors the "verify" chain in unpack-rs/package.json step for step.
-;; Two entry points, one set of steps: change one and change the other, or the
-;; two gates drift apart while both still pass.
+;; The first seven steps mirror the "verify" chain in unpack-rs/package.json step
+;; for step, and `gate-selftest` refuses to run if they drift. The last step runs
+;; the product against a real page, which npm cannot reach - so this gate is a
+;; superset of verify, never a subset.
 
 (:gate
  (:step "lint+format (rs check)"
@@ -27,4 +28,6 @@
  (:step "e2e (npm run test:e2e)"
        :npm ("run" "test:e2e"))
  (:step "extension e2e"
-       :npm ("run" "test:e2e:ext")))
+       :npm ("run" "test:e2e:ext"))
+ (:step "product (download --fixture)"
+       :vovas ("download" "--fixture")))

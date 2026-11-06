@@ -60,8 +60,13 @@ actually changed.
 6. `npm run test:e2e`
 7. `npm run test:e2e:ext`
 
-`tools/cl/vovas.sexp` mirrors this chain step for step. Two entry points, one set of steps:
-change one and change the other, or the two gates drift apart while both still pass.
+`vovas check` runs those same seven steps and then an eighth that npm cannot reach:
+`vovas download --fixture`, which drives the real DevTools panel against a local page and
+inspects the archive it produces. So the Lisp gate is a superset of `verify`, never a subset.
+
+`tools/cl/vovas.sexp` holds the gate as data, and `gate-selftest` refuses to run if the first
+seven steps drift from the `verify` chain. They used to be kept in agreement by a comment --
+which is to say, not at all.
 
 ## What each suite proves
 

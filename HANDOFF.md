@@ -10,7 +10,7 @@ recalled. Where something is *unverified*, it says so.
 | HEAD | `730ff88` — Close the audit findings that survived reading |
 | Working tree | clean |
 | `cargo test` | green — 68 unit + 89 integration |
-| `vovas check` | PASS — all 7 steps, run on every pass |
+| `vovas check` | PASS — all 8 steps, run on every pass |
 | `vovas download` | PASS — 10 checks against a real page, the real panel, a real archive |
 | Wiki | `.wiki/`, 1987 lines, seven pages, all internal links resolving |
 

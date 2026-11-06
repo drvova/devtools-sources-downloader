@@ -43,7 +43,7 @@ objects stay in the page; plain data moves to Rust and gets tested.
 | [Unpack Engine](Unpack-Engine) | The crate in depth: the scanner, the peel loop, all 10 detectors with scores, packers and refusals, the JSFuck interpreter, the V8/JSC/wasm binary parsers, the zip writer |
 | [Panel](Panel) | `src/panel/*`: the resource model, capture policy, stack profiling and capture strategy, asset scoring, boundary labels and flows, workspaces and journeys, the reports |
 | [Export Package](Export-Package) | Every path in `sources.zip`, what writes it, and the order |
-| [Build and Test](Build-and-Test) | Commands, the seven-step gate, what each suite actually proves, the release profile |
+| [Build and Test](Build-and-Test) | Commands, the eight-step gate, what each suite actually proves, the release profile |
 | [Toolchain](Toolchain) | `tools/cl/` — the SBCL driver, the sexp gate definition, the live browser REPL |
 
 ## Repository shape
