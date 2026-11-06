@@ -110,6 +110,16 @@ Returns NIL when the file is not a readable zip."
         (remove-if (lambda (line) (zerop (length line)))
                    (vovas.tools.util:split-lines out))))))
 
+(defun zip-entry-text (path entry)
+  "Contents of ENTRY inside the zip at PATH, or NIL when it is absent."
+  (let ((script (format nil
+                        "Add-Type -AssemblyName System.IO.Compression.FileSystem; $z=[System.IO.Compression.ZipFile]::OpenRead('~a'); $e=$z.GetEntry('~a'); if ($e) { $r=New-Object System.IO.StreamReader($e.Open()); $r.ReadToEnd(); $r.Close() }; $z.Dispose()"
+                        (uiop:native-namestring path) entry)))
+    (multiple-value-bind (code out)
+        (vovas.tools.util:run-program
+         (list (vovas.tools.util:powershell-exe) "-NoProfile" "-Command" script))
+      (when (zerop code) out))))
+
 (defun zip-signature-p (path)
   "Whether PATH begins with the local-file header every zip starts with."
   (with-open-file (stream path :element-type '(unsigned-byte 8) :if-does-not-exist nil)
@@ -131,6 +141,59 @@ Returns NIL when the file is not a readable zip."
                             :if-exists :supersede :if-does-not-exist :create)
     (write-sequence octets out))
   path)
+
+;;; ---------------------------------------------------------------------------
+;;; A local page with real JavaScript, served for the check.
+;;;
+;;; `example.com` proves the pipeline but has no scripts, so it cannot exercise
+;;; the runtime payload path at all. The fixture has an external script, an
+;;; `eval`, a `Function` constructor and a worker - the three runtime payload
+;;; kinds the capture records - which makes the check deterministic, offline, and
+;;; stronger than a real site would be.
+
+(defun fixture-dir ()
+  (uiop:merge-pathnames* "fixtures/download-page/"
+                         (uiop:pathname-directory-pathname
+                          (uiop:truename* (or *load-truename* *compile-file-truename*
+                                              #p"tools/cl/download.lisp")))))
+
+(defparameter *fixture-server-js*
+  "const http = require('http'), fs = require('fs'), path = require('path');
+const root = process.argv[1], port = Number(process.argv[2]);
+const types = { '.html': 'text/html', '.js': 'text/javascript',
+                '.css': 'text/css', '.json': 'application/json' };
+http.createServer((req, res) => {
+  const name = decodeURIComponent(req.url.split('?')[0]);
+  const file = path.join(root, name === '/' ? 'index.html' : name);
+  fs.readFile(file, (err, body) => {
+    if (err) { res.writeHead(404); res.end('not found'); return; }
+    res.writeHead(200, { 'content-type': types[path.extname(file)] || 'application/octet-stream' });
+    res.end(body);
+  });
+}).listen(port, '127.0.0.1');")
+
+(defun free-port ()
+  (let ((socket (usocket:socket-listen "127.0.0.1" 0)))
+    (unwind-protect (usocket:get-local-port socket)
+      (usocket:socket-close socket))))
+
+(defun start-fixture-server ()
+  "Serve the download fixture on a free port. Returns (values process url)."
+  (let* ((port (free-port))
+         (process (uiop:launch-program
+                   (list (vovas.tools.util:node-exe)
+                         "-e" *fixture-server-js*
+                         (uiop:native-namestring (fixture-dir))
+                         (write-to-string port))
+                   :output nil :error-output nil))
+         (url (format nil "http://127.0.0.1:~d/" port)))
+    (unless (wait-until (lambda ()
+                          (multiple-value-bind (status) (http-request "127.0.0.1" port "GET" "/")
+                            (= status 200)))
+                        :timeout-seconds 15)
+      (ignore-errors (uiop:terminate-process process :urgent t))
+      (error "the fixture server did not answer on ~a" url))
+    (values process url)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; The JS the check runs inside the panel.
@@ -236,8 +299,9 @@ depending on where Chrome decides to write downloads.")
       (check "archive decodes" octets (and octets (length octets)))
       octets)))
 
-(defun download-stage-verify (octets archive)
-  "Write OCTETS to ARCHIVE and prove it is the archive the product promises."
+(defun download-stage-verify (octets archive expect-runtime)
+  "Write OCTETS to ARCHIVE and prove it is the archive the product promises.
+EXPECT-RUNTIME also requires the runtime payloads the fixture page generates."
   (unless octets
     (return-from download-stage-verify nil))
   (write-octets archive octets)
@@ -248,20 +312,47 @@ depending on where Chrome decides to write downloads.")
                 (find-if (lambda (e) (search "_recon/" e)) entries)
                 (find-if (lambda (e) (search "_unpack/" e)) entries)
                 (find-if (lambda (e) (search "_analysis/" e)) entries))
-           (and entries (length entries)))))
+           (and entries (length entries)))
+    (when expect-runtime
+      ;; A worker records a url and a workerType rather than inline text, so its
+      ;; script arrives as an unpacked asset; only eval and Function produce a
+      ;; payload file. The manifest is what says which kinds were seen.
+      (let* ((text (zip-entry-text archive "_runtime/runtime-manifest.json"))
+             (manifest (and text (ignore-errors (vovas.tools.util:json-decode text))))
+             (kinds (and (listp manifest)
+                         (remove nil (mapcar (lambda (e) (getf e :kind)) manifest)))))
+        (check "manifest records the runtime payloads"
+               (and kinds
+                    (member "eval" kinds :test #'string=)
+                    (member "function" kinds :test #'string=)
+                    (member "worker" kinds :test #'string=))
+               (and kinds (format nil "~{~a~^,~}" kinds)))
+        (dolist (kind '("eval" "function"))
+          (check (format nil "runtime ~a payload is written" kind)
+                 (find-if (lambda (e) (search (format nil "_runtime/~a/" kind) e)) entries)
+                 (and entries (length entries))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; The check.
 
-(defun download-check (&key headless (url "https://example.com") (timeout-seconds 120))
+(defun download-check (&key headless url fixture (timeout-seconds 120))
   "Load the built extension, open URL, press Download All in the real panel, and
-verify the archive it produces. Returns 0 when every check passes, 1 otherwise."
+verify the archive it produces. Returns 0 when every check passes, 1 otherwise.
+
+FIXTURE serves `fixtures/download-page` locally and asserts the runtime payloads
+it generates, which is stronger than a real site and needs no network. URL
+defaults to example.com when neither is given."
   (let ((*checks* 0)
         (*checks-ok* t)
         (dist (string-right-trim "/" (namestring (vovas.tools.util:dist-dir))))
         (archive (uiop:merge-pathnames* "download-check/sources.zip"
                                         (vovas.tools.util:cache-dir)))
+        (server nil)
         (browser nil))
+    (when fixture
+      (multiple-value-setq (server url) (start-fixture-server))
+      (check "fixture server answers" url url))
+    (setf url (or url "https://example.com"))
     (unwind-protect
          (progn
            (unless (probe-file (uiop:merge-pathnames* "manifest.json"
@@ -282,8 +373,9 @@ verify the archive it produces. Returns 0 when every check passes, 1 otherwise."
                (let ((panel (download-stage-panel browser)))
                  (when panel
                    (download-stage-verify (download-stage-archive browser timeout-seconds)
-                                          archive))))))
-      (when browser (kill browser)))
+                                          archive fixture))))))
+      (when browser (kill browser))
+      (when server (ignore-errors (uiop:terminate-process server :urgent t))))
     (format t "[vovas] download: ~a (~d checks)~%"
             (if *checks-ok* "OK" "FAILED") *checks*)
     (force-output)

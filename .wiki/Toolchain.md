@@ -150,6 +150,17 @@ up, the panel hooks the archive, the click lands, the archive is built, it is na
 `sources.zip`, it decodes, it is a zip, and it carries `_recon/`, `_unpack/` and `_analysis/`
 entries. Against `https://example.com` that is 43 entries.
 
+`--fixture` is the stronger form and the one to run when changing capture code. It serves
+`fixtures/download-page` on a free port — an external script, an `eval`, a `Function`
+constructor and a worker — so the run needs no network and reaches the runtime payload path
+that `example.com` cannot exercise at all. That page produces 58 entries, and the run then
+also asserts the runtime manifest records `eval`, `function` and `worker` kinds, and that the
+`eval` and `Function` payloads were written to `_runtime/`.
+
+One asymmetry worth knowing: a worker entry carries a `url` and a `workerType`, not inline
+text, so it has no `_runtime/workers/` file — its script arrives as an unpacked asset under
+`_unpack/`. Only `eval` and `Function` produce payload files.
+
 ## Why this exists at all
 
 `npm run verify` gives one exit code for seven steps. The Lisp driver gives a verdict and a
