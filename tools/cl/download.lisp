@@ -338,6 +338,18 @@ EXPECT-RUNTIME also requires the runtime payloads the fixture page generates."
              (and entries (length entries)))
       (check "archive recovers the mapped source"
              (find-if (lambda (e) (search "/sources/app.ts" e)) entries)
+             (and entries (length entries)))
+      ;; The fixture fetches a real wasm module, so the detector and parser have
+      ;; to run and name what the module exports.
+      (let ((info-entry (find-if (lambda (e) (search "/wasm-info.json" e)) entries)))
+        (check "archive parses the wasm module" info-entry (and entries (length entries)))
+        (when info-entry
+          (let ((info (zip-entry-text archive info-entry)))
+            (check "wasm parse names the export"
+                   (and (stringp info) (search "\"answer\"" info))
+                   (and info (length info))))))
+      (check "runtime wasm payload is written"
+             (find-if (lambda (e) (search "_runtime/wasm/" e)) entries)
              (and entries (length entries))))))
 
 ;;; ---------------------------------------------------------------------------
