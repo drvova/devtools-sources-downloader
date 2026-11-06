@@ -25,10 +25,22 @@ pub const REDACT_KEY_PATTERN: &str =
 pub const TEXT_MIME_PATTERN: &str =
     "(?:javascript|ecmascript|typescript|json|text|xml|svg|html|css)";
 
-/// A request URL containing this is treated as a GraphQL endpoint. The body
-/// half of that predicate is structural and stays in the page world, where it
-/// mirrors `panel::graph::looks_like_graphql_body`.
+/// A request URL containing this is treated as a GraphQL endpoint.
 pub const GRAPHQL_URL_MARKER: &str = "graphql";
+
+/// A request body whose text matches this is treated as a GraphQL operation.
+///
+/// Written in a form both engines accept: the page world compiles it as a
+/// `RegExp`, and the engine compiles it with `unicode(false)` so `\b` is an
+/// ASCII word boundary there too. The two used to spell this predicate
+/// separately - `(?-u:\b)` on one side, `\b` on the other - which is the
+/// same rule written two ways and free to drift. `operationName` is part of
+/// the alternation because it is a plain substring test, not a word-boundary
+/// one.
+pub const GRAPHQL_BODY_PATTERN: &str = r"(?:^|\b)(query|mutation|subscription)\b|operationName";
+
+/// Object keys whose presence marks a request body as a GraphQL operation.
+pub const GRAPHQL_BODY_KEYS: [&str; 3] = ["query", "operationName", "extensions"];
 
 /// How much of each thing a capture keeps.
 pub struct Limits {
@@ -82,6 +94,8 @@ pub fn capture_policy() -> Value {
         "redactKey": REDACT_KEY_PATTERN,
         "textMime": TEXT_MIME_PATTERN,
         "graphqlUrl": GRAPHQL_URL_MARKER,
+        "graphqlBody": GRAPHQL_BODY_PATTERN,
+        "graphqlBodyKeys": GRAPHQL_BODY_KEYS,
         // The page world needs usable timings before the panel's analysed
         // profile arrives, and it used to keep its own copy of them. They are
         // engine policy like the budgets below, so they ride here.

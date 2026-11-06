@@ -105,7 +105,15 @@ fn the_injected_object_is_the_shape_the_page_world_reads() {
         .collect();
     assert_eq!(
         keys,
-        ["redactKey", "textMime", "graphqlUrl", "defaultStrategy", "limits"]
+        [
+            "redactKey",
+            "textMime",
+            "graphqlUrl",
+            "graphqlBody",
+            "graphqlBodyKeys",
+            "defaultStrategy",
+            "limits"
+        ]
     );
     assert_eq!(injected["redactKey"], policy::REDACT_KEY_PATTERN);
     assert_eq!(injected["textMime"], policy::TEXT_MIME_PATTERN);
@@ -139,6 +147,49 @@ fn the_injected_object_is_the_shape_the_page_world_reads() {
             "technologies"
         ]
     );
+}
+
+/// The GraphQL body predicate used to be spelled twice - `(?-u:)` in the
+/// engine, `` in the page world - which is the same rule written two ways.
+/// The injected value is now the engine's own pattern and key list, so this
+/// asserts identity rather than agreement.
+#[test]
+fn the_injected_graphql_body_predicate_is_the_engine_constant() {
+    let injected = policy::capture_policy();
+    assert_eq!(injected["graphqlBody"], policy::GRAPHQL_BODY_PATTERN);
+    assert_eq!(
+        injected["graphqlBodyKeys"],
+        serde_json::json!(policy::GRAPHQL_BODY_KEYS)
+    );
+}
+
+/// The shared pattern has to mean the same thing in both engines, so this pins
+/// the verdicts that depend on it. The graph oracle covers the string branch
+/// well but never exercises the `extensions` key or a word-boundary negative,
+/// which are exactly the two places the two spellings could have diverged.
+#[test]
+fn the_graphql_body_predicate_holds_its_edges() {
+    use devtools_unpack::panel::graph::looks_like_graphql_body;
+    use serde_json::json;
+
+    assert!(looks_like_graphql_body(&json!("query { a }")));
+    assert!(looks_like_graphql_body(&json!("mutation { a }")));
+    assert!(looks_like_graphql_body(&json!("subscription { a }")));
+    assert!(looks_like_graphql_body(&json!("{\"operationName\":\"X\"}")));
+
+    // A word boundary, not a substring: `query` inside a longer word is not a
+    // GraphQL operation, and this is what `unicode(false)` buys on the engine
+    // side so it matches the page world's RegExp.
+    assert!(!looks_like_graphql_body(&json!("unqueryable")));
+    assert!(!looks_like_graphql_body(&json!("requery")));
+
+    // The object branch, including the key the oracle never exercises.
+    assert!(looks_like_graphql_body(&json!({"query": "q"})));
+    assert!(looks_like_graphql_body(&json!({"operationName": "X"})));
+    assert!(looks_like_graphql_body(&json!({"extensions": {"a": 1}})));
+    assert!(!looks_like_graphql_body(&json!({"body": "q"})));
+    assert!(!looks_like_graphql_body(&json!([])));
+    assert!(!looks_like_graphql_body(&serde_json::Value::Null));
 }
 
 /// The page world used to keep its own copy of the default strategy, thirteen
@@ -221,6 +272,10 @@ fn the_page_world_keeps_no_local_copy_of_the_policy() {
         assert!(
             !nonzero_strategy_literal.is_match(&source),
             "{name} hardcodes a capture timing again; the strategy is injected"
+        );
+        assert!(
+            !source.contains("(query|mutation|subscription)"),
+            "{name} spells the GraphQL body predicate again; it is injected"
         );
     }
 }

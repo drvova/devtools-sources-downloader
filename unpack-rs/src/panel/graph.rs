@@ -16,15 +16,20 @@ use crate::util::{iso8601_now, utf16_prefix};
 
 /// `looksLikeGraphQLBody`.
 pub fn looks_like_graphql_body(body: &Value) -> bool {
-    static KEYWORD: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(r"(?:^|(?-u:\b))(query|mutation|subscription)(?-u:\b)").unwrap()
+    // `unicode(false)` makes the word boundary ASCII, which is what the page
+    // world's RegExp does - so the one shared pattern means the same thing on
+    // both sides instead of being spelled twice.
+    static BODY: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::RegexBuilder::new(crate::panel::policy::GRAPHQL_BODY_PATTERN)
+            .unicode(false)
+            .build()
+            .expect("graphql body pattern compiles")
     });
     match body {
-        Value::String(text) => KEYWORD.is_match(text) || text.contains("operationName"),
-        Value::Object(map) => ["query", "operationName", "extensions"]
+        Value::String(text) => BODY.is_match(text),
+        Value::Object(map) => crate::panel::policy::GRAPHQL_BODY_KEYS
             .iter()
             .any(|key| map.get(*key).map(js_truthy).unwrap_or(false)),
-        Value::Array(_) => false,
         _ => false,
     }
 }

@@ -387,10 +387,14 @@ world's first line, and both modules read it:
 - `framework-introspect.js` builds `REDACT_RE` from `redactKey` and reads
   `limits.items` / `limits.keys` / `limits.string` through one `limit(name)`
   accessor.
-- `injected.js` builds `TEXT_MIME_RE` from `textMime`, reads the four runtime
-  budgets the same way, and takes the GraphQL URL marker from `graphqlUrl`.
-  The body half of that predicate is structural and stays put; it already
-  mirrors `panel::graph::looks_like_graphql_body` exactly.
+- `injected.js` builds `TEXT_MIME_RE` from `textMime`, reads the runtime
+  budgets the same way, and takes both halves of the GraphQL predicate from
+  `graphqlUrl` and `graphqlBody` / `graphqlBodyKeys`. The body half used to be
+  spelled in both places - `(?-u:)` in the engine, `` in the page world -
+  which is one rule written two ways and free to drift. The engine now compiles
+  the injected pattern with `unicode(false)`, so its word boundary is ASCII
+  exactly like the page world's `RegExp`, and a single string means one thing on
+  both sides.
 
 ### Deliberate differences
 

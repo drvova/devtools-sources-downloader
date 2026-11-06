@@ -30,6 +30,11 @@
     }
     var TEXT_MIME_RE = new RegExp(POLICY ? POLICY.textMime : '$^', 'i');
     var GRAPHQL_URL = POLICY ? POLICY.graphqlUrl : '';
+    // The body half of the GraphQL predicate is engine policy too
+    // (panel/policy.rs::GRAPHQL_BODY_PATTERN); a missing policy compiles to a
+    // pattern that cannot match, so nothing is classified as GraphQL.
+    var GRAPHQL_BODY_RE = new RegExp(POLICY ? POLICY.graphqlBody : '$^');
+    var GRAPHQL_BODY_KEYS = (POLICY && POLICY.graphqlBodyKeys) || [];
 
     // The engine owns the default strategy (panel/stackprofile.rs) and injects
     // it with the rest of the capture policy. The fallback below carries no
@@ -161,13 +166,12 @@
     function looksLikeGraphQL(url, body) {
         if (GRAPHQL_URL && lower(url).indexOf(GRAPHQL_URL) >= 0) return true;
         if (!body) return false;
-        if (typeof body === 'string') {
-            return (
-                /(?:^|\b)(query|mutation|subscription)\b/.test(body) ||
-                body.indexOf('operationName') >= 0
-            );
+        if (typeof body === 'string') return GRAPHQL_BODY_RE.test(body);
+        if (typeof body !== 'object') return false;
+        for (var i = 0; i < GRAPHQL_BODY_KEYS.length; i++) {
+            if (body[GRAPHQL_BODY_KEYS[i]]) return true;
         }
-        return typeof body === 'object' && (body.query || body.operationName || body.extensions);
+        return false;
     }
 
     function getGraphQLEndpoints() {
