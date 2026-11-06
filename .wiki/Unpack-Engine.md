@@ -73,9 +73,11 @@ a regex) is what keeps `find_balanced` honest on real minified code.
 
 - **Dean Edwards' packer** — `detect_packer` / `unpack_packer`, with the original
   `MAX_PACKER_LAYERS` stop conditions preserved so nested packers peel correctly.
-- **aaencode / jjencode / jsfiretruck** — detected and **refused** with a reason. These are
-  not reversible without emulating a kaomoji interpreter, and pretending otherwise would
-  produce garbage.
+- **aaencode / jjencode / jsfiretruck** — detected and **refused**, with a reason. Each is a
+  *shell*: decoding it means executing a kaomoji/`$=~[]` expression tree, not applying a
+  string transform. The detector requires both a banner hit and real alphabet density, so a
+  stray kaomoji in a comment cannot trigger a refusal. Pretending to decode one would
+  produce garbage, so the report says what it saw instead.
 - **obfuscator.io** — a marker census (banner, string-array shape, rotator, dead-code
   injection, control-flow flattening) that ends in a `Refusal` naming what was found.
 - **string-array rebuild** — `detect_string_array` / `transform_string_array` rebuild the
@@ -85,33 +87,40 @@ a regex) is what keeps `find_balanced` honest on real minified code.
 
 `src/jsfuck.rs` (917 lines) is a real interpreter over the six-character alphabet
 (`[]()!+`): it evaluates the expression tree to a string, then the caller re-parses the
-result. `detect_jsfuck` scores how much of the text is alphabet-only; `decode_jsfuck`
-returns the recovered source plus stats. The encoder side lives in
-`tests/jsfuck_encoder/` and is used to generate round-trip fixtures.
+result. `detect_jsfuck` requires **95% purity** over at least 12 alphabet characters, so a
+file that merely contains some `[]()!+` is not mistaken for one. `decode_jsfuck` returns the
+recovered value and whether it was *captured* (the payload called the capture hook) rather
+than returned. The encoder side lives in `tests/jsfuck_encoder/` and generates round-trip
+fixtures.
 
 ## Binary formats
 
 `pipeline::unpack_binary_asset` is an ordered ladder — first match routes, an unrecognized
 blob is a *reported* refusal, never a silent skip:
 
-| Rung | Module | What it recovers |
+| Rung | Module | What it writes |
 | --- | --- | --- |
-| wasm module | `wasm.rs` | sections, imports, exports, module info |
-| V8 code cache | `v8codecache.rs` | header, cached strings, source offsets |
+| wasm module | `wasm.rs` | `wasm-info.json`: version, sections, imports, exports, function and type names, data strings |
+| V8 code cache | `v8codecache.rs` | `cache-header.json` (magic, runtime, format, version/source/flag hashes, payload length) plus the recovered strings |
 | brotli-sealed V8 | `v8codecache.rs` | inflate, then re-parse as a code cache |
-| JSC bytecode | `jscbytecode.rs` | header, shared string table, per-function stats |
+| JSC bytecode | `jscbytecode.rs` | `cache-header.json` (version, declared length) plus the recovered strings |
 
-`jscbytecode.rs` (1057 lines) is the deepest: it parses Apple's JavaScriptCore bytecode
-format, reads the shared string table (`read_jsc_shared_table`, `find_jsc_shared_table`),
-and walks function blocks to recover strings and opcode statistics. `wtf_string_hash`
-reproduces WTF's hash — including its misleadingly named `read32Big`, which builds
-little-endian words (the Rust twin comments this, and the JS quirk is preserved on purpose).
+A wasm module and a V8 code cache can both match the same blob, so those two rungs are
+independent `if`s; the JSC rung only runs when nothing else matched. JSC is the deepest:
+it parses Apple's JavaScriptCore bytecode format, reads the shared string table
+(`read_jsc_shared_table`, `find_jsc_shared_table`), and walks function blocks to recover
+strings and opcode statistics. `wtf_string_hash` reproduces WTF's hash — including its
+misleadingly named `read32Big`, which builds little-endian words (the Rust twin comments
+this, and the JS quirk is preserved on purpose).
 
 ## Bundles, beautification, source maps
 
-- `bundler::extract_bundle_modules` splits webpack/Vite/Rollup output into modules, naming
-  each from its `//# sourceURL`. A module whose body is a lone arrow expression is skipped —
-  a preserved JS quirk.
+- `bundler::extract_bundle_modules` splits **webpack** bundles — both the named
+  `__webpack_modules__` map and the push-array form — into modules, naming each from its
+  `//# sourceURL` (with `webpack://` / `webpack-internal://` prefixes stripped). A module
+  whose body is a lone arrow expression is skipped — a preserved JS quirk. Vite/Rollup output
+  is already ESM and is not re-split; those bundles are handled by beautification and source
+  maps instead.
 - `beautify::looks_minified` decides from line length and code signals;
   `beautify::beautify_js` is a scanner-aware formatter (brace blocks get one statement per
   line, two-space indent, parentheses stay inline). It is deliberately *not* js-beautify:

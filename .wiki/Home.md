@@ -53,7 +53,7 @@ living beside the Rust sources are simply not Rust sources.
 
 | | |
 | --- | --- |
-| Rust source | ~17.1k lines across 19 engine modules + 14 panel modules |
+| Rust source | ~17.1k lines: 19 files in `src/` (18 modules + `lib.rs`) and 14 in `src/panel/` |
 | JavaScript | ~2.9k lines, all platform layer |
 | Engine wasm | ~2.2 MB (release, `opt-level = "z"`, LTO, stripped) |
 | Rust tests | 64 unit + 81 integration |

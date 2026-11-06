@@ -7,6 +7,9 @@ Rust unpack engine for the DevTools sources-downloader extension.
   the crate as `dist/js/engine.wasm` through `src/js/unpack-bridge.js`, which
   keeps the exact export surface of the former JavaScript engine. Port notes
   and deliberate divergences: `PORTING.md`; the extension's docs: `README.md`.
+- `.wiki/` - how the whole thing works: architecture, the unpack engine, the
+  panel, the export package, the build gate, and the SBCL toolchain. Start at
+  `.wiki/Home.md`.
 
 Commands:
 

@@ -17,7 +17,7 @@ sources.zip
 
 | File | Contents |
 | --- | --- |
-| `page.json` | the page snapshot the capture started from: url, title, origin |
+| `page.json` | the page snapshot the capture collected (url, title, origin, and whatever the page world published) |
 | `localStorage.json`, `sessionStorage.json` | storage dumps, redacted |
 | `cookies.json` | parsed cookies, redacted |
 | `stack-profile.json` | detected technologies, traits, confidence |
@@ -55,12 +55,23 @@ The extension is chosen from the payload's MIME type — `js`, `json`, `html`, `
 | Path | Content |
 | --- | --- |
 | `00-original.js` | the asset exactly as captured — only when a layer was peeled |
-| `layers/NN-<tool>.js` | the output of layer `NN`: `eval-unwrap`, `base64`, `hex-escape`, `unescape`, `charcode`, `reverse`, `rot13` |
+| `layers/0<depth>-<tool>.js` | the output of that peel stage — `01-eval-unwrap.js`, `02-base64.js`, … The tools are `eval-unwrap`, `base64`, `hex-escape`, `unescape`, `charcode`, `reverse`, `rot13`, `packer`, `jsfuck`, `string-array` |
 | `modules/` | modules split out of the bundle, named from `//# sourceURL` |
 | `10-beautified.js` | beautified output, when the recovered source is still minified |
 | `10-source.js` | the recovered source as-is, when it is already readable |
 | `source-map.json` | the source map, inline or fetched from its URL |
 | `sources/` | `sourcesContent` entries — i.e. the original files |
+
+## Binary assets get their own files
+
+A cached-bytecode asset has no source to peel, so it writes structure instead:
+
+| Path | Content |
+| --- | --- |
+| `wasm-info.json` | version, sections, imports, exports, function and type names, data strings |
+| `cache-header.json` | the cache header: magic, runtime, format, version/source/flag hashes, payload length |
+| `functions.json` | the JSC function tree with shared-table name resolution |
+| `strings.json` | every recovered string |
 
 ## `_unpack-runtime/` — the same treatment for runtime payloads
 
@@ -86,7 +97,7 @@ it was beautified, the source-map summary, notes, and any refusals. Pretty-print
 | `cross-boundary-flows.json` | flows between boundaries |
 | `framework-runtime.json` | router, stores, query cache, hydration |
 | `interesting-entrypoints.json` | ranked starting points, with a `why` |
-| `readable/NNNN-<label>.js` | beautified, header-annotated readable views |
+| `readable/NNNN-<label>.js` | the recovered source with a `Semantic reconstruction` header: label, URL, file, boundaries, why, score, beautified yes/no |
 | `workspaces/<id>.json` | one file per boundary workspace |
 | `journeys/<id>.json` | `initial-load`, `auth-handshake`, `route-change`, `runtime-materialization` |
 

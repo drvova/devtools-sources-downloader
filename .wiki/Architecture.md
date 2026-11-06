@@ -22,9 +22,22 @@ engine never touches the DOM.
 
 `src/js/injected.js` (1348 lines) and `src/js/framework-introspect.js` (462 lines) run
 **inside the inspected page**, injected by `chrome.devtools.inspectedWindow.reload({injectedScript})`
-before the page's own scripts. They cannot be wasm: to intercept `XMLHttpRequest`,
-`window.fetch`, `WebSocket`, `EventSource`, `Worker` and `WebAssembly.instantiate`, the hook
+before the page's own scripts. They cannot be wasm: to intercept a JavaScript call, the hook
 has to be JavaScript running in that same realm.
+
+What it patches, and why each one matters:
+
+| Hook | Captures |
+| --- | --- |
+| `XMLHttpRequest.prototype.open/send/setRequestHeader` | xhr requests, bodies, headers |
+| `window.fetch` | fetch calls and their responses |
+| `window.WebSocket` | socket opens, frames, close codes |
+| `window.EventSource` | SSE streams |
+| `window.eval` | code evaluated at runtime |
+| `window.Worker` / `window.SharedWorker` | worker sources (blob or URL) |
+| `navigator.serviceWorker.register` | service worker scripts |
+| `WebAssembly.instantiate` | wasm modules, by source or by response clone |
+| `MutationObserver` | the DOM mutation log |
 
 What they publish on `window`:
 
@@ -45,9 +58,10 @@ could drift.
 
 ## Layer 2 — the panel (JavaScript shim + Rust logic)
 
-`src/js/page.js` (555 lines) is the only file that touches `chrome.devtools` and the DOM.
-Everything else the panel does — filtering, sorting, scoring, analysis, report HTML — lives
-in `src/panel/*.rs` and crosses the wasm boundary as JSON.
+`src/js/page.js` (555 lines) is the only file that touches `chrome.devtools` *and* the DOM —
+eleven `chrome.*` call sites, all of them capture plumbing. Everything else the panel does —
+filtering, sorting, scoring, analysis, report HTML — lives in `src/panel/*.rs` and crosses
+the wasm boundary as JSON.
 
 `src/js/devtools.js` is seven lines: it registers a main panel (not a sidebar pane, which
 Chrome stopped rendering in the Sources panel).
@@ -103,8 +117,11 @@ records the message; a trap leaves the instance and its memory alive, so
    `window.__CAPTURE_POLICY__ = <engine policy>`, reload the page with that as the injected
    script (`ignoreCache: true`).
 3. `startPolling` — every 500 ms, `inspectedWindow.eval` a JSON snapshot of the page-world
-   globals, up to 180 attempts. The page world decides readiness from its own capture
-   strategy (network quiet, worker grace, boot delay).
+   globals, up to 180 attempts (90 s). Readiness is decided **in the page world**, from its
+   own capture strategy: six independent signals — `domReady`, `networkQuiet`,
+   `mutationQuiet`, `runtimeQuiet`, `socketQuiet`, `workerQuiet` — must all hold, or the
+   `maxCaptureMs` window expires and readiness is forced with reason `max-capture`. The
+   panel only reports the reason text while it waits.
 4. **Capture complete** → `doDownload` walks `chrome.devtools.inspectedWindow.getResources`,
    fetching each script's text; `looksBinaryScript` routes cached bytecode down the bytes
    path.
@@ -118,10 +135,11 @@ records the message; a trap leaves the instance and its memory alive, so
 The dividing question is not "is this code pure?" but **"are its inputs plain data or live
 objects?"**
 
-- `framework-introspect.js::safeValue` has zero live-object tokens in its body — it
-  enumerates and recurses generically — but its *argument* is a live framework instance, so
-  it must run in the page.
-- `stack-profile.js::analyze` had an equally token-free body, but its input was a plain
+- `framework-introspect.js::safeValue` enumerates and recurses generically — it has no
+  framework-specific code at all — but its *argument* is a live framework instance, so it
+  must run in the page. Its rules (`shouldRedactKey`, `limitString`) come from the injected
+  policy, which is why the policy crossed to Rust even though the walker stayed.
+- `stack-profile.js::analyze` had an equally generic body, but its input was a plain
   snapshot — which is exactly why it moved to `panel::stackprofile` and now has tests.
 - `page.js::checkDone` is five lines with no `chrome` or DOM tokens, but it closes over
   state created inside a `getResources` callback — a closure can look pure while living
