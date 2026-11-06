@@ -114,7 +114,10 @@ function allocStr(str) {
     return [ptr, bytes.length];
 }
 
-function callRaw(name, argsJson) {
+// Raw dispatch: allocate, call, free. The engine's own trap escapes untouched
+// so the failure reader below can go through it without recursing into the
+// explanation layer.
+function rawCall(name, argsJson) {
     const [namePtr, nameLen] = allocStr(name);
     const [argsPtr, argsLen] = allocStr(argsJson);
     const lenPtr = engine.xu_alloc(4);
@@ -132,14 +135,48 @@ function callRaw(name, argsJson) {
     }
 }
 
+// A trap cannot be caught inside the engine (it builds with panic = abort),
+// but the engine records the panic message before trapping and a trap leaves
+// its instance and memory alive - so the real cause is still readable here.
+// Without this a panic reaches the panel as a bare "RuntimeError: unreachable".
+function engineFailure() {
+    try {
+        const value = rawCall('lastFailure', '[]');
+        // A misspelled arm must not read as "nothing failed": an unknown name
+        // comes back as {"__error": ...}, so drift between the Rust arm and
+        // this call surfaces as a failure rather than as silence.
+        if (value && typeof value === 'object' && value.__error) {
+            return 'engine: ' + value.__error;
+        }
+        return typeof value === 'string' && value ? value : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function trapError(label, err) {
+    const reason = engineFailure();
+    const detail = reason ? reason + ' (' + err.message + ')' : err.message;
+    return new Error('[unpack-bridge] ' + label + ' trapped: ' + detail, { cause: err });
+}
+
+function callRaw(name, argsJson) {
+    try {
+        return rawCall(name, argsJson);
+    } catch (err) {
+        throw trapError(name, err);
+    }
+}
+
 // Binary results (the archive) cross as raw bytes rather than base64-in-JSON.
-function callBytes(name, argsJson) {
+// Null means the engine refused; a trap escapes for `callBytes` to explain.
+function rawBytes(name, argsJson) {
     const [namePtr, nameLen] = allocStr(name);
     const [argsPtr, argsLen] = allocStr(argsJson);
     const lenPtr = engine.xu_alloc(4);
     try {
         const ptr = engine.xu_call_bytes(namePtr, nameLen, argsPtr, argsLen, lenPtr);
-        if (!ptr) fail(name + ' failed in the engine');
+        if (!ptr) return null;
         const len = new DataView(engine.memory.buffer).getUint32(lenPtr, true);
         // copy out before freeing: the wasm heap can grow and detach the view
         const bytes = new Uint8Array(engine.memory.buffer, ptr, len).slice();
@@ -150,6 +187,19 @@ function callBytes(name, argsJson) {
         engine.xu_free(argsPtr, argsLen);
         engine.xu_free(lenPtr, 4);
     }
+}
+
+function callBytes(name, argsJson) {
+    let bytes;
+    try {
+        bytes = rawBytes(name, argsJson);
+    } catch (err) {
+        throw trapError(name, err);
+    }
+    if (bytes === null) {
+        fail(name + ' failed in the engine: ' + (engineFailure() || 'no reason recorded'));
+    }
+    return bytes;
 }
 
 function call(name, ...args) {
@@ -213,6 +263,13 @@ export const LIMITS = new Proxy(
         },
     },
 );
+
+// The engine's last recorded failure: a panic message captured before the
+// trap, or a byte function's error; null when nothing has failed. A trap
+// leaves the instance and its memory alive, so this stays readable after one.
+export function lastEngineFailure() {
+    return engineFailure();
+}
 
 export function sha256Hex(text) {
     return Promise.resolve(call('sha256Hex', text));

@@ -82,7 +82,6 @@
    #:launch
    #:attach
    #:kill
-   #:with-browser
    ;; targets
    #:tabs
    #:use

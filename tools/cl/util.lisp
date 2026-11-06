@@ -121,12 +121,9 @@ implementation-dependent on Windows)."
 
 ;;; ---------- processes ----------
 
-(defun split-on-char (char s)
-  (split-on char s))
-
 (defun find-on-path (name)
   "Find NAME on the PATH environment variable. Returns the full path or NIL."
-  (loop for dir in (split-on-char #\; (uiop:getenv "PATH"))
+  (loop for dir in (split-on #\; (uiop:getenv "PATH"))
         for candidate = (and (plusp (length dir))
                              (uiop:merge-pathnames*
                               name (uiop:ensure-directory-pathname dir)))

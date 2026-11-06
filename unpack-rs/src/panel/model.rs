@@ -55,7 +55,7 @@ impl<'de> Deserialize<'de> for Counts {
 use serde_json::Value;
 
 use crate::jsnumber::{js_number_to_string, js_string_to_number};
-use crate::panel::text::{js_locale_compare, js_trim};
+use crate::panel::text::{js_truthy, js_locale_compare, js_trim};
 
 /// A normalized resource row.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -70,17 +70,6 @@ pub struct Resource {
     #[serde(serialize_with = "crate::panel::text::serialize_js_number")]
     pub time: f64,
     pub order: usize,
-}
-
-/// JS truthiness for a JSON value.
-fn js_truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(b) => *b,
-        Value::Number(n) => n.as_f64().map(|f| f != 0.0 && !f.is_nan()).unwrap_or(false),
-        Value::String(s) => !s.is_empty(),
-        Value::Array(_) | Value::Object(_) => true,
-    }
 }
 
 /// JS `String(value)` for the values the panel actually sees.

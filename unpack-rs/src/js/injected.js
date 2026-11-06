@@ -54,8 +54,6 @@
 
     var SIGNALS = {
         startedAt: Date.now(),
-        domContentLoadedAt: 0,
-        loadEventAt: 0,
         activeRequests: 0,
         openSockets: 0,
         openSse: 0,
@@ -1310,16 +1308,6 @@
         scheduleProfileRefresh('resource-detach');
     }
 
-    if (typeof document.createElement === 'function') {
-        var _createElement = document.createElement;
-        document.createElement = function (tagName, options) {
-            var el = _createElement.call(document, tagName, options);
-            el.__track_tag = tagName;
-            el.__track_ts = Date.now();
-            return el;
-        };
-    }
-
     var _appendChild = Node.prototype.appendChild;
     Node.prototype.appendChild = function (child) {
         trackResourceAttach(child, 'appendChild');
@@ -1346,12 +1334,10 @@
     };
 
     document.addEventListener('DOMContentLoaded', function () {
-        SIGNALS.domContentLoadedAt = Date.now();
         scheduleProfileRefresh('domcontentloaded');
     });
 
     window.addEventListener('load', function () {
-        SIGNALS.loadEventAt = Date.now();
         scheduleProfileRefresh('load');
     });
 

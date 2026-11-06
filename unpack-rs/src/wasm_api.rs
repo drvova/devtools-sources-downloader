@@ -10,6 +10,16 @@
 // internal Rust types and the JS contract. Remote source maps are fetched
 // through the xu_host_fetch import (a synchronous XHR on the JS side),
 // keeping the engine's sync fetch_text seam intact.
+//
+// Failure contract: this target builds with `panic = "abort"`, so a panic is
+// a trap, never an unwind - `catch_unwind` cannot catch it. (Verified, not
+// assumed: a panic inside `catch_unwind` still traps here, because the std for
+// wasm32-unknown-unknown ships precompiled with the abort strategy, and
+// `panic = "unwind"` needs nightly `-Z build-std`.) Instead of shipping a
+// boundary that only looks like one, the dispatcher installs a panic hook that
+// records the message. A trap leaves the instance and its memory alive, so
+// `xu_call("lastFailure")` reads the message back and the bridge turns an
+// opaque "unreachable" into the real panic site and text.
 #[cfg(target_arch = "wasm32")]
 use crate::pipeline::{self, Asset, UnpackOptions};
 #[cfg(target_arch = "wasm32")]
@@ -58,9 +68,41 @@ fn write_out(bytes: Vec<u8>, out_len: *mut usize) -> *const u8 {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn read_json(ptr: *const u8, len: usize) -> serde_json::Value {
+fn read_json(ptr: *const u8, len: usize, what: &str) -> Result<serde_json::Value, String> {
+    if len == 0 {
+        return Ok(serde_json::Value::Null);
+    }
     let bytes = unsafe { std::slice::from_raw_parts(ptr, len) };
-    serde_json::from_slice(bytes).unwrap_or(serde_json::Value::Null)
+    serde_json::from_slice(bytes).map_err(|e| format!("{what} is not valid JSON: {e}"))
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    // The last engine-side failure: a recorded panic, or a byte-returning
+    // function's error. Read back through `xu_call("lastFailure")`, which is
+    // reachable after a trap because the instance survives it.
+    static LAST_FAILURE: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn record_failure(message: String) {
+    LAST_FAILURE.with(|slot| *slot.borrow_mut() = Some(message));
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_panic_hook() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        std::panic::set_hook(Box::new(|info| record_failure(info.to_string())));
+    });
+}
+
+#[cfg(target_arch = "wasm32")]
+fn last_failure_value() -> serde_json::Value {
+    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
+        Some(text) => serde_json::Value::String(text.clone()),
+        None => serde_json::Value::Null,
+    })
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -121,43 +163,6 @@ pub extern "C" fn xu_looks_binary_script(
     u8::from(pipeline::looks_binary_script(&url, bytes))
 }
 
-/// `{"report": ..., "files": [{"path": ..., "content": ...}]}` for the host;
-/// mirrors JS unpackAssets.
-#[cfg(target_arch = "wasm32")]
-#[no_mangle]
-pub extern "C" fn xu_run(
-    assets_ptr: *const u8,
-    assets_len: usize,
-    opts_ptr: *const u8,
-    opts_len: usize,
-    out_len: *mut usize,
-) -> *const u8 {
-    let assets_json = read_json(assets_ptr, assets_len);
-    let opts_json = read_json(opts_ptr, opts_len);
-    let result = std::panic::catch_unwind(|| {
-        let assets: Vec<HostAsset> =
-            serde_json::from_value(assets_json).map_err(|e| format!("assets json: {e}"))?;
-        let opts: HostOptions =
-            serde_json::from_value(opts_json).map_err(|e| format!("options json: {e}"))?;
-        let native_assets: Vec<Asset> = assets.into_iter().map(|a| a.into_native()).collect();
-        let batch = pipeline::unpack_assets(&native_assets, &opts.into_native());
-        Ok::<serde_json::Value, String>(serde_json::json!({
-            "report": batch.report,
-            "files": batch
-                .files
-                .into_iter()
-                .map(|f| serde_json::json!({ "path": f.path, "content": f.content }))
-                .collect::<Vec<_>>(),
-        }))
-    });
-    let payload = match result {
-        Ok(Ok(value)) => serde_json::to_vec(&value).unwrap_or_default(),
-        Ok(Err(msg)) => serde_json::json!({ "__error": msg }).to_string().into_bytes(),
-        Err(_) => "{\"__error\":\"engine panic in unpack_assets\"}".to_string().into_bytes(),
-    };
-    write_out(payload, out_len)
-}
-
 /// Generic dispatcher: `xu_call(name, argsJson)` runs one engine function and
 /// returns its JavaScript-shaped result. Unknown names reply {"__error": ...}.
 #[cfg(target_arch = "wasm32")]
@@ -170,17 +175,18 @@ pub extern "C" fn xu_call(
     out_len: *mut usize,
 ) -> *const u8 {
     let name_bytes = unsafe { std::slice::from_raw_parts(name_ptr, name_len) };
+    install_panic_hook();
     let name = String::from_utf8_lossy(name_bytes).into_owned();
-    let args = read_json(args_ptr, args_len);
-    let array = match args {
-        serde_json::Value::Array(a) => a,
-        _ => Vec::new(),
-    };
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatch(&name, &array)));
+    let result = read_json(args_ptr, args_len, "args").and_then(|args| {
+        let array = match args {
+            serde_json::Value::Array(a) => a,
+            _ => Vec::new(),
+        };
+        dispatch(&name, &array)
+    });
     let value = match result {
-        Ok(Ok(v)) => v,
-        Ok(Err(msg)) => serde_json::json!({ "__error": msg }),
-        Err(_) => serde_json::json!({ "__error": "engine panic" }),
+        Ok(v) => v,
+        Err(msg) => serde_json::json!({ "__error": msg }),
     };
     write_out(serde_json::to_vec(&value).unwrap_or_default(), out_len)
 }
@@ -198,17 +204,19 @@ pub extern "C" fn xu_call_bytes(
     out_len: *mut usize,
 ) -> *const u8 {
     let name_bytes = unsafe { std::slice::from_raw_parts(name_ptr, name_len) };
+    install_panic_hook();
     let name = String::from_utf8_lossy(name_bytes).into_owned();
-    let args = read_json(args_ptr, args_len);
-    let array = match args {
-        serde_json::Value::Array(a) => a,
-        _ => Vec::new(),
-    };
-    let result =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatch_bytes(&name, &array)));
+    let result = read_json(args_ptr, args_len, "args").and_then(|args| {
+        let array = match args {
+            serde_json::Value::Array(a) => a,
+            _ => Vec::new(),
+        };
+        dispatch_bytes(&name, &array)
+    });
     match result {
-        Ok(Ok(bytes)) => write_out(bytes, out_len),
-        _ => {
+        Ok(bytes) => write_out(bytes, out_len),
+        Err(msg) => {
+            record_failure(msg);
             if !out_len.is_null() {
                 unsafe {
                     *out_len = 0;
@@ -229,7 +237,15 @@ fn dispatch_bytes(name: &str, array: &[serde_json::Value]) -> Result<Vec<u8>, St
                 }
                 None => Vec::new(),
             };
-            let now_ms = array.get(1).and_then(serde_json::Value::as_f64).unwrap_or(0.0) as i64;
+            // An absent clock means "now", not 1970: the engine owns a clock
+            // seam, so a caller that omits the argument still gets a sane
+            // archive timestamp instead of an epoch one.
+            let now_ms = array
+                .get(1)
+                .and_then(serde_json::Value::as_f64)
+                .filter(|ms| ms.is_finite() && *ms > 0.0)
+                .map(|ms| ms as i64)
+                .unwrap_or_else(|| crate::util::now_unix_millis() as i64);
             pipeline::build_zip(&files, now_ms)
         }
         other => Err(format!("unknown byte function {other}")),
@@ -264,13 +280,6 @@ fn arg_usize(array: &[serde_json::Value], i: usize) -> Option<usize> {
     array.get(i).and_then(|v| v.as_u64()).map(|n| n as usize)
 }
 
-#[cfg(target_arch = "wasm32")]
-fn opt_usize(array: &[serde_json::Value], i: usize) -> Option<usize> {
-    array
-        .get(i)
-        .and_then(|v| if v.is_null() { None } else { v.as_u64() })
-        .map(|n| n as usize)
-}
 
 #[cfg(target_arch = "wasm32")]
 fn arg_options(array: &[serde_json::Value], i: usize) -> Result<HostOptions, String> {
@@ -318,6 +327,9 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 "minPayloadLength": l.min_payload_length,
             }))
         }
+        // The engine's own last failure, read after a trap (see the module
+        // header). Always answered, never an error itself.
+        "lastFailureX" => Ok(last_failure_value()),
         "panelCapturePolicy" => Ok(panel::policy::capture_policy()),
         "panelStackProfileAnalyze" => Ok(panel::stackprofile::analyze(
             a.first().unwrap_or(&serde_json::Value::Null),
@@ -481,12 +493,12 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         ))),
         "beautifyJs" => Ok(serde_json::Value::String(beautify::beautify_js(
             &arg_str(a, 0).ok_or("beautifyJs: text")?,
-            opt_usize(a, 1),
+            arg_usize(a, 1),
         ))),
         "extractBundleModules" => {
             let modules = bundler::extract_bundle_modules(
                 &arg_str(a, 0).ok_or("extractBundleModules: text")?,
-                opt_usize(a, 1),
+                arg_usize(a, 1),
             );
             Ok(serde_json::Value::Array(
                 modules
@@ -603,7 +615,7 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         "extractV8Strings" => serde_json::to_value(v8codecache::extract_v8_strings(
             &arg_bytes(a, 0).unwrap_or_default(),
             arg_usize(a, 1).unwrap_or(0),
-            opt_usize(a, 2),
+            arg_usize(a, 2),
         ))
         .map_err(|e| e.to_string()),
         "parseSealedV8" => {

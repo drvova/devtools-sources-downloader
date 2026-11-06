@@ -145,7 +145,6 @@ pub fn js_string_to_number(s: &str) -> f64 {
         }
     }
     let mut exp_digits = 0;
-    let mut has_exp = false;
     if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
         let mut j = i + 1;
         if j < bytes.len() && (bytes[j] == b'+' || bytes[j] == b'-') {
@@ -156,16 +155,13 @@ pub fn js_string_to_number(s: &str) -> f64 {
             exp_digits += 1;
         }
         if exp_digits > 0 {
-            has_exp = true;
             i = j;
         }
     }
-    let _ = has_exp;
     let valid = i == bytes.len() && (int_digits + frac_digits) > 0;
     if !valid {
         return f64::NAN;
     }
-    let _ = exp_digits;
     rest.parse::<f64>().map(|v| sign * v).unwrap_or(f64::NAN)
 }
 

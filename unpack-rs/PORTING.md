@@ -271,12 +271,22 @@ generators and exporters are not arms: the export run composes them
 internally, so exposing each one individually left ten arms nothing could
 reach, and `looksBinaryScript`/`decodeBase64ToBytes` duplicated the dedicated
 `xu_looks_binary_script`/`xu_b64decode` exports that the hot paths actually
-call. Two seams are worth naming:
+call. Four seams are worth naming:
 
 - **The clock is a host import.** `wasm32-unknown-unknown` has no clock and
   `SystemTime::now()` panics there, which took out every arm that stamps a
   report until `util::iso8601_now` read the time through `xu_host_now_ms`
   (the bridge answers `Date.now()`).
+- **A panic is a trap, and the engine names it.** This target builds with
+  `panic = "abort"`, so `catch_unwind` cannot catch a panic here - verified,
+  not assumed: a panic inside `catch_unwind` still traps, because the std for
+  `wasm32-unknown-unknown` ships precompiled with the abort strategy, and
+  `panic = "unwind"` needs nightly `-Z build-std`. The dispatcher therefore
+  installs a panic hook that records the message, and the `lastFailure` arm
+  reads it back: a trap leaves the instance and its memory alive, so the
+  bridge turns an opaque `RuntimeError: unreachable` into the real panic site
+  and text. The three `catch_unwind` wrappers this replaced were a recovery
+  path that could never run.
 - **Binary payloads cross as base64.** `decoders::encode_base64` is the
   inverse of the decoder, so runtime payloads can be carried as base64 without
   a lossy UTF-8 round trip. The finished archive is the exception: it crosses

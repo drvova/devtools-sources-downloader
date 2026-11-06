@@ -4,6 +4,8 @@
 
 use std::sync::LazyLock;
 
+use serde_json::Value;
+
 use crate::jsnumber::js_number_to_string;
 use crate::transforms::decode_uri_component;
 use crate::util::utf16_prefix;
@@ -452,6 +454,18 @@ pub fn js_locale_compare(left: &str, right: &str) -> std::cmp::Ordering {
             case_key(left).cmp(&case_key(right))
         }
         other => other,
+    }
+}
+
+/// JS truthiness for a JSON value: the panel's core predicate. It lives here
+/// because both `model` and `assets` need it and `model` sits below `assets`.
+pub fn js_truthy(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(b) => *b,
+        Value::Number(n) => n.as_f64().map(|f| f != 0.0 && !f.is_nan()).unwrap_or(false),
+        Value::String(s) => !s.is_empty(),
+        Value::Array(_) | Value::Object(_) => true,
     }
 }
 

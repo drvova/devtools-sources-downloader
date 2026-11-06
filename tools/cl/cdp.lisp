@@ -81,13 +81,6 @@ No-op for attached browsers beyond closing the connection."
       (setf *browser* nil)))
   (values))
 
-(defmacro with-browser ((&key headless attach) &body body)
-  "Run BODY with a fresh browser (or an attached one), killed afterwards."
-  (let ((b (gensym "BROWSER"))
-        (port (gensym "PORT")))
-    `(let* ((,port ,attach)
-            (,b (if ,port (attach ,port) (launch :headless ,headless))))
-       (unwind-protect (progn ,@body) (kill ,b)))))
 
 ;;; ---------- targets ----------
 

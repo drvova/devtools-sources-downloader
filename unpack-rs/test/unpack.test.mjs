@@ -28,6 +28,7 @@ import {
     sha256Hex,
 } from '../src/js/unpack-bridge.js';
 import { decodeJsfuck, detectJsfuck } from '../src/js/unpack-bridge.js';
+import { lastEngineFailure } from '../src/js/unpack-bridge.js';
 import {
     detectPacker,
     unpackPacker,
@@ -1178,3 +1179,13 @@ for (const [name, fn] of sharedCases) test(name, fn);
 for (const [name, fn] of structureCases) test(name, fn);
 
 for (const [name, fn] of binaryCases) test(name, fn);
+
+test('engine: a failure is named rather than a silent trap', () => {
+    // Non-vacuous by construction: if the Rust arm and this bridge name ever
+    // drift, the engine answers {"__error": "unknown function lastFailure"}
+    // and the seam returns that string, so this fails by name instead of
+    // passing quietly.
+    assert.equal(lastEngineFailure(), null);
+    assetSlug('https://example.test/app.js', 0);
+    assert.equal(lastEngineFailure(), null);
+});

@@ -48,14 +48,6 @@ pub enum Stage {
     Binary(BinaryStage),
 }
 
-impl Stage {
-    pub fn tool(&self) -> &str {
-        match self {
-            Stage::Text(s) => &s.tool,
-            Stage::Binary(s) => &s.tool,
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalPayload {

@@ -579,7 +579,7 @@ pub fn prepare_script_assets(inputs: &[ScriptInput], recon: Option<&Value>) -> V
             size: utf16_len(&content),
             transfer_size: timing
                 .map(|t| {
-                    if is_truthy(&t.transfer_size) {
+                    if js_truthy(&t.transfer_size) {
                         js_number(&t.transfer_size)
                     } else {
                         0.0
@@ -619,15 +619,6 @@ pub fn prepare_script_assets(inputs: &[ScriptInput], recon: Option<&Value>) -> V
     assets
 }
 
-fn is_truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(b) => *b,
-        Value::Number(n) => n.as_f64().map(|f| f != 0.0 && !f.is_nan()).unwrap_or(false),
-        Value::String(s) => !s.is_empty(),
-        Value::Array(_) | Value::Object(_) => true,
-    }
-}
 
 /// `countPropertyValues`: values keyed by the given property, falsy -> unknown.
 pub fn count_property_values(items: &[ScriptAsset], key: &str) -> Counts {
@@ -738,16 +729,8 @@ pub fn find_asset_by_reference<'a>(
 /// the page supplied and every later step reads it with JS truthiness.
 pub type RuntimeOrigin = Value;
 
-/// JS truthiness for a JSON value.
-pub fn js_truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(b) => *b,
-        Value::Number(n) => n.as_f64().map(|f| f != 0.0 && !f.is_nan()).unwrap_or(false),
-        Value::String(s) => !s.is_empty(),
-        Value::Array(_) | Value::Object(_) => true,
-    }
-}
+/// Re-exported so existing call sites keep one name for one rule.
+pub use crate::panel::text::js_truthy;
 
 fn field<'a>(entry: &'a Value, key: &str) -> Option<&'a Value> {
     entry.get(key).filter(|v| js_truthy(v))
