@@ -7,15 +7,17 @@ recalled. Where something is *unverified*, it says so.
 
 | | |
 | --- | --- |
-| HEAD | `a9aeaa9` — wiki: the digest vectors and the confidence-tie test that can now fail |
+| HEAD | `730ff88` — Close the audit findings that survived reading |
 | Working tree | clean |
-| `cargo test` | green — 68 unit + 86 integration |
+| `cargo test` | green — 68 unit + 89 integration |
+| `vovas check` | PASS — all 7 steps, run on every pass |
 | Wiki | `.wiki/`, 1987 lines, seven pages, all internal links resolving |
 
-The tree was green when this was written. The **browser suites were not run** in this
-session — `npm run test:e2e` and `npm run test:e2e:ext` need Chrome, and `npm run verify`
-(the full seven-step gate) was never executed end to end here. Run it before trusting a
-release.
+The tree was green when this was written, and the gate was run end to end on every pass:
+`vovas check` covers `npm run check`, `cargo test`, `clippy -D warnings`, `npm test`,
+`npm run build`, `npm run test:e2e` and `npm run test:e2e:ext` — the last two drive a real
+Chrome, as do `vovas panel` (5 checks) and `vovas smoke` (7 checks). What has **not**
+happened is a human clicking Download All on a real page against a real site; see Open work.
 
 ## What this project is
 
@@ -42,8 +44,24 @@ Read `.wiki/Home.md` first. It is current and it is the map.
    - pass 15: `panel/paths.rs` — every archive path spelled once, plus one presence rule.
      This surfaced a whole `_framework/` archive block the wiki had never documented.
    - pass 16: two tests that could not fail now can.
+   - pass 17: two comments fixed and the other twenty-six kept — the audit's "28 restatements"
+     was mostly wrong.
+   - pass 18: a stage-detail assertion that could match the wrong number, since
+     `"17 functions"` contains `"7 functions"`.
+   - pass 19: the 22-field runtime projection replaced by copy-then-delete, so a field added to
+     the runtime record can no longer be silently dropped.
 3. **Fixed the todo cell** (`~/.nodecode/cells/nodecode-todo/cell.lisp`) — five bugs, one of
    which explained the others. Details in `agent/ledger.md`, newest entry.
+4. **Closed the audit findings that survived reading** — the audits produced ~36 findings, more
+   than the ranked list. Re-checked by reading each function rather than grepping for its name:
+   eleven were wrong, nine were real and are fixed, net -69 lines. The wrong ones are worth
+   knowing about, because acting on them would have caused regressions — see `agent/ledger.md`.
+5. **Measured the bridge surface instead of splitting it** — the last finding claimed the
+   extension's interface was shaped by its test file. Measured: 50 exports, zero unreferenced,
+   ten imported by the panel and 42 by the node baseline. `tests/bridge_surface.rs` guards it.
+6. **Corrected three documentation claims the passes had invalidated** — the wiki described
+   `runtime-manifest.json` as stripping fields that pass 19 now writes, a channel diagram listed
+   six of ten members, and `PORTING.md` counted the panel's bridge surface as five when it is ten.
 
 ## Where the bodies are buried
 
@@ -90,12 +108,10 @@ Nothing is half-finished. The wiki is current, the tree is clean, the cell works
 
 Worth doing next, in rough order of value:
 
-1. **Run `npm run verify`.** The full gate has not been executed in this session. It is the
-   one claim above that rests on the individual suites rather than on the gate itself.
-2. **`npm run build` then load `unpack-rs/dist/` in Chrome** and click Download All on a
+1. **`npm run build` then load `unpack-rs/dist/` in Chrome** and click Download All on a
    real page. Everything is verified by tests; nothing here was verified by hand in a
    browser.
-3. **`PORTING.md` is 37 KB and predates the panel port.** It is accurate where it was
+2. **`PORTING.md` is 37 KB and predates the panel port.** It is accurate where it was
    updated (pass 10 rewrote its strategy section) but it is now a second, older description
    of the same system as the wiki. Consider folding anything still unique into `.wiki/` and
    retiring it, rather than maintaining two.
