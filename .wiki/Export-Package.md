@@ -102,9 +102,12 @@ The folder comes from the payload's **kind**; the extension from its **MIME type
 `bin` when it arrived as base64, `txt` otherwise. `eval`/`function`/worker/script-injection
 kinds default to `js`.
 
-`runtime-manifest.json` is the entries **minus** the payload bodies (`text`, `base64`,
-`hasText`, `hasBase64`, `index` are stripped) **plus** the `file` path each payload was
-written to. So the manifest is the index, and the payloads are the content.
+`runtime-manifest.json` is the entries **minus** the payload bodies: `text` and `base64` are
+dropped, and `hasText`/`hasBase64` booleans record whether each was there. `index`, `id` and
+`kind` are filled in when the record omits them, and the `file` path each payload was written to
+is added. Every other field passes through untouched, so a field added to the runtime record in
+`injected.js` reaches the manifest without an edit here. So the manifest is the index, and the
+payloads are the content.
 
 ## `_unpack/<asset>/` — one folder per page script
 

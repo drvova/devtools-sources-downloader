@@ -23,7 +23,7 @@ console.
 ## The short version of how it works
 
 ```
-page world (JS)  →  window.__CAPTURE__  {policy, tracker, recon, status, profile, frameworkState}
+page world (JS)  →  window.__CAPTURE__  {policy, tracker, trackerReady, recon, status, profile, snapshot, signals, …}
        │
        ▼  polled through chrome.devtools.inspectedWindow.eval
 panel (JS shim)  →  collects, filters, calls the engine
