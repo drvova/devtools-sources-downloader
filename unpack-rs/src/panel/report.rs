@@ -12,7 +12,7 @@ use crate::panel::analysis::build_semantic_analysis;
 use crate::panel::artifacts::{
     compute_recon_stats, escape_attr, escape_xml, serialize_inline_json,
 };
-use crate::panel::assets::{field_number, field_str, js_truthy, keys_len, ScriptInput};
+use crate::panel::assets::{field_number, field_str, js_truthy, ScriptInput};
 use crate::panel::text::{format_ms, format_size, sanitize_path_part};
 
 use crate::panel::assets::value_text;
@@ -696,21 +696,11 @@ pub fn export_framework_artifacts(
 ) {
     let Some(state) = framework_state else { return };
     let pretty = |value: &Value| serde_json::to_string_pretty(value).unwrap_or_default();
-    let files: [(&str, &str); 7] = [
-        ("_framework/summary.json", "summary"),
-        ("_framework/router-state.json", "router"),
-        ("_framework/framework-roots.json", "roots"),
-        ("_framework/store-snapshots.json", "stores"),
-        ("_framework/query-caches.json", "queries"),
-        ("_framework/hydration-payloads.json", "hydration"),
-        ("_framework/auth-state.json", "auth"),
-    ];
-    for (path, key) in files {
-        let value = state.get(key);
-        if value.map(keys_len).unwrap_or(0) == 0 {
+    for (path, key) in crate::panel::paths::FRAMEWORK_ARTIFACTS {
+        if !crate::panel::paths::framework_slice_present(state, key) {
             continue;
         }
-        if let Some(value) = value {
+        if let Some(value) = state.get(key) {
             writer(path, &pretty(value));
         }
     }
@@ -778,19 +768,7 @@ pub fn export_semantic_analysis(
         build_semantic_analysis(js_assets, recon_data, runtime_entries, runtime_manifest);
     export_readable_artifacts(writer, &analysis);
     let pretty = |value: &Value| serde_json::to_string_pretty(value).unwrap_or_default();
-    for (path, key) in [
-        ("_analysis/chunk-map.json", "chunkMap"),
-        ("_analysis/cross-boundary-flows.json", "crossBoundaryFlows"),
-        ("_analysis/module-graph.json", "moduleGraph"),
-        ("_analysis/startup-chain.json", "startupChain"),
-        ("_analysis/runtime-origins.json", "runtimeOrigins"),
-        ("_analysis/boundary-labels.json", "boundaryLabels"),
-        ("_analysis/framework-runtime.json", "frameworkRuntime"),
-        (
-            "_analysis/interesting-entrypoints.json",
-            "interestingEntrypoints",
-        ),
-    ] {
+    for (path, key) in crate::panel::paths::ANALYSIS_ARTIFACTS {
         if let Some(value) = analysis.get(key) {
             writer(path, &pretty(value));
         }
@@ -800,7 +778,7 @@ pub fn export_semantic_analysis(
         .cloned()
         .unwrap_or(Value::Null);
     writer(
-        "_analysis/index.html",
+        crate::panel::paths::ANALYSIS_INDEX_HTML,
         &generate_investigation_index_html(&investigation),
     );
     for workspace in investigation

@@ -18,6 +18,7 @@ src/panel/report.rs       the HTML pages the archive carries
 src/panel/export.rs       export orchestration
 src/panel/view.rs         view models + row markup
 src/panel/artifacts.rs    artifact paths, runtime unpack assets
+src/panel/paths.rs        the archive's own layout — one spelling per artifact path
 ```
 
 ## The resource model — `model.rs`

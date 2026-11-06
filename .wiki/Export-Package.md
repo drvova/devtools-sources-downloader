@@ -46,6 +46,30 @@ first and its `index.json` report last.
 
 Empty maps are **skipped, not written empty** — an archive full of `{}` files is noise.
 
+## `_framework/` — what the framework itself said
+
+Written when the page world published a framework state, one file per slice, and **only when
+the slice is non-empty**:
+
+| File | State key |
+| --- | --- |
+| `_framework/summary.json` | `summary` |
+| `_framework/router-state.json` | `router` |
+| `_framework/framework-roots.json` | `roots` |
+| `_framework/store-snapshots.json` | `stores` |
+| `_framework/query-caches.json` | `queries` |
+| `_framework/hydration-payloads.json` | `hydration` |
+| `_framework/auth-state.json` | `auth` |
+
+The table lives in `panel/paths.rs`, together with every `_analysis/` path, because a path
+written by one module and referenced by another is a contract: renaming an artifact is a
+compile error at every reference instead of a report that links to a file nothing writes.
+
+Presence is decided by **one** rule, `framework_slice_present`, which counts keys. It used to
+be two — the writer counted keys, the artifact index demanded an object or an array — so a
+slice holding a non-empty string was written to the archive and left out of the index that
+points at it.
+
 ## `_runtime/` — raw payloads
 
 One folder per kind, numbered per entry:

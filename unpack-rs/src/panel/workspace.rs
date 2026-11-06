@@ -406,9 +406,9 @@ fn build_boundary_workspace(boundary: &str, analysis: &Value) -> Value {
         "topTransitions": top_transitions,
         "chains": chains,
         "relatedArtifacts": [
-            "_analysis/boundary-labels.json",
-            "_analysis/cross-boundary-flows.json",
-            "_analysis/interesting-entrypoints.json",
+            crate::panel::paths::ANALYSIS_BOUNDARY_LABELS,
+            crate::panel::paths::ANALYSIS_CROSS_BOUNDARY_FLOWS,
+            crate::panel::paths::ANALYSIS_INTERESTING_ENTRYPOINTS,
         ],
     })
 }
@@ -617,9 +617,9 @@ fn build_journey_view(
         "chains": chains,
         "supportingWorkspaces": supporting,
         "relatedArtifacts": [
-            "_analysis/cross-boundary-flows.json",
-            "_analysis/startup-chain.json",
-            "_analysis/runtime-origins.json",
+            crate::panel::paths::ANALYSIS_CROSS_BOUNDARY_FLOWS,
+            crate::panel::paths::ANALYSIS_STARTUP_CHAIN,
+            crate::panel::paths::ANALYSIS_RUNTIME_ORIGINS,
         ],
     })
 }

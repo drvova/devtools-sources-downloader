@@ -19,6 +19,7 @@ pub mod boundary;
 pub mod export;
 pub mod graph;
 pub mod model;
+pub mod paths;
 pub mod policy;
 pub mod report;
 pub mod stackprofile;

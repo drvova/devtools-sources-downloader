@@ -285,9 +285,9 @@ structure (enumerate a live object, recurse, read the page) and stay.
 
 | | |
 | --- | --- |
-| Rust source | ~17.9k lines: 19 files in `src/`, 14 in `src/panel/` |
+| Rust source | ~18.0k lines: 19 files in `src/`, 15 in `src/panel/` |
 | JavaScript | ~3.0k lines, all platform layer |
 | Engine wasm | ~2.2 MB (release, `opt-level = "z"`, LTO, stripped) |
 | Bridge exports | 51 |
 | Dispatch arms | 44 |
-| Rust tests | 65 unit + 85 integration |
+| Rust tests | 67 unit + 85 integration |

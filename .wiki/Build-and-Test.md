@@ -67,7 +67,7 @@ change one and change the other, or the two gates drift apart while both still p
 
 | Suite | Count | Proves |
 | --- | --- | --- |
-| `src/**` unit tests | 65 | each module's contract, in place — scanner walkers, escape decoding, base64 round-trips, JS number formatting, zip CRC/offsets, and every panel module's oracle |
+| `src/**` unit tests | 67 | each module's contract, in place — scanner walkers, escape decoding, base64 round-trips, JS number formatting, the two whitespace sets, zip CRC/offsets, and every panel module's oracle |
 | `tests/unpack_test.rs` | 67 | engine behavior against fixtures: scanner, decoders, every peel layer, packers, JSFuck, bundle splitting, source maps, the binary formats, and the full asset pipeline |
 | `tests/stack_profile_test.rs` | 6 | 28 captured snapshots match the page-world analyzer by value **and** by serialized text; a coverage guard asserts the fixtures still span every detector, trait and strategy; confidence ties break by name the way `localeCompare` does; a non-object snapshot falls back to the generic profile |
 | `tests/capture_policy_test.rs` | 9 | both patterns over their corpora, the limits, the injected shape, the GraphQL body predicate against the engine constant and its word-boundary edges, the injected strategy against the engine default, that every limit name the page world reads is answered and every key is read, and a guard that neither page-world module carries a local copy again |

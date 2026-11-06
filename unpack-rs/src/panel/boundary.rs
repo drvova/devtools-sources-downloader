@@ -1793,39 +1793,13 @@ fn collect_framework_artifact_paths(framework_state: Option<&Value>) -> Vec<Stri
         Some(state) if js_truthy(state) => state,
         _ => return Vec::new(),
     };
-    let non_empty_object = |key: &str| -> bool {
-        state
-            .get(key)
-            .and_then(|v| v.as_object())
-            .map(|map| !map.is_empty())
-            .unwrap_or(false)
-    };
-    let non_empty_array = |key: &str| -> bool {
-        state
-            .get(key)
-            .and_then(|v| v.as_array())
-            .map(|items| !items.is_empty())
-            .unwrap_or(false)
-    };
-    let mut artifacts: Vec<String> = Vec::new();
-    if non_empty_object("summary") {
-        artifacts.push("_framework/summary.json".to_string());
-    }
-    if non_empty_object("router") {
-        artifacts.push("_framework/router-state.json".to_string());
-    }
-    for (key, path) in [
-        ("roots", "_framework/framework-roots.json"),
-        ("stores", "_framework/store-snapshots.json"),
-        ("queries", "_framework/query-caches.json"),
-        ("hydration", "_framework/hydration-payloads.json"),
-        ("auth", "_framework/auth-state.json"),
-    ] {
-        if non_empty_array(key) {
-            artifacts.push(path.to_string());
-        }
-    }
-    artifacts
+    // Same table and same presence rule as the writer, so the index can never
+    // list a file that was not written or omit one that was.
+    crate::panel::paths::FRAMEWORK_ARTIFACTS
+        .iter()
+        .filter(|(_, key)| crate::panel::paths::framework_slice_present(state, key))
+        .map(|(path, _)| path.to_string())
+        .collect()
 }
 
 /// `buildFrameworkRuntimeSummary`.
@@ -1948,6 +1922,39 @@ fn count_origin_kinds(origins: &[RuntimeOrigin]) -> Counts {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The artifact index and the archive writer must agree about which
+    /// framework slices exist. They used to test presence differently - the
+    /// writer counted keys, the index demanded an object or an array - so a
+    /// slice holding a non-empty string was written to the archive and left out
+    /// of the index that points at it. This walks every shape a slice can take.
+    #[test]
+    fn the_writer_and_the_index_agree_on_every_framework_slice() {
+        let empty = json!({
+            "summary": {}, "router": {}, "roots": [], "stores": [],
+            "queries": [], "hydration": [], "auth": [],
+        });
+        let full = json!({
+            "summary": {"a": 1}, "router": {"r": 1}, "roots": [1], "stores": [1],
+            "queries": [1], "hydration": [1], "auth": [1],
+        });
+        // The shape the two rules disagreed on: a non-empty string counts as
+        // present to `Object.keys(x).length` but is neither object nor array.
+        let strings = json!({
+            "summary": "s", "router": "s", "roots": "s", "stores": "s",
+            "queries": "s", "hydration": "s", "auth": "s",
+        });
+        for state in [json!({}), empty, full, strings] {
+            let mut written: Vec<String> = Vec::new();
+            crate::panel::report::export_framework_artifacts(
+                &mut |path: &str, _content: &str| written.push(path.to_string()),
+                Some(&state),
+            );
+            let listed = collect_framework_artifact_paths(Some(&state));
+            assert_eq!(written, listed, "writer and index disagree for {state}");
+        }
+    }
+
     use crate::panel::assets::{build_runtime_origins, prepare_script_assets, ScriptInput};
     use crate::panel::text::js_number_value;
     use crate::util::utf16_len;

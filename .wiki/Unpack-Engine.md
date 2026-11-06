@@ -562,6 +562,16 @@ class would change what every one of them matches. Only `ToNumber` uses the full
 `Number(string)` genuinely trims `\s`. Keeping the two distinguishable **by name** is what
 stops a well-meant widening from silently changing the scanner.
 
+Two tests hold the distinction, and they pin opposite directions:
+
+- `the_ascii_and_ecmascript_whitespace_sets_differ_by_the_extras` asserts every ASCII member
+  is in the full set, every ECMAScript extra is in the full set **and not** in the ASCII one,
+  and a non-whitespace character is in neither. Without it the two could be collapsed back
+  into one and nothing would notice.
+- `the_byte_form_agrees_with_the_char_form_over_ascii` walks all 128 ASCII bytes rather than
+  a hand-picked few, because the byte form scans raw UTF-8 and a divergence between the two
+  forms would be invisible on the characters a test author tends to pick.
+
 `BAD_PATH_CHARS` has **one definition on purpose**: widening the set for one producer used
 to leave the other four writing names it would reject. There are two forms — one for a path
 segment, one that also strips `/` for a whole path.
