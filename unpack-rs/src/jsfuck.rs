@@ -13,24 +13,11 @@
 //     literal / quoted payload / raw payload (captured)
 //   - escape() and Date() builtins for the encoder's C/D/%/G/M/T recipes
 
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 const CHARSET: [char; 6] = ['[', ']', '(', ')', '!', '+'];
 const MAX_PARSE_NODES: u64 = 2_000_000;
 const MAX_PARSE_DEPTH: u64 = 10_000;
-
-/// A native builtin the fromSource resolver and global object can produce.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Builtin {
-    Array,
-    Number,
-    String_,
-    Boolean,
-    RegExp,
-    Date,
-    Escape,
-}
 
 /// The interpreter's value model: the subset of ECMAScript values the
 /// canonical JSFuck language can construct.
@@ -928,17 +915,3 @@ pub fn decode_jsfuck(source: &str) -> JsfuckDecode {
     }
 }
 
-// Builtin is referenced by name-matching in fromSource; keep the enum used
-// for future registry extension without dead-code warnings.
-#[allow(dead_code)]
-fn builtin_registry() -> HashMap<&'static str, Builtin> {
-    HashMap::from([
-        ("Array", Builtin::Array),
-        ("Number", Builtin::Number),
-        ("String", Builtin::String_),
-        ("Boolean", Builtin::Boolean),
-        ("RegExp", Builtin::RegExp),
-        ("Date", Builtin::Date),
-        ("escape", Builtin::Escape),
-    ])
-}

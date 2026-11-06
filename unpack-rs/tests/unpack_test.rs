@@ -119,15 +119,28 @@ fn decoder_mixed_escapes() {
     );
 }
 
+/// `detect_layers` returns findings sorted by score, highest first, and a long
+/// base64 literal outscores a single eval payload. This test was named "eval
+/// packer wins over base64 when both present" and asserted
+/// `eval-unwrap || base64`, which passed on base64 alone - the precedence in its
+/// name was never real. It now pins the ordering rule it was reaching for.
 #[test]
-fn detector_eval_packer_wins_over_base64_when_both_present() {
+fn detector_orders_findings_by_score_base64_outranks_one_eval_payload() {
     let payload = "function hello(){return 42;}".repeat(40);
     let code = format!(r#"eval(atob("{}"))"#, base64_of(&payload));
     let findings = detect_layers(&code);
-    assert!(!findings.is_empty());
-    assert!(findings
-        .iter()
-        .any(|f| f.tool == "eval-unwrap" || f.tool == "base64"));
+    assert!(
+        findings.iter().any(|f| f.tool == "eval-unwrap")
+            && findings.iter().any(|f| f.tool == "base64"),
+        "both layers are present"
+    );
+    // base64: 0.5 + min(len/4000, 0.3) = 0.8 for this literal.
+    // eval-unwrap: 0.7 + min(1/20, 0.3) = 0.75 for one payload.
+    assert_eq!(findings[0].tool, "base64", "higher score wins the stage");
+    assert!(
+        findings.windows(2).all(|w| w[0].score >= w[1].score),
+        "findings must be ordered by descending score"
+    );
 }
 
 #[test]
@@ -737,8 +750,9 @@ fn binary_pass_zip_artifacts_are_scoped_to_their_own_asset_root() {
         if p.ends_with("/index.json") {
             continue;
         }
+        // `root` is a segment of `p`, so asserting p.contains(root) was true by
+        // construction. The real claim is that there are exactly two roots.
         let root = p.split('/').nth(1).unwrap().to_string();
-        assert!(p.contains(&root), "artifact must live under its own root");
         roots.insert(root.clone());
     }
     assert_eq!(roots.len(), 2);
