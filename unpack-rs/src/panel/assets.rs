@@ -57,9 +57,8 @@ fn clean_stack_reference(value: &str) -> String {
 
 /// `extractStackRefs`.
 fn extract_stack_refs(stack: &str) -> Vec<String> {
-    static REF: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(r"(https?://[^\s)]+|blob:[^\s)]+)").unwrap()
-    });
+    static REF: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(r"(https?://[^\s)]+|blob:[^\s)]+)").unwrap());
     let mut refs: Vec<String> = Vec::new();
     for caps in REF.captures_iter(stack) {
         if refs.len() >= 12 {
@@ -101,7 +100,9 @@ fn detect_bundler_name(url: &str, content: &str) -> String {
     if sample.contains("parcelrequire") {
         return "parcel".to_string();
     }
-    if sample.contains("import.meta.hot") || sample.contains("/@vite/") || sample.contains("__vite__")
+    if sample.contains("import.meta.hot")
+        || sample.contains("/@vite/")
+        || sample.contains("__vite__")
     {
         return "vite".to_string();
     }
@@ -205,7 +206,9 @@ fn extract_route_hints_from_url(url: &str) -> Vec<String> {
     };
     let mut hints: Vec<String> = Vec::new();
     for part in parsed.path().split('/') {
-        let part = EXT.replace(&safe_decode_uri_component(part), "").into_owned();
+        let part = EXT
+            .replace(&safe_decode_uri_component(part), "")
+            .into_owned();
         if part.is_empty() || utf16_len(&part) < 3 {
             continue;
         }
@@ -262,8 +265,9 @@ fn classify_script_asset(
         LazyLock::new(|| regex::Regex::new(r"runtime|manifest|polyfill|bootstrap").unwrap());
     static VENDOR: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"vendor|node_modules|chunk-vendors").unwrap());
-    static FRAMEWORK: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r"(?i)react|vue|angular|next|nuxt|svelte|astro|remix").unwrap());
+    static FRAMEWORK: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"(?i)react|vue|angular|next|nuxt|svelte|astro|remix").unwrap()
+    });
 
     let sample = format!("{url}\n{content}").to_lowercase();
     let has_signal = |name: &str| startup_signals.iter().any(|s| s == name);
@@ -511,8 +515,9 @@ pub fn prepare_script_assets(inputs: &[ScriptInput], recon: Option<&Value>) -> V
         regex::Regex::new(r"(?-u:\b)export[ \t\n\x0B\f\r]+(?:default|const|function|class|\{)")
             .unwrap()
     });
-    static SOURCE_MAP: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r"(?i)sourceMappingURL[ \t\n\x0B\f\r]*=[ \t\n\x0B\f\r]*data:").unwrap());
+    static SOURCE_MAP: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"(?i)sourceMappingURL[ \t\n\x0B\f\r]*=[ \t\n\x0B\f\r]*data:").unwrap()
+    });
 
     let empty: Vec<Timing> = Vec::new();
     let timings: Vec<Timing> = recon
@@ -520,7 +525,9 @@ pub fn prepare_script_assets(inputs: &[ScriptInput], recon: Option<&Value>) -> V
         .and_then(|v| serde_json::from_value(v.clone()).ok())
         .unwrap_or(empty);
     let timing_lookup = build_timing_lookup(&timings);
-    let stack_profile = recon.and_then(|r| r.get("stackProfile")).filter(|v| !v.is_null());
+    let stack_profile = recon
+        .and_then(|r| r.get("stackProfile"))
+        .filter(|v| !v.is_null());
 
     let mut assets: Vec<ScriptAsset> = Vec::new();
     for (index, item) in inputs.iter().enumerate() {
@@ -619,7 +626,6 @@ pub fn prepare_script_assets(inputs: &[ScriptInput], recon: Option<&Value>) -> V
     assets
 }
 
-
 /// `countPropertyValues` for the one property the panel counts: classification,
 /// falsy -> unknown. The former `key: &str` parameter only ever received
 /// "classification" while carrying a dead "bundler" arm and a silent `_ =>`
@@ -650,7 +656,10 @@ pub fn count_boundary_labels(items: &[ScriptAsset]) -> Counts {
 
 /// `countTaggedEntries`.
 pub fn count_tagged_entries(items: &[ScriptAsset]) -> usize {
-    items.iter().filter(|item| !item.boundary_labels.is_empty()).count()
+    items
+        .iter()
+        .filter(|item| !item.boundary_labels.is_empty())
+        .count()
 }
 
 /// `buildChunkSummary`.
@@ -742,7 +751,9 @@ fn field<'a>(entry: &'a Value, key: &str) -> Option<&'a Value> {
 pub fn field_str(entry: &Value, key: &str) -> String {
     match field(entry, key) {
         Some(Value::String(s)) => s.clone(),
-        Some(Value::Number(n)) => crate::jsnumber::js_number_to_string(n.as_f64().unwrap_or(f64::NAN)),
+        Some(Value::Number(n)) => {
+            crate::jsnumber::js_number_to_string(n.as_f64().unwrap_or(f64::NAN))
+        }
         _ => String::new(),
     }
 }
@@ -780,7 +791,10 @@ pub fn build_runtime_origins(
     let mut origins: Vec<RuntimeOrigin> = Vec::new();
     for source in entries {
         let mut merged = serde_json::Map::new();
-        let id = source.get("id").and_then(|v| v.as_str()).unwrap_or_default();
+        let id = source
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
         if let Some(manifest_item) = manifest_by_id.get(id).and_then(|v| v.as_object()) {
             for (key, value) in manifest_item {
                 merged.insert(key.clone(), value.clone());
@@ -924,7 +938,11 @@ fn count_origin_property(origins: &[RuntimeOrigin], key: &str) -> Counts {
     let mut counts = Counts::default();
     for item in origins {
         let value = field_str(item, key);
-        let value = if value.is_empty() { "unknown".to_string() } else { value };
+        let value = if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            value
+        };
         counts.add(value);
     }
     counts
@@ -1023,19 +1041,57 @@ mod tests {
     fn helpers_match_oracles() {
         let fx = fixture();
         let exp = &fx["expected"];
-        for (i, value) in exp["normalizeUrlKey"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["normalizeUrlKey"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let input = ["https://x/y?a=1#f", "https://x/y#f", "", ""][i];
-            assert_eq!(normalize_url_key(input), value.as_str().unwrap(), "normalizeUrlKey {i}");
+            assert_eq!(
+                normalize_url_key(input),
+                value.as_str().unwrap(),
+                "normalizeUrlKey {i}"
+            );
         }
-        for (i, value) in exp["stripUrlVariant"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["stripUrlVariant"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let input = ["https://x/y?a=1#f", "https://x/y", ""][i];
-            assert_eq!(strip_url_variant(input), value.as_str().unwrap(), "stripUrlVariant {i}");
+            assert_eq!(
+                strip_url_variant(input),
+                value.as_str().unwrap(),
+                "stripUrlVariant {i}"
+            );
         }
-        for (i, value) in exp["getBareFileName"].as_array().unwrap().iter().enumerate() {
-            let input = ["/a/b/c.js", "https://x/y/z.js?v=1", "plain.js", "", "a\\b\\c.js"][i];
-            assert_eq!(get_bare_file_name(input), value.as_str().unwrap(), "getBareFileName {i}");
+        for (i, value) in exp["getBareFileName"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            let input = [
+                "/a/b/c.js",
+                "https://x/y/z.js?v=1",
+                "plain.js",
+                "",
+                "a\\b\\c.js",
+            ][i];
+            assert_eq!(
+                get_bare_file_name(input),
+                value.as_str().unwrap(),
+                "getBareFileName {i}"
+            );
         }
-        for (i, value) in exp["cleanStackReference"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["cleanStackReference"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let input = [
                 "https://x/a.js:10:5",
                 "https://x/a.js:10",
@@ -1043,13 +1099,23 @@ mod tests {
                 "  https://x/a.js  ",
                 "",
             ][i];
-            assert_eq!(clean_stack_reference(input), value.as_str().unwrap(), "cleanStackReference {i}");
+            assert_eq!(
+                clean_stack_reference(input),
+                value.as_str().unwrap(),
+                "cleanStackReference {i}"
+            );
         }
         let stack_inputs = [
             "Error\n    at f (https://x/a.js:1:2)\n    at g (blob:https://x/b)",
             "no refs",
         ];
-        for (i, value) in exp["extractStackRefs"].as_array().unwrap().iter().take(2).enumerate() {
+        for (i, value) in exp["extractStackRefs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .take(2)
+            .enumerate()
+        {
             assert_eq!(
                 serde_json::to_value(extract_stack_refs(stack_inputs[i])).unwrap(),
                 *value,
@@ -1064,9 +1130,18 @@ mod tests {
             ("https://x/@vite/client", ""),
             ("https://x/app.js", "console.log(1)"),
         ];
-        for (i, value) in exp["detectBundlerName"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["detectBundlerName"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let (u, c) = bundler_inputs[i];
-            assert_eq!(detect_bundler_name(u, c), value.as_str().unwrap(), "bundler {i}");
+            assert_eq!(
+                detect_bundler_name(u, c),
+                value.as_str().unwrap(),
+                "bundler {i}"
+            );
         }
         let hint_inputs = [
             ("https://x/app.js", "ReactDOM.hydrate(x)"),
@@ -1076,7 +1151,12 @@ mod tests {
             ("https://x/app.js", "SvelteKit"),
             ("https://x/app.js", "plain"),
         ];
-        for (i, value) in exp["detectFrameworkHints"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["detectFrameworkHints"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let (u, c) = hint_inputs[i];
             assert_eq!(
                 serde_json::to_value(detect_framework_hints(u, c, None)).unwrap(),
@@ -1086,7 +1166,12 @@ mod tests {
         }
         let profile = json!({"technologies": [{"name": "jQuery"}, {"name": "React"}, null, {}]});
         assert_eq!(
-            serde_json::to_value(detect_framework_hints("https://x/app.js", "plain", Some(&profile))).unwrap(),
+            serde_json::to_value(detect_framework_hints(
+                "https://x/app.js",
+                "plain",
+                Some(&profile)
+            ))
+            .unwrap(),
             exp["detectFrameworkHintsWithProfile"]
         );
         let signal_inputs = [
@@ -1101,9 +1186,15 @@ mod tests {
             "history.pushState({}, \"\", \"/a\")",
             "nothing here",
         ];
-        for (i, value) in exp["detectStartupSignals"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["detectStartupSignals"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             assert_eq!(
-                serde_json::to_value(detect_startup_signals("https://x/app.js", signal_inputs[i])).unwrap(),
+                serde_json::to_value(detect_startup_signals("https://x/app.js", signal_inputs[i]))
+                    .unwrap(),
                 *value,
                 "startupSignals {i}"
             );
@@ -1116,7 +1207,12 @@ mod tests {
             "https://x/",
             "not a url",
         ];
-        for (i, value) in exp["extractRouteHintsFromUrl"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["extractRouteHintsFromUrl"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             assert_eq!(
                 serde_json::to_value(extract_route_hints_from_url(route_inputs[i])).unwrap(),
                 *value,
@@ -1128,7 +1224,12 @@ mod tests {
             "import { x } from \"./x.js\"; import \"./side.css\";",
             "require(\"a\");require(\"a\");",
         ];
-        for (i, value) in exp["extractImportSpecifiers"].as_array().unwrap().iter().enumerate() {
+        for (i, value) in exp["extractImportSpecifiers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             assert_eq!(
                 serde_json::to_value(extract_import_specifiers(import_inputs[i])).unwrap(),
                 *value,
@@ -1136,17 +1237,54 @@ mod tests {
             );
         }
         let classify_inputs: Vec<(String, String, Vec<String>, Vec<String>)> = vec![
-            ("https://x/runtime.js".into(), "plain".into(), vec![], vec![]),
-            ("https://x/app.js".into(), "plain".into(), vec![], vec!["chunk-loader".into()]),
+            (
+                "https://x/runtime.js".into(),
+                "plain".into(),
+                vec![],
+                vec![],
+            ),
+            (
+                "https://x/app.js".into(),
+                "plain".into(),
+                vec![],
+                vec!["chunk-loader".into()],
+            ),
             ("https://x/vendor.js".into(), "plain".into(), vec![], vec![]),
-            ("https://x/app.js".into(), "plain".into(), vec!["React".into()], vec![]),
-            ("https://x/app.js".into(), "plain".into(), vec![], vec!["hydration".into()]),
-            ("https://x/app.js".into(), "plain".into(), vec![], vec!["router".into()]),
+            (
+                "https://x/app.js".into(),
+                "plain".into(),
+                vec!["React".into()],
+                vec![],
+            ),
+            (
+                "https://x/app.js".into(),
+                "plain".into(),
+                vec![],
+                vec!["hydration".into()],
+            ),
+            (
+                "https://x/app.js".into(),
+                "plain".into(),
+                vec![],
+                vec!["router".into()],
+            ),
             ("https://x/app.js".into(), "plain".into(), vec![], vec![]),
-            ("https://x/account/profile.js".into(), "plain".into(), vec![], vec![]),
+            (
+                "https://x/account/profile.js".into(),
+                "plain".into(),
+                vec![],
+                vec![],
+            ),
         ];
-        let bundlers = ["unknown", "webpack", "unknown", "unknown", "webpack", "unknown", "unknown", "unknown"];
-        for (i, value) in exp["classifyScriptAsset"].as_array().unwrap().iter().enumerate() {
+        let bundlers = [
+            "unknown", "webpack", "unknown", "unknown", "webpack", "unknown", "unknown", "unknown",
+        ];
+        for (i, value) in exp["classifyScriptAsset"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let (u, c, f, s) = &classify_inputs[i];
             assert_eq!(
                 classify_script_asset(u, c, bundlers[i], f, s),
@@ -1164,7 +1302,10 @@ mod tests {
 
         let prepared = prepare_script_assets(&scripts, Some(&recon));
         assert_eq!(
-            project(&serde_json::to_value(&prepared).unwrap(), &exp["prepareScriptAssets"]),
+            project(
+                &serde_json::to_value(&prepared).unwrap(),
+                &exp["prepareScriptAssets"]
+            ),
             exp["prepareScriptAssets"],
             "prepareScriptAssets"
         );
@@ -1177,7 +1318,11 @@ mod tests {
             exp["prepareScriptAssetsNoRecon"],
             "prepareScriptAssets without recon"
         );
-        assert_eq!(build_chunk_summary(&prepared), exp["buildChunkSummary"], "chunk summary");
+        assert_eq!(
+            build_chunk_summary(&prepared),
+            exp["buildChunkSummary"],
+            "chunk summary"
+        );
         assert_eq!(
             strip_chunk_asset(&prepared[0]),
             exp["stripChunkAsset"],
@@ -1208,10 +1353,7 @@ mod tests {
             .map(|o| {
                 let mut picked = serde_json::Map::new();
                 for key in keys {
-                    picked.insert(
-                        key.to_string(),
-                        o.get(key).cloned().unwrap_or(Value::Null),
-                    );
+                    picked.insert(key.to_string(), o.get(key).cloned().unwrap_or(Value::Null));
                 }
                 Value::Object(picked)
             })
@@ -1223,10 +1365,7 @@ mod tests {
             .map(|o| {
                 let mut picked = serde_json::Map::new();
                 for key in keys {
-                    picked.insert(
-                        key.to_string(),
-                        o.get(key).cloned().unwrap_or(Value::Null),
-                    );
+                    picked.insert(key.to_string(), o.get(key).cloned().unwrap_or(Value::Null));
                 }
                 Value::Object(picked)
             })
@@ -1237,6 +1376,10 @@ mod tests {
             exp["buildRuntimeSummary"],
             "runtime summary"
         );
-        assert_eq!(strip_runtime_entry(&origins[0]), exp["stripRuntimeEntry"], "stripRuntimeEntry");
+        assert_eq!(
+            strip_runtime_entry(&origins[0]),
+            exp["stripRuntimeEntry"],
+            "stripRuntimeEntry"
+        );
     }
 }

@@ -20,12 +20,16 @@ const FUNCTION_HEAD: &str = r"(?:^|[^\w$.])(?:new\s+)?Function\s*\(";
 static GAIN_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(KEYWORD_GAIN).unwrap());
 static BASE64_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(BASE64_LITERAL).unwrap());
-static HEX_ESCAPE_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(HEX_ESCAPE).unwrap());
+static HEX_ESCAPE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(HEX_ESCAPE).unwrap());
 static UNICODE_PERCENT_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(UNICODE_PERCENT).unwrap());
-static CHARCODE_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(CHARCODE_CALL).unwrap());
-static EVAL_HEAD_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(EVAL_HEAD).unwrap());
-static FUNCTION_HEAD_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(FUNCTION_HEAD).unwrap());
+static CHARCODE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(CHARCODE_CALL).unwrap());
+static EVAL_HEAD_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(EVAL_HEAD).unwrap());
+static FUNCTION_HEAD_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(FUNCTION_HEAD).unwrap());
 
 /// An obfuscation layer the engine can detect.
 ///
@@ -218,7 +222,11 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
             ),
         });
     }
-    findings.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    findings.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     findings
 }
 

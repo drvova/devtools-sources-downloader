@@ -11,8 +11,8 @@ use devtools_unpack::bundler::{extract_bundle_modules, module_file_name};
 use devtools_unpack::decoders::{
     bytes_to_text, decode_base64_to_bytes, decode_escapes, printable_ratio,
 };
-use devtools_unpack::digest::{sha256_hex, sha256_hex_bytes};
 use devtools_unpack::detectors::detect_layers;
+use devtools_unpack::digest::{sha256_hex, sha256_hex_bytes};
 use devtools_unpack::jscbytecode::{
     analyze_jsc_module, detect_jsc_bytecode, find_jsc_shared_table, parse_jsc_header,
     read_jsc_shared_table, recover_jsc_strings, wtf_string_hash,
@@ -37,10 +37,7 @@ use devtools_unpack::wasm::{detect_wasm_module, parse_wasm_module};
 use devtools_unpack::LIMITS;
 
 fn fixture(name: &str) -> Vec<u8> {
-    let path = format!(
-        "{}/test/fixtures/{name}",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let path = format!("{}/test/fixtures/{name}", env!("CARGO_MANIFEST_DIR"));
     std::fs::read(path).unwrap_or_else(|e| panic!("fixture {name}: {e}"))
 }
 
@@ -113,10 +110,7 @@ fn scanner_string_literals_decoded_with_escapes() {
 
 #[test]
 fn decoder_mixed_escapes() {
-    assert_eq!(
-        decode_escapes(r"a\tb\nc\\d\x41\u0042"),
-        "a\tb\nc\\dAB"
-    );
+    assert_eq!(decode_escapes(r"a\tb\nc\\d\x41\u0042"), "a\tb\nc\\dAB");
 }
 
 /// `detect_layers` returns findings sorted by score, highest first, and a long
@@ -160,7 +154,10 @@ fn peel_base64_payload_is_recovered_and_reported_as_a_layer() {
 
 #[test]
 fn peel_gzip_layer_inflates_to_source() {
-    let source = format!("function gzipped(){{return \"inflated\";}}\n{}", "var pad = 1;\n".repeat(20));
+    let source = format!(
+        "function gzipped(){{return \"inflated\";}}\n{}",
+        "var pad = 1;\n".repeat(20)
+    );
     let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     std::io::Write::write_all(&mut gz, source.as_bytes()).unwrap();
     let gz = gz.finish().unwrap();
@@ -198,12 +195,17 @@ fn peel_hex_escape_layer_decodes() {
 fn peel_charcode_layer_decodes() {
     let source = "function charcoded(){return 9;}";
     let codes: Vec<String> = source.chars().map(|c| (c as u32).to_string()).collect();
-    let result = peel_text(&format!("var t = String.fromCharCode({});", codes.join(",")), None);
+    let result = peel_text(
+        &format!("var t = String.fromCharCode({});", codes.join(",")),
+        None,
+    );
     match &result.stages[0] {
         Stage::Text(s) => assert_eq!(s.tool, "charcode"),
         Stage::Binary(_) => panic!("expected text stage"),
     }
-    assert!(result.final_text.contains("function charcoded(){return 9;}"));
+    assert!(result
+        .final_text
+        .contains("function charcoded(){return 9;}"));
 }
 
 #[test]
@@ -223,8 +225,12 @@ fn peel_rot13_source_is_detected_and_decoded() {
     let rotated: String = source
         .chars()
         .map(|c| match c {
-            'a'..='z' => char::from_u32(((c as u32 - b'a' as u32 + 13) % 26) + b'a' as u32).unwrap(),
-            'A'..='Z' => char::from_u32(((c as u32 - b'A' as u32 + 13) % 26) + b'A' as u32).unwrap(),
+            'a'..='z' => {
+                char::from_u32(((c as u32 - b'a' as u32 + 13) % 26) + b'a' as u32).unwrap()
+            }
+            'A'..='Z' => {
+                char::from_u32(((c as u32 - b'A' as u32 + 13) % 26) + b'A' as u32).unwrap()
+            }
             other => other,
         })
         .collect();
@@ -254,7 +260,10 @@ fn peel_nested_eval_base64_produces_two_ordered_layers() {
 
 #[test]
 fn peel_plain_source_yields_no_layers() {
-    let result = peel_text(&"function nothing(){ return 1; }\nmodule.exports = nothing;\n".repeat(3), None);
+    let result = peel_text(
+        &"function nothing(){ return 1; }\nmodule.exports = nothing;\n".repeat(3),
+        None,
+    );
     assert!(result.stages.is_empty());
 }
 
@@ -342,7 +351,13 @@ fn asset_pipeline_files_layers_and_sources_are_produced() {
         base64_of(map)
     );
     let asset = text_asset("https://a.test/static/main.js?cb=1", &content);
-    let result = unpack_asset(&asset, &UnpackOptions { index: Some(0), ..Default::default() });
+    let result = unpack_asset(
+        &asset,
+        &UnpackOptions {
+            index: Some(0),
+            ..Default::default()
+        },
+    );
     assert!(result.entry.stages.len() >= 2);
     assert_eq!(result.entry.sources, 1);
     let paths: Vec<&str> = result.files.iter().map(|f| f.path.as_str()).collect();
@@ -352,7 +367,9 @@ fn asset_pipeline_files_layers_and_sources_are_produced() {
     assert!(paths.iter().any(|p| p.contains("/source-map.json")));
     assert!(paths.iter().any(|p| p.contains("/sources/src/original.ts")));
     let slug = asset_slug("https://a.test/static/main.js?cb=1", 0);
-    assert!(regex::Regex::new(r"^0000-a\.test__static__main\.js$").unwrap().is_match(&slug));
+    assert!(regex::Regex::new(r"^0000-a\.test__static__main\.js$")
+        .unwrap()
+        .is_match(&slug));
     // Each layer artifact carries THAT stage's output, not the final text.
     let layer1 = result
         .files
@@ -371,14 +388,18 @@ fn asset_pipeline_files_layers_and_sources_are_produced() {
 
 #[test]
 fn asset_pipeline_external_map_fetched_through_the_injected_fetcher() {
-    let map = r#"{"version":3,"sources":["src/only.js"],"sourcesContent":["let only = 1;"]}"#.to_string();
+    let map =
+        r#"{"version":3,"sources":["src/only.js"],"sourcesContent":["let only = 1;"]}"#.to_string();
     let requested: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
     let fetch = |url: &str| -> Option<String> {
         requested.borrow_mut().push(url.to_string());
         Some(map.clone())
     };
     let result = unpack_asset(
-        &text_asset("https://a.test/app.js", "var a = 1;\n//# sourceMappingURL=app.js.map"),
+        &text_asset(
+            "https://a.test/app.js",
+            "var a = 1;\n//# sourceMappingURL=app.js.map",
+        ),
         &UnpackOptions {
             index: Some(1),
             fetch_text: Some(&fetch),
@@ -388,7 +409,10 @@ fn asset_pipeline_external_map_fetched_through_the_injected_fetcher() {
     assert_eq!(requested.borrow().len(), 1);
     assert_eq!(requested.borrow()[0], "https://a.test/app.js.map");
     assert_eq!(result.entry.sources, 1);
-    assert!(result.files.iter().any(|f| f.path.ends_with("/sources/src/only.js")));
+    assert!(result
+        .files
+        .iter()
+        .any(|f| f.path.ends_with("/sources/src/only.js")));
 }
 
 #[test]
@@ -396,7 +420,10 @@ fn asset_pipeline_budget_refusal_is_reported_not_silently_dropped() {
     let oversized = "x".repeat(64);
     let result = unpack_asset(
         &text_asset("https://a.test/big.js", &oversized),
-        &UnpackOptions { index: Some(2), ..Default::default() },
+        &UnpackOptions {
+            index: Some(2),
+            ..Default::default()
+        },
     );
     assert_eq!(result.entry.stages.len(), 0);
     assert_eq!(
@@ -404,10 +431,19 @@ fn asset_pipeline_budget_refusal_is_reported_not_silently_dropped() {
         vec!["no obfuscation layer, bundle structure, or source map content found".to_string()]
     );
     let huge = unpack_asset(
-        &text_asset("https://a.test/huge.js", &"x".repeat(LIMITS.max_asset_bytes + 1)),
-        &UnpackOptions { index: Some(3), ..Default::default() },
+        &text_asset(
+            "https://a.test/huge.js",
+            &"x".repeat(LIMITS.max_asset_bytes + 1),
+        ),
+        &UnpackOptions {
+            index: Some(3),
+            ..Default::default()
+        },
     );
-    assert_eq!(huge.entry.notes, vec!["asset exceeds unpack budget".to_string()]);
+    assert_eq!(
+        huge.entry.notes,
+        vec!["asset exceeds unpack budget".to_string()]
+    );
     assert_eq!(huge.files.len(), 0);
 }
 
@@ -432,7 +468,10 @@ fn zip_seam_writes_artifacts_and_a_report_at_the_requested_root() {
     let written: std::cell::RefCell<std::collections::BTreeMap<String, String>> =
         std::cell::RefCell::new(std::collections::BTreeMap::new());
     let payload = "function runtime(){return \"eval\";}";
-    let assets = vec![text_asset("eval-payload", &format!(r#"eval(atob("{}"))"#, base64_of(payload)))];
+    let assets = vec![text_asset(
+        "eval-payload",
+        &format!(r#"eval(atob("{}"))"#, base64_of(payload)),
+    )];
     let opts = UnpackOptions {
         path_prefix: "_unpack-runtime".to_string(),
         ..Default::default()
@@ -450,11 +489,11 @@ fn zip_seam_writes_artifacts_and_a_report_at_the_requested_root() {
     assert!(!report.unpacked_at.as_deref().unwrap_or("").is_empty());
     let map = written.borrow();
     assert!(map.contains_key("_unpack-runtime/index.json"));
-    assert!(map
-        .keys()
-        .any(|p| regex::Regex::new(r"^_unpack-runtime/0000-eval-payload\.js/layers/01-eval-unwrap\.js$")
-            .unwrap()
-            .is_match(p)));
+    assert!(map.keys().any(|p| regex::Regex::new(
+        r"^_unpack-runtime/0000-eval-payload\.js/layers/01-eval-unwrap\.js$"
+    )
+    .unwrap()
+    .is_match(p)));
     let parsed: serde_json::Value =
         serde_json::from_str(map.get("_unpack-runtime/index.json").unwrap()).unwrap();
     assert_eq!(parsed["totals"]["unpacked"], 1);
@@ -468,7 +507,10 @@ fn jsfuck_bare_recipe_value_matches_the_vendored_oracle() {
     let jsfucked = jsfuck_encoder::encode("Number", false, false);
     let decoded = decode_jsfuck(&jsfucked);
     assert_eq!(decoded.value.as_deref(), Some("Number"));
-    assert!(!decoded.captured, "bare recipe must yield a plain value, not a capture");
+    assert!(
+        !decoded.captured,
+        "bare recipe must yield a plain value, not a capture"
+    );
 }
 
 #[test]
@@ -538,7 +580,10 @@ fn packer_nested_layers_peel_in_order_through_peeltext() {
         Stage::Text(s) => assert_eq!(s.tool, "packer"),
         Stage::Binary(_) => panic!("expected text stage"),
     }
-    assert_eq!(res.final_text, "var _0xabc=['hello','world'];console.log(_0xabc[9]);");
+    assert_eq!(
+        res.final_text,
+        "var _0xabc=['hello','world'];console.log(_0xabc[9]);"
+    );
 }
 
 // -------------------------------------------------------------- string arrays
@@ -574,7 +619,10 @@ fn string_array_peeltext_peels_it_as_one_layer() {
         Stage::Text(s) => assert_eq!(s.tool, "string-array"),
         Stage::Binary(_) => panic!("expected text stage"),
     }
-    assert_eq!(res.final_text, "var _0xabc = ['1', 'hello', 'world', 'a'];console.log('world','a');");
+    assert_eq!(
+        res.final_text,
+        "var _0xabc = ['1', 'hello', 'world', 'a'];console.log('world','a');"
+    );
 }
 
 // -------------------------------------------------------------- shell refusals
@@ -583,7 +631,10 @@ fn string_array_peeltext_peels_it_as_one_layer() {
 fn refusals_aaencode_shell_is_reported_never_transformed() {
     let shell = "ﾟωﾉ= /´ｍｓ)ﾉ ~┻━┻   //*\\´∇`＊/ ['_']; ".to_string() + &"ﾟΘﾟ".repeat(20);
     let res = peel_text(&shell, None);
-    assert!(res.stages.is_empty(), "no static transform may run on a runtime shell");
+    assert!(
+        res.stages.is_empty(),
+        "no static transform may run on a runtime shell"
+    );
     assert_eq!(res.refusals.len(), 1);
     assert_eq!(res.refusals[0].tool, "aaencode");
     assert!(!res.refusals[0].detail.is_empty());
@@ -593,7 +644,10 @@ fn refusals_aaencode_shell_is_reported_never_transformed() {
 fn refusals_jjencode_shell_is_reported() {
     let shell = r#"$=~[];$={___:++$,$___:(![]+"")[$],____:++$};$.___=($.__=$[""])[$.___+$.___];console.log($.___);"#;
     let res = peel_text(shell, None);
-    assert!(res.refusals.iter().any(|r| r.tool == "jjencode"), "jjencode must be refused");
+    assert!(
+        res.refusals.iter().any(|r| r.tool == "jjencode"),
+        "jjencode must be refused"
+    );
 }
 
 #[test]
@@ -607,10 +661,17 @@ fn refusals_unpackasset_surfaces_refusal_notes_on_the_entry() {
     let shell = "ﾟωﾉ= /´ｍｓ)ﾉ ~┻━┻   //*\\´∇`＊/ ['_']; ".to_string() + &"ﾟΘﾟ".repeat(20);
     let res = unpack_asset(
         &text_asset("https://x/aa.js", &shell),
-        &UnpackOptions { index: Some(3), ..Default::default() },
+        &UnpackOptions {
+            index: Some(3),
+            ..Default::default()
+        },
     );
     assert_eq!(res.entry.refusals.as_ref().map(|v| v.len()), Some(1));
-    assert!(res.entry.notes.iter().any(|n| n.starts_with("refused: aaencode")));
+    assert!(res
+        .entry
+        .notes
+        .iter()
+        .any(|n| n.starts_with("refused: aaencode")));
 }
 
 // ------------------------------------------------ binary cached-bytecode layers
@@ -631,7 +692,10 @@ fn v8_header_and_framed_strings_on_a_real_node24_cache() {
 fn v8_detector_rejects_jsc_bytecode_and_truncated_blobs() {
     assert!(!detect_v8_code_cache(&fixture("jsc-chunk.jsc")));
     assert!(!detect_v8_code_cache(&[0u8; 20]));
-    assert!(!detect_v8_code_cache(&[0u8; 64]), "zero magic must not match the 0xC0DE family");
+    assert!(
+        !detect_v8_code_cache(&[0u8; 64]),
+        "zero magic must not match the 0xC0DE family"
+    );
 }
 
 #[test]
@@ -653,7 +717,10 @@ fn jsc_header_accepts_the_real_chunk_and_rejects_noise() {
     assert_eq!(header.declared_length as usize, bytes.len());
     assert_eq!(header.body_offset, 32);
     let noise = vec![0x41u8; 4096];
-    assert!(!detect_jsc_bytecode(&noise), "uniform noise must fail the format-or-length guard");
+    assert!(
+        !detect_jsc_bytecode(&noise),
+        "uniform noise must fail the format-or-length guard"
+    );
     assert!(!detect_jsc_bytecode(&[0u8; 20]));
 }
 
@@ -661,7 +728,10 @@ fn jsc_header_accepts_the_real_chunk_and_rejects_noise() {
 fn jsc_recovered_strings_match_the_unbuned_ground_truth() {
     let bytes = fixture("jsc-chunk.jsc");
     let truth = fixture_json("jsc-chunk-strings.json");
-    assert_eq!(serde_json::to_value(recover_jsc_strings(&bytes)).unwrap(), truth);
+    assert_eq!(
+        serde_json::to_value(recover_jsc_strings(&bytes)).unwrap(),
+        truth
+    );
 }
 
 #[test]
@@ -680,14 +750,20 @@ fn jsc_wtfstringhash_reproduces_every_ledger_ground_truth() {
 #[test]
 fn sealed_brotli_sealed_v8_cache_peels_through_two_stages() {
     let bytes = fixture("v8-codecache-sealed.jsc");
-    assert!(!detect_v8_code_cache(&bytes), "sealed blob must not read as a plain cache");
+    assert!(
+        !detect_v8_code_cache(&bytes),
+        "sealed blob must not read as a plain cache"
+    );
     let inflator = |b: &[u8]| -> std::io::Result<Vec<u8>> {
         let mut out = Vec::new();
         std::io::Read::read_to_end(&mut brotli::Decompressor::new(b, 4096), &mut out)?;
         Ok(out)
     };
     let sealed = parse_sealed_v8(&bytes, Some(&inflator));
-    assert!(sealed.is_some(), "sealed route must parse with an injected inflator");
+    assert!(
+        sealed.is_some(),
+        "sealed route must parse with an injected inflator"
+    );
     let sealed = sealed.unwrap();
     assert_eq!(
         sealed.cache.strings,
@@ -699,7 +775,10 @@ fn sealed_brotli_sealed_v8_cache_peels_through_two_stages() {
 fn sealed_a_throwing_inflator_degrades_to_a_refusal_not_a_crash() {
     let bytes = fixture("v8-codecache-sealed.jsc");
     let failing = |_b: &[u8]| -> std::io::Result<Vec<u8>> {
-        Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "not brotli"))
+        Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "not brotli",
+        ))
     };
     assert!(parse_sealed_v8(&bytes, Some(&failing)).is_none());
 }
@@ -708,9 +787,18 @@ fn sealed_a_throwing_inflator_degrades_to_a_refusal_not_a_crash() {
 fn routing_looksbinaryscript_matches_caches_by_magic_and_extension_only() {
     assert!(looks_binary_script("https://x/app.jsc", None));
     assert!(looks_binary_script("https://x/chunk.bc?v=2", None));
-    assert!(looks_binary_script("https://x/blob", Some(&fixture("v8-codecache.jsc"))));
-    assert!(looks_binary_script("https://x/blob", Some(&fixture("jsc-chunk.jsc"))));
-    assert!(!looks_binary_script("https://x/app.js", Some(b"console.log(1)")));
+    assert!(looks_binary_script(
+        "https://x/blob",
+        Some(&fixture("v8-codecache.jsc"))
+    ));
+    assert!(looks_binary_script(
+        "https://x/blob",
+        Some(&fixture("jsc-chunk.jsc"))
+    ));
+    assert!(!looks_binary_script(
+        "https://x/app.js",
+        Some(b"console.log(1)")
+    ));
     assert!(!looks_binary_script("https://x/b", Some(&[0u8; 8])));
 }
 
@@ -719,15 +807,20 @@ fn binary_pass_unrecognized_blobs_report_a_refusal_note() {
     let noise = vec![0x41u8; 4096];
     let res = unpack_asset(
         &bytes_asset("https://x/unknown.bin", noise),
-        &UnpackOptions { index: Some(0), ..Default::default() },
+        &UnpackOptions {
+            index: Some(0),
+            ..Default::default()
+        },
     );
     assert_eq!(res.entry.kind, "binary");
     assert_eq!(res.entry.stages.len(), 0);
-    assert!(res
-        .entry
-        .notes
-        .iter()
-        .any(|n| n.contains("no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape")));
+    assert!(
+        res.entry
+            .notes
+            .iter()
+            .any(|n| n
+                .contains("no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape"))
+    );
 }
 
 #[test]
@@ -759,16 +852,21 @@ fn binary_pass_zip_artifacts_are_scoped_to_their_own_asset_root() {
     let v8_root = roots.iter().find(|r| r.contains("v8.jsc")).unwrap();
     let jsc_root = roots.iter().find(|r| r.contains("jsc.jsc")).unwrap();
     let map = written.borrow();
-    let v8_strings: serde_json::Value = serde_json::from_str(
-        map.get(&format!("_unpack/{v8_root}/strings.json")).unwrap(),
-    )
-    .unwrap();
-    assert_eq!(v8_strings, serde_json::json!(["hi from cache", "evalmachine.<anonymous>"]));
+    let v8_strings: serde_json::Value =
+        serde_json::from_str(map.get(&format!("_unpack/{v8_root}/strings.json")).unwrap()).unwrap();
+    assert_eq!(
+        v8_strings,
+        serde_json::json!(["hi from cache", "evalmachine.<anonymous>"])
+    );
     let jsc_strings: serde_json::Value = serde_json::from_str(
-        map.get(&format!("_unpack/{jsc_root}/strings.json")).unwrap(),
+        map.get(&format!("_unpack/{jsc_root}/strings.json"))
+            .unwrap(),
     )
     .unwrap();
-    assert_eq!(jsc_strings, serde_json::json!(["moduleLoader", "starNamespace"]));
+    assert_eq!(
+        jsc_strings,
+        serde_json::json!(["moduleLoader", "starNamespace"])
+    );
     assert_eq!(report.totals.unpacked, 2);
 }
 
@@ -810,7 +908,11 @@ fn jsc_structural_walk_fails_closed_on_non_bytecode_bytes() {
     let stats = analyze_jsc_module(&noise, None);
     assert_eq!(stats.blocks, 0);
     assert!(!stats.valid);
-    assert_eq!(stats.functions.len(), 1, "root record alone, no blocks bound");
+    assert_eq!(
+        stats.functions.len(),
+        1,
+        "root record alone, no blocks bound"
+    );
 }
 
 #[test]
@@ -831,7 +933,14 @@ fn wasm_exports_match_the_platform_oracle_on_the_crafted_fixture() {
         .collect();
     mine.sort_by(|a, b| a["name"].as_str().cmp(&b["name"].as_str()));
     assert_eq!(serde_json::Value::Array(mine), oracle);
-    assert_eq!(info.exports.iter().find(|e| e.name == "compute").unwrap().index, 0);
+    assert_eq!(
+        info.exports
+            .iter()
+            .find(|e| e.name == "compute")
+            .unwrap()
+            .index,
+        0
+    );
     assert_eq!(info.module_name.as_deref(), Some("handcrafted_module"));
     let names: Vec<&str> = info.function_names.values().map(|s| s.as_str()).collect();
     assert_eq!(names, ["compute"]);
@@ -851,8 +960,16 @@ fn wasm_name_section_recovered_from_the_real_corpus_fixture() {
     let mut names = names;
     names.sort();
     assert_eq!(names, ["eval0", "eval1", "hash", "mix"]);
-    assert_eq!(info.exports.len(), 5, "oracle-captured export count from WebAssembly");
-    assert_eq!(info.notes.len(), 0, "the section walk must consume the module exactly");
+    assert_eq!(
+        info.exports.len(),
+        5,
+        "oracle-captured export count from WebAssembly"
+    );
+    assert_eq!(
+        info.notes.len(),
+        0,
+        "the section walk must consume the module exactly"
+    );
 }
 
 #[test]
@@ -865,19 +982,34 @@ fn wasm_detector_rejects_noise_and_truncated_bytes() {
 #[test]
 fn routing_wasm_extension_and_wasm_magic_reach_the_binary_pass() {
     assert!(looks_binary_script("https://x/mod.wasm", None));
-    assert!(looks_binary_script("https://x/blob?v=1", Some(&fixture("wasm-named.wasm"))));
-    assert!(!looks_binary_script("https://x/app.js", Some(b"console.log(1)")));
+    assert!(looks_binary_script(
+        "https://x/blob?v=1",
+        Some(&fixture("wasm-named.wasm"))
+    ));
+    assert!(!looks_binary_script(
+        "https://x/app.js",
+        Some(b"console.log(1)")
+    ));
 }
 
 #[test]
 fn binary_pass_wasm_asset_lands_the_wasm_module_stage_and_artifact() {
     let res = unpack_asset(
         &bytes_asset("https://x/mod.wasm", fixture("wasm-data.wasm")),
-        &UnpackOptions { index: Some(0), ..Default::default() },
+        &UnpackOptions {
+            index: Some(0),
+            ..Default::default()
+        },
     );
     assert_eq!(res.entry.kind, "binary");
-    assert!(stage_tools(&res.entry.stages).iter().any(|d| d == "wasm-module"));
-    let artifact = res.files.iter().find(|f| f.path.ends_with("/wasm-info.json")).unwrap();
+    assert!(stage_tools(&res.entry.stages)
+        .iter()
+        .any(|d| d == "wasm-module"));
+    let artifact = res
+        .files
+        .iter()
+        .find(|f| f.path.ends_with("/wasm-info.json"))
+        .unwrap();
     let info: serde_json::Value = serde_json::from_str(&artifact.content).unwrap();
     assert_eq!(info["moduleName"], "handcrafted_module");
     assert_eq!(
@@ -890,7 +1022,10 @@ fn binary_pass_wasm_asset_lands_the_wasm_module_stage_and_artifact() {
 fn binary_pass_jsc_asset_lands_functions_json_with_the_oracle_tree() {
     let res = unpack_asset(
         &bytes_asset("https://x/chunk.jsc", fixture("jsc-chunk.jsc")),
-        &UnpackOptions { index: Some(0), ..Default::default() },
+        &UnpackOptions {
+            index: Some(0),
+            ..Default::default()
+        },
     );
     let tools = stage_tools(&res.entry.stages);
     assert!(tools.iter().any(|d| d.contains("jsc-bytecode")));
@@ -901,7 +1036,11 @@ fn binary_pass_jsc_asset_lands_functions_json_with_the_oracle_tree() {
         stage_detail_lines[0]
     );
     assert_eq!(res.entry.functions, Some(7));
-    let artifact = res.files.iter().find(|f| f.path.ends_with("/functions.json")).unwrap();
+    let artifact = res
+        .files
+        .iter()
+        .find(|f| f.path.ends_with("/functions.json"))
+        .unwrap();
     let tree: serde_json::Value = serde_json::from_str(&artifact.content).unwrap();
     assert_eq!(tree["valid"], true);
     assert_eq!(tree["functions"].as_array().unwrap().len(), 7);
@@ -928,7 +1067,9 @@ fn build_shared_table(corrupt_ordinal: Option<u32>) -> Vec<u8> {
     let rec_bytes: Vec<Vec<u8>> = sorted
         .iter()
         .map(|o| {
-            let hex = records_json["records"][o.to_string()]["hex"].as_str().unwrap();
+            let hex = records_json["records"][o.to_string()]["hex"]
+                .as_str()
+                .unwrap();
             hex_to_bytes(hex)
         })
         .collect();
@@ -969,7 +1110,10 @@ fn jsc_shared_reader_resolves_real_records_and_leaves_holes() {
     let read = read_jsc_shared_table(&table, 0, table.len());
     assert_eq!(read.count, 204782);
     assert_eq!(read.resolved, 9);
-    assert_eq!(read.strings[0].as_deref(), Some("B:/~BUN/root/chunk-6xptctz4.js"));
+    assert_eq!(
+        read.strings[0].as_deref(),
+        Some("B:/~BUN/root/chunk-6xptctz4.js")
+    );
     assert_eq!(read.strings[10609].as_deref(), Some("W"));
     assert_eq!(read.strings[10759].as_deref(), Some("o"));
     assert_eq!(read.strings[22490].as_deref(), Some("S_t"));
@@ -979,7 +1123,10 @@ fn jsc_shared_reader_resolves_real_records_and_leaves_holes() {
         read.strings[204781].as_deref(),
         Some("file:///B:/%7EBUN/root/chunk-nqhgex2p.js")
     );
-    assert!(read.strings[100].is_none(), "gap ordinals stay holes, never shifted names");
+    assert!(
+        read.strings[100].is_none(),
+        "gap ordinals stay holes, never shifted names"
+    );
     assert_eq!(
         read_jsc_shared_table(&table, 0, 12).resolved,
         0,
@@ -993,7 +1140,10 @@ fn jsc_scanner_finds_an_embedded_shared_table_and_rejects_noise() {
     let mut padded = vec![0x41u8; 512 + table.len()];
     padded[512..].copy_from_slice(&table);
     let found = find_jsc_shared_table(&padded);
-    assert!(found.is_some(), "scanner must find the table inside an arbitrary blob");
+    assert!(
+        found.is_some(),
+        "scanner must find the table inside an arbitrary blob"
+    );
     let found = found.unwrap();
     assert_eq!(found.offset, 512);
     assert_eq!(found.resolved, 9);
@@ -1048,8 +1198,15 @@ fn jsc_a_corrupt_record_leaves_a_hole_never_a_shifted_name() {
     let table = build_shared_table(Some(129467));
     let read = read_jsc_shared_table(&table, 0, table.len());
     assert_eq!(read.resolved, 8);
-    assert!(read.strings[129467].is_none(), "the broken ordinal is an unresolvable placeholder");
-    assert_eq!(read.strings[10609].as_deref(), Some("W"), "earlier ordinals keep their own strings");
+    assert!(
+        read.strings[129467].is_none(),
+        "the broken ordinal is an unresolvable placeholder"
+    );
+    assert_eq!(
+        read.strings[10609].as_deref(),
+        Some("W"),
+        "earlier ordinals keep their own strings"
+    );
     assert_eq!(
         read.strings[184967].as_deref(),
         Some("SGs"),
@@ -1082,7 +1239,10 @@ fn binary_pass_batch_discovers_the_shared_table_and_resolves_functions_json() {
             bytes_asset("https://x/assets/chunk-nqhgex2p.jsc", chunk_bytes),
             bytes_asset("https://x/assets/section.bin", container_bytes),
         ],
-        &UnpackOptions { path_prefix: "_unpack".to_string(), ..Default::default() },
+        &UnpackOptions {
+            path_prefix: "_unpack".to_string(),
+            ..Default::default()
+        },
     );
     let chunk_entry = &result.report.assets[0];
     let tools = stage_tools(&chunk_entry.stages);
@@ -1100,15 +1260,20 @@ fn binary_pass_batch_discovers_the_shared_table_and_resolves_functions_json() {
         .unwrap_or_else(|| {
             panic!(
                 "functions.json missing: {}",
-                result.files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>().join(", ")
+                result
+                    .files
+                    .iter()
+                    .map(|f| f.path.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
         });
     let tree: serde_json::Value = serde_json::from_str(&artifact.content).unwrap();
+    assert_eq!(tree["rootName"], "file:///B:/%7EBUN/root/chunk-nqhgex2p.js");
     assert_eq!(
-        tree["rootName"],
-        "file:///B:/%7EBUN/root/chunk-nqhgex2p.js"
+        tree["sharedTable"]["source"],
+        "https://x/assets/section.bin"
     );
-    assert_eq!(tree["sharedTable"]["source"], "https://x/assets/section.bin");
     assert_eq!(tree["sharedTable"]["resolvedNames"], 6);
     let names = tree["functions"].as_array().unwrap();
     assert!(names.iter().any(|f| f["name"] == "o"));
@@ -1124,7 +1289,10 @@ fn jsc_program_tag_0_chunk_binds_the_real_function_tree() {
     let chunk = fixture("jsc-cjs-chunk.bin");
     let section = fixture("jsc-cjs-sec.bin");
     let table = find_jsc_shared_table(&section);
-    assert!(table.is_some(), "scanner must find the 53-string table inside the cjs section");
+    assert!(
+        table.is_some(),
+        "scanner must find the 53-string table inside the cjs section"
+    );
     let table = table.unwrap();
     let resolved = analyze_jsc_module(&chunk, Some(&table.strings));
     let truth = fixture_json("jsc-cjs-functions-resolved.json");
@@ -1136,7 +1304,11 @@ fn jsc_program_tag_0_chunk_binds_the_real_function_tree() {
     assert!(resolved.valid);
     assert_eq!(resolved.blocks, 17);
     assert_eq!(resolved.bind_failed, 0);
-    let names: Vec<Option<&str>> = resolved.functions.iter().map(|f| f.name.as_deref()).collect();
+    let names: Vec<Option<&str>> = resolved
+        .functions
+        .iter()
+        .map(|f| f.name.as_deref())
+        .collect();
     for real in [
         "calculateInvoiceTotal",
         "validateCustomerRecord",
@@ -1146,11 +1318,16 @@ fn jsc_program_tag_0_chunk_binds_the_real_function_tree() {
         "computeTotal",
         "__export",
     ] {
-        assert!(names.iter().any(|n| n == &Some(real)), "missing real function name: {real}");
+        assert!(
+            names.iter().any(|n| n == &Some(real)),
+            "missing real function name: {real}"
+        );
     }
     // every named slot resolved through the shared table, no placeholders
     assert!(
-        names.iter().all(|n| n.map(|n| !n.starts_with("<ordinal ")).unwrap_or(true)),
+        names
+            .iter()
+            .all(|n| n.map(|n| !n.starts_with("<ordinal ")).unwrap_or(true)),
         "names must resolve, got: {:?}",
         names
             .iter()
@@ -1165,13 +1342,24 @@ fn jsc_program_chunk_without_a_table_degrades_to_ordinals_but_still_binds() {
     let plain = analyze_jsc_module(&chunk, None);
     assert!(plain.valid);
     assert_eq!(plain.blocks, 17);
-    assert_eq!(plain.root_name, None, "the entry name slot is the empty sentinel in this payload");
+    assert_eq!(
+        plain.root_name, None,
+        "the entry name slot is the empty sentinel in this payload"
+    );
     let placeholder = plain
         .functions
         .iter()
-        .filter(|f| f.name.as_deref().map(|n| n.starts_with("<ordinal ")).unwrap_or(false))
+        .filter(|f| {
+            f.name
+                .as_deref()
+                .map(|n| n.starts_with("<ordinal "))
+                .unwrap_or(false)
+        })
         .count();
-    assert!(placeholder >= 6, "expected ordinal placeholders without a table, got {placeholder}");
+    assert!(
+        placeholder >= 6,
+        "expected ordinal placeholders without a table, got {placeholder}"
+    );
 }
 
 #[test]
@@ -1201,7 +1389,10 @@ fn binary_pass_cjs_asset_lands_functions_json_with_real_names() {
             bytes_asset("https://x/assets/pair-cjs.jsc", chunk_bytes),
             bytes_asset("https://x/assets/pair-cjs.sec", section_bytes),
         ],
-        &UnpackOptions { path_prefix: "_unpack".to_string(), ..Default::default() },
+        &UnpackOptions {
+            path_prefix: "_unpack".to_string(),
+            ..Default::default()
+        },
     );
     let chunk_entry = &result.report.assets[0];
     let tools = stage_tools(&chunk_entry.stages);
@@ -1223,7 +1414,12 @@ fn binary_pass_cjs_asset_lands_functions_json_with_real_names() {
         .unwrap_or_else(|| {
             panic!(
                 "functions.json missing: {}",
-                result.files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>().join(", ")
+                result
+                    .files
+                    .iter()
+                    .map(|f| f.path.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
         });
     let tree: serde_json::Value = serde_json::from_str(&artifact.content).unwrap();

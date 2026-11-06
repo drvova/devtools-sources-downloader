@@ -264,7 +264,11 @@ mod tests {
         let mut at = read_u32(archive, eocd + 16) as usize;
         let mut out = Vec::new();
         for _ in 0..count {
-            assert_eq!(read_u32(archive, at), CENTRAL_SIG, "central header signature");
+            assert_eq!(
+                read_u32(archive, at),
+                CENTRAL_SIG,
+                "central header signature"
+            );
             let method = read_u16(archive, at + 10);
             let crc = read_u32(archive, at + 16);
             let compressed = read_u32(archive, at + 20) as usize;
@@ -272,7 +276,11 @@ mod tests {
             let local = read_u32(archive, at + 42) as usize;
             let name = String::from_utf8(archive[at + 46..at + 46 + name_len].to_vec()).unwrap();
 
-            assert_eq!(read_u32(archive, local), LOCAL_SIG, "local header signature");
+            assert_eq!(
+                read_u32(archive, local),
+                LOCAL_SIG,
+                "local header signature"
+            );
             let local_name_len = read_u16(archive, local + 26) as usize;
             let local_extra = read_u16(archive, local + 28) as usize;
             let start = local + 30 + local_name_len + local_extra;
@@ -308,10 +316,15 @@ mod tests {
     #[test]
     fn round_trips_text_and_binary_entries() {
         let mut writer = ZipWriter::new();
-        writer.add_text("_unpack/index.json", "{\"ok\":true}").unwrap();
+        writer
+            .add_text("_unpack/index.json", "{\"ok\":true}")
+            .unwrap();
         // compressible: deflate should win
         writer
-            .add("demo.test/app/bundle.js", &b"function f(){return 1;}\n".repeat(40))
+            .add(
+                "demo.test/app/bundle.js",
+                &b"function f(){return 1;}\n".repeat(40),
+            )
             .unwrap();
         // incompressible: store should win (xorshift32 bytes, no structure to find)
         let mut state = 0x1234_5678u32;

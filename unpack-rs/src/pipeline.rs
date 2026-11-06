@@ -25,7 +25,8 @@ static SLUG_SLASHES_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"/+").unwrap());
 static BINARY_EXT_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"(?i)\.(jsc|bc|wasm)(\?|$)").unwrap());
-static JS_EXT_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"(?i)\.js$").unwrap());
+static JS_EXT_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?i)\.js$").unwrap());
 
 pub fn asset_slug(url: &str, index: usize) -> String {
     let cleaned = SCHEME_RE.replace(url, "");
@@ -54,7 +55,9 @@ pub fn looks_binary_script(url: &str, bytes: Option<&[u8]>) -> bool {
     }
     match bytes {
         Some(bytes) if bytes.len() >= 8 && detect_wasm_module(bytes) => true,
-        Some(bytes) if bytes.len() >= 32 && (detect_v8_code_cache(bytes) || detect_jsc_bytecode(bytes)) => {
+        Some(bytes)
+            if bytes.len() >= 32 && (detect_v8_code_cache(bytes) || detect_jsc_bytecode(bytes)) =>
+        {
             true
         }
         _ => false,
@@ -192,13 +195,12 @@ fn unpack_binary_asset(url: &str, bytes: &[u8], opts: &UnpackOptions) -> AssetRe
     let base = format!("{}/{}", opts.path_prefix, asset_slug(url, index));
     let mut strings: Option<Vec<String>> = None;
 
-    let cache_header_file =
-        |files: &mut Vec<File>, base: &str, payload: &serde_json::Value| {
-            files.push(File {
-                path: format!("{base}/cache-header.json"),
-                content: pretty_json(payload),
-            });
-        };
+    let cache_header_file = |files: &mut Vec<File>, base: &str, payload: &serde_json::Value| {
+        files.push(File {
+            path: format!("{base}/cache-header.json"),
+            content: pretty_json(payload),
+        });
+    };
 
     if detect_wasm_module(bytes) {
         if let Some(wasm) = parse_wasm_module(bytes) {
@@ -262,7 +264,10 @@ fn unpack_binary_asset(url: &str, bytes: &[u8], opts: &UnpackOptions) -> AssetRe
             entry.stages.push(Stage::Binary(BinaryStage {
                 depth: 0,
                 tool: "jsc-bytecode".to_string(),
-                detail: format!("JSC bytecode v{}, {}B", header.version, header.declared_length),
+                detail: format!(
+                    "JSC bytecode v{}, {}B",
+                    header.version, header.declared_length
+                ),
             }));
             strings = Some(recover_jsc_strings(bytes));
             cache_header_file(
@@ -309,7 +314,8 @@ fn unpack_binary_asset(url: &str, bytes: &[u8], opts: &UnpackOptions) -> AssetRe
                         resolved_names: named,
                     });
                     if let Some(Stage::Binary(stage)) = entry.stages.last_mut() {
-                        stage.detail = format!("{}, {} names via shared table", stage.detail, named);
+                        stage.detail =
+                            format!("{}, {} names via shared table", stage.detail, named);
                     }
                 }
                 files.push(File {
@@ -328,7 +334,10 @@ fn unpack_binary_asset(url: &str, bytes: &[u8], opts: &UnpackOptions) -> AssetRe
             entry.stages.push(Stage::Binary(BinaryStage {
                 depth: 0,
                 tool: "jsc-sealed-v8".to_string(),
-                detail: format!("brotli-sealed V8 cache, {}B inflated", sealed.inflated_bytes),
+                detail: format!(
+                    "brotli-sealed V8 cache, {}B inflated",
+                    sealed.inflated_bytes
+                ),
             }));
             entry.stages.push(Stage::Binary(BinaryStage {
                 depth: 1,
@@ -417,7 +426,8 @@ pub fn unpack_asset(asset: &Asset, opts: &UnpackOptions) -> AssetResult {
                 if let Stage::Text(meta) = stage {
                     files.push(File {
                         path: format!("{base}/layers/0{}-{}.js", meta.depth, meta.tool),
-                        content: utf16_prefix(&peeled.outputs[s], LIMITS.max_asset_bytes).to_string(),
+                        content: utf16_prefix(&peeled.outputs[s], LIMITS.max_asset_bytes)
+                            .to_string(),
                     });
                 }
             }
@@ -473,9 +483,13 @@ pub fn unpack_asset(asset: &Asset, opts: &UnpackOptions) -> AssetResult {
                         Some(fetch) => {
                             let map_url = resolve_map_url(url, value);
                             match fetch(&map_url) {
-                                Some(text) if utf16_len(&text) <= LIMITS.max_map_bytes => Some(text),
+                                Some(text) if utf16_len(&text) <= LIMITS.max_map_bytes => {
+                                    Some(text)
+                                }
                                 _ => {
-                                    entry.notes.push(format!("source map fetch failed: {value}"));
+                                    entry
+                                        .notes
+                                        .push(format!("source map fetch failed: {value}"));
                                     None
                                 }
                             }
@@ -505,7 +519,8 @@ pub fn unpack_asset(asset: &Asset, opts: &UnpackOptions) -> AssetResult {
 
             if entry.stages.is_empty() && entry.modules == 0 && entry.sources == 0 {
                 entry.notes.push(
-                    "no obfuscation layer, bundle structure, or source map content found".to_string(),
+                    "no obfuscation layer, bundle structure, or source map content found"
+                        .to_string(),
                 );
             }
             AssetResult { entry, files }
@@ -577,7 +592,12 @@ pub fn unpack_assets(assets: &[Asset], opts: &UnpackOptions) -> BatchResult {
         });
         if wants_table {
             for (s, asset) in assets.iter().enumerate() {
-                let Asset::Bytes { url, bytes, zip_path } = asset else {
+                let Asset::Bytes {
+                    url,
+                    bytes,
+                    zip_path,
+                } = asset
+                else {
                     continue;
                 };
                 if bytes.len() < 24 || bytes.len() > LIMITS.max_asset_bytes {

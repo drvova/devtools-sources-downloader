@@ -22,7 +22,8 @@ pub const REDACT_KEY_PATTERN: &str =
 
 /// A payload whose MIME type matches this is decoded as text rather than kept
 /// as bytes.
-pub const TEXT_MIME_PATTERN: &str = "(?:javascript|ecmascript|typescript|json|text|xml|svg|html|css)";
+pub const TEXT_MIME_PATTERN: &str =
+    "(?:javascript|ecmascript|typescript|json|text|xml|svg|html|css)";
 
 /// A request URL containing this is treated as a GraphQL endpoint. The body
 /// half of that predicate is structural and stays in the page world, where it
@@ -38,6 +39,17 @@ pub struct Limits {
     pub runtime_items: u32,
     pub runtime_text: u32,
     pub runtime_binary: u32,
+    pub resource_urls: u32,
+    pub script_urls: u32,
+    pub endpoints: u32,
+    pub response_text: u32,
+    pub socket_message: u32,
+    pub mutation_text: u32,
+    pub element_text: u32,
+    pub element_label: u32,
+    pub class_names: u32,
+    pub query_items: u32,
+    pub technologies: u32,
 }
 
 /// The budgets the page world enforces while capturing.
@@ -49,6 +61,17 @@ pub const LIMITS: Limits = Limits {
     runtime_items: 200,
     runtime_text: 262_144,
     runtime_binary: 1_048_576,
+    resource_urls: 160,
+    script_urls: 80,
+    endpoints: 20,
+    response_text: 10_000,
+    socket_message: 2_000,
+    mutation_text: 200,
+    element_text: 80,
+    element_label: 40,
+    class_names: 8,
+    query_items: 6,
+    technologies: 12,
 };
 
 /// The object the panel injects as `window.__CAPTURE_POLICY__`. The page world
@@ -67,6 +90,17 @@ pub fn capture_policy() -> Value {
             "runtimeItems": LIMITS.runtime_items,
             "runtimeText": LIMITS.runtime_text,
             "runtimeBinary": LIMITS.runtime_binary,
+            "resourceUrls": LIMITS.resource_urls,
+            "scriptUrls": LIMITS.script_urls,
+            "endpoints": LIMITS.endpoints,
+            "responseText": LIMITS.response_text,
+            "socketMessage": LIMITS.socket_message,
+            "mutationText": LIMITS.mutation_text,
+            "elementText": LIMITS.element_text,
+            "elementLabel": LIMITS.element_label,
+            "classNames": LIMITS.class_names,
+            "queryItems": LIMITS.query_items,
+            "technologies": LIMITS.technologies,
         },
     })
 }

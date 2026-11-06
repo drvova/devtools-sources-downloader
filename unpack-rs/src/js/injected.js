@@ -149,7 +149,7 @@
         for (var key in TRACKER.resources) {
             if (Object.prototype.hasOwnProperty.call(TRACKER.resources, key)) urls.push(key);
         }
-        return urls.slice(0, 160);
+        return urls.slice(0, limit('resourceUrls'));
     }
 
     function getScriptUrls() {
@@ -158,7 +158,7 @@
         for (var i = 0; i < scripts.length; i++) {
             if (scripts[i] && scripts[i].src) urls.push(scripts[i].src);
         }
-        return urls.slice(0, 80);
+        return urls.slice(0, limit('scriptUrls'));
     }
 
     function looksLikeGraphQL(url, body) {
@@ -183,7 +183,7 @@
                     addUnique(endpoints, entry.url || 'graphql');
             }
         }
-        return endpoints.slice(0, 20);
+        return endpoints.slice(0, limit('endpoints'));
     }
 
     function buildGlobalFlags() {
@@ -768,7 +768,7 @@
                     entry.statusText = self.statusText;
                     entry.responseHeaders = self.getAllResponseHeaders();
                     entry.responseBody = self.responseText
-                        ? self.responseText.substring(0, 10000)
+                        ? self.responseText.substring(0, limit('responseText'))
                         : null;
                     entry.responseSize = self.responseText ? self.responseText.length : 0;
                     finishRequest();
@@ -832,7 +832,9 @@
                         .clone()
                         .text()
                         .then(function (text) {
-                            entry.responseBody = text ? text.substring(0, 10000) : null;
+                            entry.responseBody = text
+                                ? text.substring(0, limit('responseText'))
+                                : null;
                             entry.responseSize = text ? text.length : 0;
                         })
                         .catch(function () {
@@ -874,7 +876,10 @@
             instance.send = function (data) {
                 entry.messages.push({
                     direction: 'out',
-                    data: typeof data === 'string' ? data.substring(0, 2000) : '[binary]',
+                    data:
+                        typeof data === 'string'
+                            ? data.substring(0, limit('socketMessage'))
+                            : '[binary]',
                     timestamp: Date.now(),
                 });
                 touchSignal('socket');
@@ -891,7 +896,7 @@
                 }
                 entry.messages.push({
                     direction: 'in',
-                    data: message ? message.substring(0, 2000) : '',
+                    data: message ? message.substring(0, limit('socketMessage')) : '',
                     timestamp: Date.now(),
                 });
                 touchSignal('socket');
@@ -924,7 +929,7 @@
             instance.addEventListener('message', function (event) {
                 entry.events.push({
                     type: event.type || 'message',
-                    data: event.data ? event.data.substring(0, 2000) : '',
+                    data: event.data ? event.data.substring(0, limit('socketMessage')) : '',
                     timestamp: Date.now(),
                 });
                 touchSignal('socket');
@@ -1187,10 +1192,12 @@
             addedNodes: mutation.addedNodes ? getNodeList(mutation.addedNodes, 3) : [],
             removedNodes: mutation.removedNodes ? getNodeList(mutation.removedNodes, 3) : [],
             attributeName: mutation.attributeName || null,
-            oldValue: mutation.oldValue ? mutation.oldValue.substring(0, 200) : null,
+            oldValue: mutation.oldValue
+                ? mutation.oldValue.substring(0, limit('mutationText'))
+                : null,
             textContent:
                 mutation.type === 'characterData'
-                    ? (mutation.target.textContent || '').substring(0, 200)
+                    ? (mutation.target.textContent || '').substring(0, limit('mutationText'))
                     : null,
             timestamp: Date.now(),
         });
@@ -1250,14 +1257,17 @@
         if (!tag) return null;
         if (tag === 'script') {
             if (el.src) return el.src;
-            var text = (el.textContent || '').substring(0, 80).replace(/\s+/g, ' ');
+            var text = (el.textContent || '')
+                .substring(0, limit('elementText'))
+                .replace(/\s+/g, ' ');
             return 'inline-script:' + (text || 'empty');
         }
         if (tag === 'link' && el.rel === 'stylesheet' && el.href) return el.href;
         if (tag === 'style')
             return (
                 'inline-style:' +
-                ((el.textContent || '').substring(0, 40).replace(/\s+/g, ' ') || 'empty')
+                ((el.textContent || '').substring(0, limit('elementLabel')).replace(/\s+/g, ' ') ||
+                    'empty')
             );
         if (tag === 'img') return el.src || el.getAttribute('data-src') || null;
         if (tag === 'video') return el.src || null;

@@ -72,7 +72,6 @@ struct RawSourceMap {
     file: Option<String>,
 }
 
-
 /// JS `parseSourceMap`: throws on malformed JSON (the caller maps that to a
 /// note); here the Result carries the parse error.
 pub fn parse_source_map(json: &str) -> Result<ParsedSourceMap, serde_json::Error> {
@@ -109,9 +108,9 @@ fn clean_source_path(source: &str) -> String {
         LazyLock::new(|| regex::Regex::new(r"^webpack://").unwrap());
     static WEBPACK_SLASH: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^webpack//").unwrap());
-    static DOT_SLASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^\./").unwrap());
-    static BACKSLASH: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r"\\").unwrap());
+    static DOT_SLASH: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(r"^\./").unwrap());
+    static BACKSLASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\").unwrap());
     static LEADING_SLASHES: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^/+").unwrap());
     let path = WEBPACK_HTTP.replace(source, "");
@@ -119,7 +118,9 @@ fn clean_source_path(source: &str) -> String {
     let path = DOT_SLASH.replace(&path, "");
     let path = BACKSLASH.replace_all(&path, "/");
     let path = LEADING_SLASHES.replace(&path, "");
-    crate::util::BAD_PATH_CHARS.replace_all(&path, "_").into_owned()
+    crate::util::BAD_PATH_CHARS
+        .replace_all(&path, "_")
+        .into_owned()
 }
 
 static DATA_URI_RE: LazyLock<regex::Regex> =
@@ -131,7 +132,9 @@ pub fn decode_inline_source_map(data_uri: &str) -> Option<String> {
     if m.get(2).is_some() {
         // A failed base64 payload decodes to empty text (the JS TextDecoder
         // path), which the caller then treats as no map.
-        return Some(bytes_to_text(&decode_base64_to_bytes(payload).unwrap_or_default()));
+        return Some(bytes_to_text(
+            &decode_base64_to_bytes(payload).unwrap_or_default(),
+        ));
     }
     crate::transforms::decode_uri_component(payload)
 }

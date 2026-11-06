@@ -225,10 +225,14 @@ fn build_strategy(profile: &Value) -> Map<String, Value> {
         strategy.insert("preferHydratedDom".into(), json!(true));
         strategy.insert("captureFrameworkState".into(), json!(true));
         strategy.insert("prioritizeSourceMaps".into(), json!(true));
-        add_unique(&mut reasons, "Hydration-oriented framework markers detected");
+        add_unique(
+            &mut reasons,
+            "Hydration-oriented framework markers detected",
+        );
     }
 
-    if has_trait("graphql-heavy") || has_tech("Apollo") || has_tech("Relay") || has_tech("GraphQL") {
+    if has_trait("graphql-heavy") || has_tech("Apollo") || has_tech("Relay") || has_tech("GraphQL")
+    {
         if profile_name(&strategy) == "generic-app" {
             strategy.insert("profile".into(), json!("graphql-app"));
         }
@@ -359,7 +363,9 @@ pub fn analyze(snapshot: &Value) -> Value {
             }),
         );
     }
-    if flag(globals, "svelteKit") || flag(dom, "hasSvelteData") || has_url(&urls, "/_app/immutable/")
+    if flag(globals, "svelteKit")
+        || flag(dom, "hasSvelteData")
+        || has_url(&urls, "/_app/immutable/")
     {
         tech(
             &mut techs,
@@ -439,7 +445,13 @@ pub fn analyze(snapshot: &Value) -> Value {
         );
     }
     if any_regex(&urls, &PARCEL_RE) {
-        tech(&mut techs, "Parcel", "bundler", 0.67, Some("Parcel URL marker"));
+        tech(
+            &mut techs,
+            "Parcel",
+            "bundler",
+            0.67,
+            Some("Parcel URL marker"),
+        );
     }
 
     let generator = field(dom, "metaGenerator").map(|v| lower(Some(v)));
@@ -447,10 +459,7 @@ pub fn analyze(snapshot: &Value) -> Value {
         .as_deref()
         .map(|value| value.contains("wordpress"))
         .unwrap_or(false);
-    if generator_is_wordpress
-        || has_url(&urls, "/wp-content/")
-        || has_url(&urls, "/wp-includes/")
-    {
+    if generator_is_wordpress || has_url(&urls, "/wp-content/") || has_url(&urls, "/wp-includes/") {
         tech(
             &mut techs,
             "WordPress",
@@ -491,7 +500,9 @@ pub fn analyze(snapshot: &Value) -> Value {
         );
     }
     let endpoints = normalize_list(field(network, "graphqlEndpoints"));
-    if flag(globals, "apolloClient") || flag(globals, "apolloState") || any_regex(&endpoints, &APOLLO_RE)
+    if flag(globals, "apolloClient")
+        || flag(globals, "apolloState")
+        || any_regex(&endpoints, &APOLLO_RE)
     {
         tech(
             &mut techs,
@@ -552,7 +563,11 @@ pub fn analyze(snapshot: &Value) -> Value {
         );
     }
     if over(dom, "mutationCount", 20.0) {
-        trait_hit(&mut traits, "dynamic-dom", Some("Sustained DOM mutation activity"));
+        trait_hit(
+            &mut traits,
+            "dynamic-dom",
+            Some("Sustained DOM mutation activity"),
+        );
     }
     if over(network, "graphqlCount", 0.0) {
         trait_hit(
@@ -565,7 +580,11 @@ pub fn analyze(snapshot: &Value) -> Value {
         || over(network, "sseCount", 0.0)
         || over(activity, "openSockets", 0.0)
     {
-        trait_hit(&mut traits, "socket-heavy", Some("WebSocket or SSE activity"));
+        trait_hit(
+            &mut traits,
+            "socket-heavy",
+            Some("WebSocket or SSE activity"),
+        );
     }
     if over(runtime, "workerCount", 0.0) {
         trait_hit(&mut traits, "worker-heavy", Some("Worker runtime observed"));
@@ -591,7 +610,11 @@ pub fn analyze(snapshot: &Value) -> Value {
         && num(network, "fetchCount") <= 2.0
         && num(network, "xhrCount") <= 1.0
     {
-        trait_hit(&mut traits, "static-ish", Some("Low script and API activity"));
+        trait_hit(
+            &mut traits,
+            "static-ish",
+            Some("Low script and API activity"),
+        );
     }
 
     if techs.is_empty() {
@@ -625,10 +648,7 @@ pub fn analyze(snapshot: &Value) -> Value {
         evidence_traits.insert(name.clone(), json!(signals));
     }
     let mut evidence = Map::new();
-    evidence.insert(
-        "technologies".into(),
-        Value::Object(evidence_technologies),
-    );
+    evidence.insert("technologies".into(), Value::Object(evidence_technologies));
     evidence.insert("traits".into(), Value::Object(evidence_traits));
     evidence.insert(
         "globals".into(),
@@ -642,9 +662,14 @@ pub fn analyze(snapshot: &Value) -> Value {
         json!(endpoints.iter().take(20).collect::<Vec<_>>()),
     );
 
-    let confidence_base = techs.first().map(|item| item.confidence * 100.0).unwrap_or(45.0);
+    let confidence_base = techs
+        .first()
+        .map(|item| item.confidence * 100.0)
+        .unwrap_or(45.0);
     let confidence = clamp(
-        confidence_base + (techs.len().min(4) as f64) * 4.0 + (trait_names.len().min(5) as f64) * 3.0,
+        confidence_base
+            + (techs.len().min(4) as f64) * 4.0
+            + (trait_names.len().min(5) as f64) * 3.0,
         35.0,
         99.0,
     )

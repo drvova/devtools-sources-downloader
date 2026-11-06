@@ -4,7 +4,9 @@
 // divergence in PORTING.md): string/comment/template-aware brace layout,
 // two-space indent, newline after statement semicolons.
 
-use crate::scanner::{skip_block_comment, skip_line_comment, skip_quoted, skip_regex, skip_template};
+use crate::scanner::{
+    skip_block_comment, skip_line_comment, skip_quoted, skip_regex, skip_template,
+};
 use crate::util::utf16_len;
 use crate::LIMITS;
 

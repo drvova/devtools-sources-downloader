@@ -52,15 +52,31 @@ fn build_encoder() -> Encoder {
 fn declared_mapping() -> Vec<(char, Option<&'static str>)> {
     let mut rows: Vec<(char, Option<&str>)> = Vec::new();
     let lower = [
-        "(false+\"\")[1]", "([][\"entries\"]()+\"\")[2]", "([][\"at\"]+\"\")[3]", "(undefined+\"\")[2]",
-        "(true+\"\")[3]", "(false+\"\")[0]", "(false+[0]+String)[20]",
-        "(+(101))[\"to\"+String[\"name\"]](21)[1]", "([false]+undefined)[10]",
-        "([][\"entries\"]()+\"\")[3]", "(+(20))[\"to\"+String[\"name\"]](21)", "(false+\"\")[2]",
-        "(Number+\"\")[11]", "(undefined+\"\")[1]", "(true+[][\"at\"])[10]",
-        "(+(211))[\"to\"+String[\"name\"]](31)[1]", "(\"\")[\"fontcolor\"]([0]+false+\")[20]",
-        "(true+\"\")[1]", "(false+\"\")[3]", "(true+\"\")[0]", "(undefined+\"\")[0]",
-        "(+(31))[\"to\"+String[\"name\"]](32)", "(+(32))[\"to\"+String[\"name\"]](33)",
-        "(+(101))[\"to\"+String[\"name\"]](34)[1]", "(NaN+[Infinity])[10]",
+        "(false+\"\")[1]",
+        "([][\"entries\"]()+\"\")[2]",
+        "([][\"at\"]+\"\")[3]",
+        "(undefined+\"\")[2]",
+        "(true+\"\")[3]",
+        "(false+\"\")[0]",
+        "(false+[0]+String)[20]",
+        "(+(101))[\"to\"+String[\"name\"]](21)[1]",
+        "([false]+undefined)[10]",
+        "([][\"entries\"]()+\"\")[3]",
+        "(+(20))[\"to\"+String[\"name\"]](21)",
+        "(false+\"\")[2]",
+        "(Number+\"\")[11]",
+        "(undefined+\"\")[1]",
+        "(true+[][\"at\"])[10]",
+        "(+(211))[\"to\"+String[\"name\"]](31)[1]",
+        "(\"\")[\"fontcolor\"]([0]+false+\")[20]",
+        "(true+\"\")[1]",
+        "(false+\"\")[3]",
+        "(true+\"\")[0]",
+        "(undefined+\"\")[0]",
+        "(+(31))[\"to\"+String[\"name\"]](32)",
+        "(+(32))[\"to\"+String[\"name\"]](33)",
+        "(+(101))[\"to\"+String[\"name\"]](34)[1]",
+        "(NaN+[Infinity])[10]",
         "(+(35))[\"to\"+String[\"name\"]](36)",
     ];
     for (i, v) in lower.iter().enumerate() {
@@ -74,14 +90,25 @@ fn declared_mapping() -> Vec<(char, Option<&'static str>)> {
         Some("(RegExp+\"\")[12]"),
         Some("(+[]+Function)[10]"),
         Some("(false+Function(\"return Date\")()())[30]"),
-        None, None, None, None, None, // H I J K L
+        None,
+        None,
+        None,
+        None,
+        None, // H I J K L
         Some("(true+Function(\"return Date\")()())[30]"),
         Some("(NaN+\"\")[0]"),
-        None, None, None, // O P Q
+        None,
+        None,
+        None, // O P Q
         Some("(+[]+RegExp)[10]"),
         Some("(+[]+String)[10]"),
         Some("(NaN+Function(\"return Date\")()())[30]"),
-        None, None, None, None, None, None, // U V W X Y Z
+        None,
+        None,
+        None,
+        None,
+        None,
+        None, // U V W X Y Z
     ];
     for (i, v) in upper_values.iter().enumerate() {
         rows.push(((b'A' + i as u8) as char, *v));
@@ -98,10 +125,16 @@ fn declared_mapping() -> Vec<(char, Option<&'static str>)> {
         ('(', Some("([][\"at\"]+\"\")[11]")),
         (')', Some("(\"\"+[][\"at\"])[12]")),
         ('*', None),
-        ('+', Some("(+(+!+[]+(!+[]+[])[!+[]+!+[]+!+[]]+[+!+[]]+[+[]]+[+[]])+[])[2]")),
+        (
+            '+',
+            Some("(+(+!+[]+(!+[]+[])[!+[]+!+[]+!+[]]+[+!+[]]+[+[]]+[+[]])+[])[2]"),
+        ),
         (',', Some("[[]][\"concat\"]([[]])+\"\"")),
         ('-', Some("(+(.+[0000001])+\"\")[2]")),
-        ('.', Some("(+(+!+[]+[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+[!+[]+!+[]]+[+[]])+[])[+!+[]]")),
+        (
+            '.',
+            Some("(+(+!+[]+[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+[!+[]+!+[]]+[+[]])+[])[+!+[]]"),
+        ),
         ('/', Some("(false+[0])[\"italics\"]()[10]")),
         (':', Some("(RegExp()+\"\")[3]")),
         (';', Some("(\"\")[\"fontcolor\"](NaN+\")[21]")),
@@ -126,7 +159,10 @@ fn declared_mapping() -> Vec<(char, Option<&'static str>)> {
 }
 
 fn mapping_index(mapping: &[(char, Option<String>)], c: char) -> usize {
-    mapping.iter().position(|(k, _)| *k == c).expect("mapped key")
+    mapping
+        .iter()
+        .position(|(k, _)| *k == c)
+        .expect("mapped key")
 }
 
 fn fill_missing_digits(mapping: &mut [(char, Option<String>)]) {
@@ -158,7 +194,10 @@ const CONSTRUCTORS: [(&str, &str); 6] = [
 const GLOBAL: &str = "Function(\"return this\")()";
 
 fn digit(mapping: &[(char, Option<String>)], c: char) -> String {
-    mapping[mapping_index(mapping, c)].1.clone().expect("digit mapped")
+    mapping[mapping_index(mapping, c)]
+        .1
+        .clone()
+        .expect("digit mapped")
 }
 
 fn number_replacement(mapping: &[(char, Option<String>)], y: &str) -> String {
@@ -181,7 +220,10 @@ fn number_replacement(mapping: &[(char, Option<String>)], y: &str) -> String {
     regex::Regex::new(r"(\d)")
         .unwrap()
         .replace_all(&joined, |caps: &regex::Captures| {
-            digit(mapping, caps.get(1).unwrap().as_str().chars().next().unwrap())
+            digit(
+                mapping,
+                caps.get(1).unwrap().as_str().chars().next().unwrap(),
+            )
         })
         .into_owned()
 }
@@ -382,7 +424,13 @@ pub fn encode(input: &str, wrap_with_eval: bool, run_in_parent_scope: bool) -> S
         }
     }
     let mut out = output.join("+");
-    if input.len() == 1 && input.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+    if input.len() == 1
+        && input
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
+    {
         out.push_str("+[]");
     }
 
@@ -413,7 +461,11 @@ pub fn encode(input: &str, wrap_with_eval: bool, run_in_parent_scope: bool) -> S
                 encode("return eval", false, false)
             );
         } else {
-            out = format!("[][{}][{}]({out})()", encode("at", false, false), encode("constructor", false, false));
+            out = format!(
+                "[][{}][{}]({out})()",
+                encode("at", false, false),
+                encode("constructor", false, false)
+            );
         }
     }
     out

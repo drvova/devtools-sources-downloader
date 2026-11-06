@@ -428,7 +428,10 @@ fn build_framework_state_workspace(analysis: &Value, existing_workspaces: &[Valu
     let supporting: Vec<Value> = existing_workspaces
         .iter()
         .filter(|workspace| {
-            array_contains_any(&boundaries, std::slice::from_ref(&field_str(workspace, "id")))
+            array_contains_any(
+                &boundaries,
+                std::slice::from_ref(&field_str(workspace, "id")),
+            )
         })
         .cloned()
         .collect();
@@ -436,7 +439,10 @@ fn build_framework_state_workspace(analysis: &Value, existing_workspaces: &[Valu
         .into_iter()
         .filter(|item| {
             array_contains_any(
-                &[field_str(item, "fromBoundary"), field_str(item, "toBoundary")],
+                &[
+                    field_str(item, "fromBoundary"),
+                    field_str(item, "toBoundary"),
+                ],
                 &boundaries,
             )
         })
@@ -507,18 +513,17 @@ fn build_journey_view(
     let transitions: Vec<Value> = flows_of(analysis, "transitions")
         .into_iter()
         .filter(|flow| {
-            transition_filter(flow)
-                || {
-                    let endpoints = if !field_str(flow, "fromBoundary").is_empty() {
-                        vec![
-                            Value::String(field_str(flow, "fromBoundary")),
-                            Value::String(field_str(flow, "toBoundary")),
-                        ]
-                    } else {
-                        Vec::new()
-                    };
-                    array_touches_any(&endpoints, focus_boundaries)
-                }
+            transition_filter(flow) || {
+                let endpoints = if !field_str(flow, "fromBoundary").is_empty() {
+                    vec![
+                        Value::String(field_str(flow, "fromBoundary")),
+                        Value::String(field_str(flow, "toBoundary")),
+                    ]
+                } else {
+                    Vec::new()
+                };
+                array_touches_any(&endpoints, focus_boundaries)
+            }
         })
         .take(26)
         .collect();
@@ -585,10 +590,7 @@ fn build_journey_view(
 }
 
 /// `buildJourneyViews`.
-fn build_journey_views(
-    analysis: &Value,
-    workspaces: &[Value],
-) -> Vec<Value> {
+fn build_journey_views(analysis: &Value, workspaces: &[Value]) -> Vec<Value> {
     let workspace_map: std::collections::BTreeMap<String, Value> = workspaces
         .iter()
         .map(|workspace| (field_str(workspace, "id"), workspace.clone()))

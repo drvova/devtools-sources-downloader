@@ -9,8 +9,8 @@ use crate::detectors::{eval_heads, function_heads, longest_base64_literal, rot13
 use crate::digest::sha256_hex;
 use crate::jsfuck::decode_jsfuck;
 use crate::packers::{
-    detect_aaencode, detect_jjencode, detect_jsfiretruck, detect_obfuscator_io, detect_string_array,
-    transform_string_array, unpack_packer, Refusal,
+    detect_aaencode, detect_jjencode, detect_jsfiretruck, detect_obfuscator_io,
+    detect_string_array, transform_string_array, unpack_packer, Refusal,
 };
 use crate::scanner::{collect_string_literals, find_balanced};
 use crate::util::{utf16_len, JS_S};
@@ -48,7 +48,6 @@ pub enum Stage {
     Binary(BinaryStage),
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalPayload {
     pub head: usize,
@@ -70,10 +69,7 @@ pub struct PeelResult {
 // than an expression.
 fn is_literal_only_arg(arg: &str) -> bool {
     static LITERAL_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(
-            r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`"#,
-        )
-        .unwrap()
+        regex::Regex::new(r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`"#).unwrap()
     });
     static SPACES_RE: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(&format!(r"[{JS_S}]+")).unwrap());
@@ -87,7 +83,11 @@ fn is_literal_only_arg(arg: &str) -> bool {
 pub fn collect_eval_payloads(text: &str) -> Vec<EvalPayload> {
     let mut payloads: Vec<EvalPayload> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
-    let push = |payloads: &mut Vec<EvalPayload>, seen: &mut HashSet<String>, head: usize, code: String, end: usize| {
+    let push = |payloads: &mut Vec<EvalPayload>,
+                seen: &mut HashSet<String>,
+                head: usize,
+                code: String,
+                end: usize| {
         if seen.contains(&code) {
             return;
         }
@@ -185,12 +185,16 @@ fn unwrap_hex_escapes(text: &str) -> Option<String> {
     }
     let stage = X_RE.replace_all(text, |caps: &regex::Captures| {
         let code = u16::from_str_radix(caps.get(1).unwrap().as_str(), 16).unwrap_or(0);
-        char::from_u32(code as u32).unwrap_or('\u{FFFD}').to_string()
+        char::from_u32(code as u32)
+            .unwrap_or('\u{FFFD}')
+            .to_string()
     });
     Some(
         U_RE.replace_all(&stage, |caps: &regex::Captures| {
             let code = u16::from_str_radix(caps.get(1).unwrap().as_str(), 16).unwrap_or(0);
-            char::from_u32(code as u32).unwrap_or('\u{FFFD}').to_string()
+            char::from_u32(code as u32)
+                .unwrap_or('\u{FFFD}')
+                .to_string()
         })
         .into_owned(),
     )
@@ -274,7 +278,10 @@ fn unwrap_charcode(text: &str) -> Option<String> {
 /// No digits -> NaN.
 fn js_parse_int(s: &str) -> f64 {
     let t = s.trim_start();
-    let signed = t.strip_prefix('-').or_else(|| t.strip_prefix('+')).unwrap_or(t);
+    let signed = t
+        .strip_prefix('-')
+        .or_else(|| t.strip_prefix('+'))
+        .unwrap_or(t);
     let digits: String = signed.chars().take_while(|c| c.is_ascii_digit()).collect();
     if digits.is_empty() {
         return f64::NAN;

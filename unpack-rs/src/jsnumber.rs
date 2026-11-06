@@ -30,7 +30,7 @@ pub fn js_number_to_string(value: f64) -> String {
     let digits = digits.trim_end_matches('0');
     let digits = if digits.is_empty() { "0" } else { digits };
     let k = digits.len() as i32; // digit count
-    // Decimal point position after the first digit: for "1.05e2" -> n = 3.
+                                 // Decimal point position after the first digit: for "1.05e2" -> n = 3.
     let n = exp + 1;
 
     let body = if k <= n && n <= 21 {
@@ -47,7 +47,13 @@ pub fn js_number_to_string(value: f64) -> String {
         format!("{}e{}{}", digits, sign(n - 1), (n - 1).abs())
     } else {
         // multi digit, exponential
-        format!("{}.{}e{}{}", &digits[..1], &digits[1..], sign(n - 1), (n - 1).abs())
+        format!(
+            "{}.{}e{}{}",
+            &digits[..1],
+            &digits[1..],
+            sign(n - 1),
+            (n - 1).abs()
+        )
     };
     if negative {
         format!("-{body}")
@@ -92,14 +98,15 @@ pub fn js_number_to_radix_string(value: f64, radix: u32) -> String {
 }
 
 fn is_js_space(c: char) -> bool {
-    matches!(
-        c,
-        ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r'
-    ) || c == '\u{a0}'
+    matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
+        || c == '\u{a0}'
         || c == '\u{feff}'
         || c == '\u{1680}'
         || ('\u{2000}'..='\u{200a}').contains(&c)
-        || matches!(c, '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}')
+        || matches!(
+            c,
+            '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}'
+        )
 }
 
 /// JS ToNumber(string) for the grammar the recipes exercise: trimmed decimal
@@ -126,7 +133,10 @@ pub fn js_string_to_number(s: &str) -> f64 {
         if hex.is_empty() || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
             return f64::NAN;
         }
-        return sign * u64::from_str_radix(hex, 16).map(|v| v as f64).unwrap_or(f64::NAN);
+        return sign
+            * u64::from_str_radix(hex, 16)
+                .map(|v| v as f64)
+                .unwrap_or(f64::NAN);
     }
     // Validate the decimal/exponent shape strictly; JS rejects junk.
     let bytes = rest.as_bytes();
@@ -223,7 +233,10 @@ mod tests {
 
     #[test]
     fn escape_builtins() {
-        assert_eq!(js_escape("function at() { [native code] }"), "function%20at%28%29%20%7B%20%5Bnative%20code%5D%20%7D");
+        assert_eq!(
+            js_escape("function at() { [native code] }"),
+            "function%20at%28%29%20%7B%20%5Bnative%20code%5D%20%7D"
+        );
         assert_eq!(js_escape("<i></i>"), "%3Ci%3E%3C/i%3E");
     }
 }

@@ -418,7 +418,9 @@ async function main() {
         );
         assert(
             worldState.policyLimits ===
-                'items,keys,mutations,runtimeBinary,runtimeItems,runtimeText,string',
+                'classNames,elementLabel,elementText,endpoints,items,keys,mutationText,' +
+                    'mutations,queryItems,resourceUrls,responseText,runtimeBinary,runtimeItems,' +
+                    'runtimeText,scriptUrls,socketMessage,string,technologies',
             'the injected policy must carry the engine limits, got ' + worldState.policyLimits,
         );
         assert(

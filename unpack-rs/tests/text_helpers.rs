@@ -7,7 +7,10 @@
 use devtools_unpack::panel::text as js;
 
 fn oracle() -> serde_json::Value {
-    let path = format!("{}/tests/fixtures/text-helpers.json", env!("CARGO_MANIFEST_DIR"));
+    let path = format!(
+        "{}/tests/fixtures/text-helpers.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("oracle {path}: {e}"));
     serde_json::from_str(&text).expect("oracle json")
 }

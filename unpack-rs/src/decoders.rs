@@ -69,7 +69,10 @@ pub fn decode_escapes(raw: &str) -> String {
                             // Divergence, documented: the JS rewinds the
                             // cursor to -1 and loops forever re-emitting the
                             // fallback NUL; terminate after one emission.
-                            let hex: String = chars[i + 2..(chars.len().saturating_sub(1)).max(i + 2)].iter().collect();
+                            let hex: String = chars
+                                [i + 2..(chars.len().saturating_sub(1)).max(i + 2)]
+                                .iter()
+                                .collect();
                             let code = parse_hex_prefix(&hex);
                             out.push(code_point_to_char(code));
                             break;
@@ -104,10 +107,7 @@ pub fn decode_escapes(raw: &str) -> String {
 
 /// JS `parseInt(s, 16)`: longest valid hex prefix, no digits -> 0.
 fn parse_hex_prefix(s: &str) -> u32 {
-    let digits: String = s
-        .chars()
-        .take_while(|c| c.is_ascii_hexdigit())
-        .collect();
+    let digits: String = s.chars().take_while(|c| c.is_ascii_hexdigit()).collect();
     u32::from_str_radix(&digits, 16).unwrap_or(0)
 }
 
@@ -228,7 +228,10 @@ mod tests {
 
     #[test]
     fn base64_and_ratio() {
-        assert_eq!(bytes_to_text(&decode_base64_to_bytes("aGVsbG8=").unwrap()), "hello");
+        assert_eq!(
+            bytes_to_text(&decode_base64_to_bytes("aGVsbG8=").unwrap()),
+            "hello"
+        );
         assert_eq!(printable_ratio("hello\nworld"), 1.0);
         assert!(printable_ratio("\u{0}\u{1}") < 0.1);
     }

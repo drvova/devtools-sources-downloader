@@ -129,7 +129,10 @@ pub fn write_recon_artifacts(
                     };
                     json!({ "title": title })
                 });
-            writer("_recon/dom-snapshot.html", &generate_dom_snapshot_html(&html, &page));
+            writer(
+                "_recon/dom-snapshot.html",
+                &generate_dom_snapshot_html(&html, &page),
+            );
         }
     }
     runtime_entries
@@ -203,7 +206,13 @@ pub fn finalize_zip_with_recon(
     let manifest = export_runtime_artifacts(writer, runtime_payloads);
     {
         let mut text = |path: &str, content: &str| writer(path, content.as_bytes());
-        export_semantic_analysis(&mut text, js_assets, recon_data, runtime_payloads, &manifest);
+        export_semantic_analysis(
+            &mut text,
+            js_assets,
+            recon_data,
+            runtime_payloads,
+            &manifest,
+        );
     }
 
     let runtime_assets = build_runtime_unpack_assets(runtime_payloads, &manifest);
@@ -297,10 +306,7 @@ mod tests {
         })
     }
 
-    fn collect_text(
-        recon: Option<&Value>,
-        snapshot: Option<&Value>,
-    ) -> (Vec<String>, Vec<Value>) {
+    fn collect_text(recon: Option<&Value>, snapshot: Option<&Value>) -> (Vec<String>, Vec<Value>) {
         let mut paths: Vec<String> = Vec::new();
         let entries = {
             let mut writer = |path: &str, _: &str| paths.push(path.to_string());
@@ -389,9 +395,15 @@ mod tests {
             let mut writer = |_: &str, content: &str| without_page = content.to_string();
             write_recon_artifacts(&mut writer, None, Some(&snapshot));
         }
-        assert!(with_page.contains("<h1>From recon</h1>"), "recon page title wins");
+        assert!(
+            with_page.contains("<h1>From recon</h1>"),
+            "recon page title wins"
+        );
         assert!(with_page.contains("&lt;html&gt;&lt;body&gt;x&lt;/body&gt;&lt;/html&gt;"));
-        assert!(without_page.contains("<h1>Snapshot</h1>"), "snapshot title fallback");
+        assert!(
+            without_page.contains("<h1>Snapshot</h1>"),
+            "snapshot title fallback"
+        );
         assert!(without_page.contains("&lt;html&gt;&lt;body&gt;x&lt;/body&gt;&lt;/html&gt;"));
     }
 
@@ -417,10 +429,17 @@ mod tests {
         // the page's, not the placeholder), entries that report neither are
         // skipped entirely.
         assert_eq!(asked, vec![0, 2, 3], "only entries that have a payload");
-        assert_eq!(collected[0]["text"], json!("fetched"), "text comes from the page");
+        assert_eq!(
+            collected[0]["text"],
+            json!("fetched"),
+            "text comes from the page"
+        );
         assert_eq!(collected[1]["note"], json!("not captured"), "untouched");
         assert_eq!(collected[2]["base64"], json!("AGFzbQ=="));
-        assert!(collected[3].get("text").is_none(), "failed fetch leaves none");
+        assert!(
+            collected[3].get("text").is_none(),
+            "failed fetch leaves none"
+        );
         assert!(collect_runtime_payloads(&[], &mut |_| None).is_empty());
     }
 
@@ -497,7 +516,10 @@ mod tests {
         );
         assert_text(&text(&analysis), &oracle["analysisText"], "analysis");
 
-        let investigation = analysis.get("investigation").cloned().unwrap_or(Value::Null);
+        let investigation = analysis
+            .get("investigation")
+            .cloned()
+            .unwrap_or(Value::Null);
         assert_text(
             &crate::panel::report::generate_investigation_index_html(&investigation),
             &oracle["consoleText"],
@@ -541,16 +563,10 @@ mod tests {
         assert_eq!(recon_files.len(), want_recon.len(), "recon file count");
         for (index, want) in want_recon.iter().enumerate() {
             let got = &recon_files[index];
-            assert_eq!(
-                got.get("path"),
-                want.get("path"),
-                "recon path {index}"
-            );
+            assert_eq!(got.get("path"), want.get("path"), "recon path {index}");
             assert_eq!(
                 got.get("content").and_then(|v| v.as_str()).map(normalize),
-                want.get("content")
-                    .and_then(|v| v.as_str())
-                    .map(normalize),
+                want.get("content").and_then(|v| v.as_str()).map(normalize),
                 "recon content {}",
                 want.get("path").and_then(|v| v.as_str()).unwrap_or("?")
             );
@@ -633,17 +649,16 @@ mod tests {
             "_analysis/chunk-map.json",
             "_analysis/index.html",
         ] {
-            assert!(
-                paths.contains(&expected),
-                "missing {expected} in {paths:?}"
-            );
+            assert!(paths.contains(&expected), "missing {expected} in {paths:?}");
         }
         assert!(
             paths.iter().any(|path| path.starts_with("_unpack/")),
             "script unpack pass wrote nothing: {paths:?}"
         );
         assert!(
-            paths.iter().any(|path| path.starts_with("_unpack-runtime/")),
+            paths
+                .iter()
+                .any(|path| path.starts_with("_unpack-runtime/")),
             "runtime unpack pass wrote nothing: {paths:?}"
         );
         // The recon block comes first, then the runtime payloads, then the

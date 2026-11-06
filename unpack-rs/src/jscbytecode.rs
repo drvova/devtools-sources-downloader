@@ -17,14 +17,20 @@ const JSC_STRING_LIMIT: u32 = 4096;
 const JSC_HASH_MASK: u64 = 0x00FF_FFFF;
 
 // RapidHash secret from WTF's rapidhash.h — constant, not build specific.
-const WTF_SECRET: [u64; 3] = [0x2d35_8dcc_aa6c_78a5, 0x8bb8_4b93_962e_acc9, 0x4b33_a62e_d433_d4a3];
+const WTF_SECRET: [u64; 3] = [
+    0x2d35_8dcc_aa6c_78a5,
+    0x8bb8_4b93_962e_acc9,
+    0x4b33_a62e_d433_d4a3,
+];
 
 const JSC_OPCODE_SOURCE: &str = include_str!("jsc_opcodes.txt");
 
 const JSC_WIDE16: u8 = 0x83;
 const JSC_WIDE32: u8 = 0x85;
 const JSC_ENTER_OPCODE: u8 = 134;
-const JSC_ARRAY_ORDER: [&str; 7] = ["steps", "instr", "consts", "cscr", "idents", "fdecls", "fexprs"];
+const JSC_ARRAY_ORDER: [&str; 7] = [
+    "steps", "instr", "consts", "cscr", "idents", "fdecls", "fexprs",
+];
 const JSC_BLOCK_GAPS: [usize; 4] = [4, 0x38, 0x28, 16];
 
 fn u32(bytes: &[u8], at: usize) -> u32 {
@@ -80,8 +86,14 @@ pub fn wtf_string_hash(bytes: &[u8]) -> u32 {
             let mut see2 = seed;
             loop {
                 seed = rapid_mix(read64(bytes, at) ^ secret[0], read64(bytes, at + 8) ^ seed);
-                see1 = rapid_mix(read64(bytes, at + 16) ^ secret[1], read64(bytes, at + 24) ^ see1);
-                see2 = rapid_mix(read64(bytes, at + 32) ^ secret[2], read64(bytes, at + 40) ^ see2);
+                see1 = rapid_mix(
+                    read64(bytes, at + 16) ^ secret[1],
+                    read64(bytes, at + 24) ^ see1,
+                );
+                see2 = rapid_mix(
+                    read64(bytes, at + 32) ^ secret[2],
+                    read64(bytes, at + 40) ^ see2,
+                );
                 at += 48;
                 remaining -= 48;
                 if remaining < 48 {
@@ -91,9 +103,15 @@ pub fn wtf_string_hash(bytes: &[u8]) -> u32 {
             seed ^= see1 ^ see2;
         }
         if remaining > 16 {
-            seed = rapid_mix(read64(bytes, at) ^ secret[2], read64(bytes, at + 8) ^ seed ^ secret[1]);
+            seed = rapid_mix(
+                read64(bytes, at) ^ secret[2],
+                read64(bytes, at + 8) ^ seed ^ secret[1],
+            );
             if remaining > 32 {
-                seed = rapid_mix(read64(bytes, at + 16) ^ secret[2], read64(bytes, at + 24) ^ seed);
+                seed = rapid_mix(
+                    read64(bytes, at + 16) ^ secret[2],
+                    read64(bytes, at + 24) ^ seed,
+                );
             }
         }
         first = read64(bytes, at + remaining - 16);
@@ -224,9 +242,11 @@ fn jsc_opcode_table() -> &'static Vec<Option<JscOpcodeInfo>> {
             else {
                 continue;
             };
-            let (Ok(id_num), Ok(operand_num), Ok(pad_num)) =
-                (id.parse::<usize>(), operand.parse::<usize>(), pad.parse::<usize>())
-            else {
+            let (Ok(id_num), Ok(operand_num), Ok(pad_num)) = (
+                id.parse::<usize>(),
+                operand.parse::<usize>(),
+                pad.parse::<usize>(),
+            ) else {
                 continue;
             };
             if id_num < 256 {
@@ -358,7 +378,12 @@ struct JscOp {
     pub name: &'static str,
 }
 
-fn walk_jsc_ops(bytes: &[u8], start: usize, length: f64, table: &'static [Option<JscOpcodeInfo>]) -> Option<Vec<JscOp>> {
+fn walk_jsc_ops(
+    bytes: &[u8],
+    start: usize,
+    length: f64,
+    table: &'static [Option<JscOpcodeInfo>],
+) -> Option<Vec<JscOp>> {
     let mut offset = start;
     let end = start + length as usize;
     let mut ops: Vec<JscOp> = Vec::new();
@@ -383,7 +408,9 @@ fn walk_jsc_ops(bytes: &[u8], start: usize, length: f64, table: &'static [Option
         if offset > end {
             return None;
         }
-        ops.push(JscOp { name: op.name.as_str() });
+        ops.push(JscOp {
+            name: op.name.as_str(),
+        });
     }
     if ops.is_empty() {
         None
@@ -408,7 +435,11 @@ struct JscBlockCandidate {
 /// each fixed record-size gap; a candidate survives only when every positive
 /// array packs before the record, the stream opens on `enter`, walks
 /// exactly, and ends on a transfer of control.
-fn bind_jsc_block(bytes: &[u8], record: usize, table: &'static [Option<JscOpcodeInfo>]) -> Vec<JscBlockCandidate> {
+fn bind_jsc_block(
+    bytes: &[u8],
+    record: usize,
+    table: &'static [Option<JscOpcodeInfo>],
+) -> Vec<JscBlockCandidate> {
     let mut candidates = Vec::new();
     for &gap in &JSC_BLOCK_GAPS {
         let tail = match parse_jsc_tail(bytes, record + gap) {
@@ -462,7 +493,11 @@ fn bind_jsc_block(bytes: &[u8], record: usize, table: &'static [Option<JscOpcode
             Some(ops) => ops,
             None => continue,
         };
-        if !ops.last().map(|op| is_terminal_op(op.name)).unwrap_or(false) {
+        if !ops
+            .last()
+            .map(|op| is_terminal_op(op.name))
+            .unwrap_or(false)
+        {
             continue;
         }
         let tail_record_offset = tail.record_offset;
@@ -607,7 +642,11 @@ pub fn find_jsc_shared_table(bytes: &[u8]) -> Option<JscSharedTable> {
         for &probe in &probes {
             let record_at = u32(bytes, at + 4 + probe * 4) as usize;
             let rec = at + record_at;
-            if !record_at.is_multiple_of(4) || record_at < 8 || rec + 8 > bytes.len() || record_at as i64 <= last_offset {
+            if !record_at.is_multiple_of(4)
+                || record_at < 8
+                || rec + 8 > bytes.len()
+                || record_at as i64 <= last_offset
+            {
                 ok = false;
                 break;
             }
@@ -749,7 +788,11 @@ fn instantiate_jsc_exec(
     let mut construct_empty = false;
     for kind in 0..2 {
         let is_call = kind == 0;
-        if !(if is_call { present.call } else { present.construct }) {
+        if !(if is_call {
+            present.call
+        } else {
+            present.construct
+        }) {
             continue;
         }
         if cursor + 4 > bytes.len() {
@@ -801,7 +844,8 @@ fn jsc_block_children(bytes: &[u8], block: &JscBlockCandidate) -> Vec<(&'static 
     let mut children = Vec::new();
     let region = block.region;
     for &kind in &["fdecls", "fexprs"] {
-        let Some((_, count, start)) = block.tail.arrays.iter().find(|(name, ..)| *name == kind) else {
+        let Some((_, count, start)) = block.tail.arrays.iter().find(|(name, ..)| *name == kind)
+        else {
             continue;
         };
         if *count == 0.0 {
@@ -933,7 +977,11 @@ pub fn analyze_jsc_module(bytes: &[u8], shared: Option<&[Option<String>]>) -> Js
             return stats;
         };
         let root_name = decode_jsc_slot(bytes, 0x1c, u32(bytes, 0x1c), shared, 0);
-        stats.root_name = if root_name.is_empty() { None } else { Some(root_name) };
+        stats.root_name = if root_name.is_empty() {
+            None
+        } else {
+            Some(root_name)
+        };
         stats.root_parse_mode = Some(0);
         stats.nodes = 1;
         stats.functions.push(JscFunction {

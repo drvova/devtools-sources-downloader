@@ -15,7 +15,12 @@ pub struct Counts(serde_json::Map<String, Value>);
 impl Counts {
     pub fn add(&mut self, key: impl Into<String>) {
         let key = key.into();
-        let next = self.0.get(&key).and_then(|value| value.as_u64()).unwrap_or(0) + 1;
+        let next = self
+            .0
+            .get(&key)
+            .and_then(|value| value.as_u64())
+            .unwrap_or(0)
+            + 1;
         self.0.insert(key, Value::from(next));
     }
 
@@ -55,7 +60,7 @@ impl<'de> Deserialize<'de> for Counts {
 use serde_json::Value;
 
 use crate::jsnumber::{js_number_to_string, js_string_to_number};
-use crate::panel::text::{js_truthy, js_locale_compare, js_trim};
+use crate::panel::text::{js_locale_compare, js_trim, js_truthy};
 
 /// A normalized resource row.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -191,7 +196,12 @@ pub fn compare_resources(left: &Resource, right: &Resource, mode: &str) -> Order
             .size
             .partial_cmp(&left.size)
             .unwrap_or(Ordering::Equal)
-            .then_with(|| right.time.partial_cmp(&left.time).unwrap_or(Ordering::Equal)),
+            .then_with(|| {
+                right
+                    .time
+                    .partial_cmp(&left.time)
+                    .unwrap_or(Ordering::Equal)
+            }),
         "type" => js_locale_compare(&left.kind, &right.kind)
             .then_with(|| js_locale_compare(&left.url, &right.url)),
         "url" => js_locale_compare(&left.url, &right.url),
@@ -249,13 +259,19 @@ mod tests {
             ),
             (json!({}), "unloaded", 3),
             (json!({"size": "2048", "timestamp": 12}), "loaded", 1),
-            (json!({"size": "abc", "startTime": f64::INFINITY}), "loaded", 2),
+            (
+                json!({"size": "abc", "startTime": f64::INFINITY}),
+                "loaded",
+                2,
+            ),
             (Value::Null, "unloaded", 4),
             (json!({"seenAt": 7}), "loaded", 5),
         ];
         let got: Vec<Value> = rows
             .iter()
-            .map(|(raw, status, index)| serde_json::to_value(normalize_resource(raw, status, *index)).unwrap())
+            .map(|(raw, status, index)| {
+                serde_json::to_value(normalize_resource(raw, status, *index)).unwrap()
+            })
             .collect();
         let want = json!([
             {"status": "loaded", "type": "script", "source": "network", "url": "https://x/a.js", "size": 100, "time": 5, "order": 0},
@@ -270,10 +286,42 @@ mod tests {
 
     fn sample_items() -> Vec<Resource> {
         [
-            ("loaded", "script", "network", "https://x/a.js", 300.0, 5.0, 0usize),
-            ("unloaded", "image", "memory", "https://x/b.png", 100.0, 9.0, 1),
-            ("loaded", "script", "network", "https://x/c.js", 100.0, 9.0, 2),
-            ("loaded", "Script", "Network", "HTTPS://X/D.JS", 100.0, 1.0, 3),
+            (
+                "loaded",
+                "script",
+                "network",
+                "https://x/a.js",
+                300.0,
+                5.0,
+                0usize,
+            ),
+            (
+                "unloaded",
+                "image",
+                "memory",
+                "https://x/b.png",
+                100.0,
+                9.0,
+                1,
+            ),
+            (
+                "loaded",
+                "script",
+                "network",
+                "https://x/c.js",
+                100.0,
+                9.0,
+                2,
+            ),
+            (
+                "loaded",
+                "Script",
+                "Network",
+                "HTTPS://X/D.JS",
+                100.0,
+                1.0,
+                3,
+            ),
         ]
         .into_iter()
         .map(|(status, kind, source, url, size, time, order)| Resource {

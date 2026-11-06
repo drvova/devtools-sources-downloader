@@ -21,11 +21,9 @@ pub fn looks_like_graphql_body(body: &Value) -> bool {
     });
     match body {
         Value::String(text) => KEYWORD.is_match(text) || text.contains("operationName"),
-        Value::Object(map) => {
-            ["query", "operationName", "extensions"]
-                .iter()
-                .any(|key| map.get(*key).map(js_truthy).unwrap_or(false))
-        }
+        Value::Object(map) => ["query", "operationName", "extensions"]
+            .iter()
+            .any(|key| map.get(*key).map(js_truthy).unwrap_or(false)),
         Value::Array(_) => false,
         _ => false,
     }
@@ -34,10 +32,8 @@ pub fn looks_like_graphql_body(body: &Value) -> bool {
 /// `normalizeGraphQLPayload`.
 fn normalize_graphql_payload(body: &Value) -> Value {
     static OPERATION: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(
-            r"(?-u:\b)(query|mutation|subscription)[ \t\n\x0B\f\r]+([A-Za-z0-9_]+)",
-        )
-        .unwrap()
+        regex::Regex::new(r"(?-u:\b)(query|mutation|subscription)[ \t\n\x0B\f\r]+([A-Za-z0-9_]+)")
+            .unwrap()
     });
     let parsed = match body {
         Value::String(text) => match serde_json::from_str::<Value>(text) {
@@ -55,10 +51,7 @@ fn normalize_graphql_payload(body: &Value) -> Value {
             .get("query")
             .filter(|v| js_truthy(v))
             .map(value_text);
-        let from_body = payload
-            .get("body")
-            .filter(|v| js_truthy(v))
-            .map(value_text);
+        let from_body = payload.get("body").filter(|v| js_truthy(v)).map(value_text);
         from_query.or(from_body).unwrap_or_default()
     };
     let capture = OPERATION.captures(&query);
@@ -131,7 +124,11 @@ fn text_or(entry: &Value, key: &str, fallback: &str) -> String {
 pub fn collect_graphql_operations(recon: &Value) -> Vec<Value> {
     let mut operations: Vec<Value> = Vec::new();
     for key in ["xhr", "fetch"] {
-        let items = recon.get(key).and_then(|v| v.as_array()).cloned().unwrap_or_default();
+        let items = recon
+            .get(key)
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
         for item in items {
             if let Some(parsed) = parse_graphql_operation(&item) {
                 operations.push(parsed);
@@ -265,7 +262,11 @@ pub fn build_module_graph(
                     let dep_id = format!("{prefix}{specifier}");
                     add_node(
                         dep_id.clone(),
-                        if dep_id.starts_with("pkg:") { "package" } else { "reference" },
+                        if dep_id.starts_with("pkg:") {
+                            "package"
+                        } else {
+                            "reference"
+                        },
                         specifier.clone(),
                         None,
                     );
@@ -309,7 +310,10 @@ pub fn build_module_graph(
             }
         } else if origin.get("blobId").map(js_truthy).unwrap_or(false) {
             add_edge(
-                format!("runtime:{}", value_text(origin.get("blobId").unwrap_or(&Value::Null))),
+                format!(
+                    "runtime:{}",
+                    value_text(origin.get("blobId").unwrap_or(&Value::Null))
+                ),
                 runtime_id.clone(),
                 "spawns".to_string(),
                 None,
@@ -566,8 +570,7 @@ mod tests {
         stack_recon["stackProfile"] = json!({ "strategy": { "profile": "ssr" } });
         let chain = build_startup_chain(Some(&stack_recon), &assets, &origins);
         assert_eq!(
-            chain["profile"],
-            exp["buildStartupChainProfileFromStack"],
+            chain["profile"], exp["buildStartupChainProfileFromStack"],
             "profile from the stack strategy"
         );
     }

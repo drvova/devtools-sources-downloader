@@ -134,13 +134,7 @@ pub fn build_runtime_unpack_assets(payloads: &[Value], manifest: &[Value]) -> Ve
 
 /// `mergeUnpackReports`: the script report absorbs the runtime report totals.
 pub fn merge_unpack_reports(script_report: &mut Value, runtime_report: &Value) {
-    let keys = [
-        "assets",
-        "unpacked",
-        "modules",
-        "sources",
-        "beautified",
-    ];
+    let keys = ["assets", "unpacked", "modules", "sources", "beautified"];
     for key in keys {
         let runtime_total = runtime_report
             .get("totals")
@@ -195,9 +189,9 @@ pub fn escape_xml(value: &Value) -> String {
         Value::Null => String::new(),
         Value::String(text) => escape_html(text),
         Value::Bool(flag) => escape_html(&flag.to_string()),
-        Value::Number(number) => {
-            escape_html(&crate::jsnumber::js_number_to_string(number.as_f64().unwrap_or(f64::NAN)))
-        }
+        Value::Number(number) => escape_html(&crate::jsnumber::js_number_to_string(
+            number.as_f64().unwrap_or(f64::NAN),
+        )),
         other => escape_html(&serde_json::to_string(other).unwrap_or_default()),
     }
 }
@@ -348,46 +342,38 @@ pub fn build_readable_artifact_with(
     };
     let facts = [
         format!("Kind: {}", field_str(entry, "kind")),
-        format!(
-            "Label: {}",
-            {
-                let label = field_str(entry, "label");
-                if label.is_empty() {
-                    field_str(entry, "id")
-                } else {
-                    label
-                }
+        format!("Label: {}", {
+            let label = field_str(entry, "label");
+            if label.is_empty() {
+                field_str(entry, "id")
+            } else {
+                label
             }
-        ),
+        }),
         format!("URL: {}", field_str(entry, "url")),
         format!("File: {}", field_str(entry, "file")),
-        format!(
-            "Boundaries: {}",
-            {
-                let labels = entry
-                    .get("boundaryLabels")
-                    .and_then(|v| v.as_array())
-                    .map(|items| {
-                        items
-                            .iter()
-                            .filter_map(|item| item.as_str())
-                            .collect::<Vec<&str>>()
-                            .join(", ")
-                    })
-                    .unwrap_or_default();
-                if labels.is_empty() {
-                    "none".to_string()
-                } else {
-                    labels
-                }
+        format!("Boundaries: {}", {
+            let labels = entry
+                .get("boundaryLabels")
+                .and_then(|v| v.as_array())
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|item| item.as_str())
+                        .collect::<Vec<&str>>()
+                        .join(", ")
+                })
+                .unwrap_or_default();
+            if labels.is_empty() {
+                "none".to_string()
+            } else {
+                labels
             }
-        ),
+        }),
         format!("Why: {}", field_str(entry, "why")),
         format!(
             "Score: {}",
-            crate::jsnumber::js_number_to_string(
-                truthy_or(entry, "score").unwrap_or(0.0)
-            )
+            crate::jsnumber::js_number_to_string(truthy_or(entry, "score").unwrap_or(0.0))
         ),
         format!(
             "Beautified: {}",
@@ -541,8 +527,7 @@ mod tests {
         });
         merge_unpack_reports(&mut script_report, &runtime_report);
         assert_eq!(
-            script_report,
-            exp["mergeUnpackReports"],
+            script_report, exp["mergeUnpackReports"],
             "mergeUnpackReports"
         );
 

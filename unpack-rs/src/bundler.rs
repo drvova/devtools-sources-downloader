@@ -60,7 +60,11 @@ pub fn extract_bundle_modules(text: &str, max_modules: Option<usize>) -> Vec<Bun
     let mut modules: Vec<BundleModule> = Vec::new();
     let mut cursor = 0usize;
     while modules.len() < cap {
-        let re = if cursor == 0 { &*HEADER_FULL } else { &*HEADER_CONT };
+        let re = if cursor == 0 {
+            &*HEADER_FULL
+        } else {
+            &*HEADER_CONT
+        };
         let Some(m) = re.captures(&body[cursor..]) else {
             break;
         };
@@ -116,7 +120,8 @@ pub fn module_file_name(module: &BundleModule) -> String {
     };
     static WEBPACK_PREFIX: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^webpack(-internal)?://").unwrap());
-    static DOT_SLASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^\./").unwrap());
+    static DOT_SLASH: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(r"^\./").unwrap());
     static LEADING_SLASHES: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^/+").unwrap());
     let cleaned = WEBPACK_PREFIX.replace(&url, "");

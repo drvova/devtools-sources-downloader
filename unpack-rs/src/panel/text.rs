@@ -24,19 +24,23 @@ fn is_js_trim_char(c: char) -> bool {
             | '\u{0020}'
             | '\u{00A0}'
             | '\u{1680}'
-            | '\u{2000}'..='\u{200A}'
-            | '\u{2028}'
-            | '\u{2029}'
-            | '\u{202F}'
-            | '\u{205F}'
-            | '\u{3000}'
-            | '\u{FEFF}'
+            | '\u{2000}'
+            ..='\u{200A}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202F}'
+                | '\u{205F}'
+                | '\u{3000}'
+                | '\u{FEFF}'
     )
 }
 
 /// `JSON.stringify` for a number: whole values print without a fraction and
 /// non-finite values print as `null`.
-pub fn serialize_js_number<S: serde::Serializer>(value: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+pub fn serialize_js_number<S: serde::Serializer>(
+    value: &f64,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
     if !value.is_finite() {
         return serializer.serialize_none();
     }
@@ -508,15 +512,24 @@ mod tests {
 
     #[test]
     fn sanitize_filename_matches_node() {
-        assert_eq!(sanitize_filename("https://a.test/app.js?v=2"), "a.test/app__1e65ec.js");
-        assert_eq!(sanitize_filename("https://a.test/dir/"), "a.test/dir/index.html");
+        assert_eq!(
+            sanitize_filename("https://a.test/app.js?v=2"),
+            "a.test/app__1e65ec.js"
+        );
+        assert_eq!(
+            sanitize_filename("https://a.test/dir/"),
+            "a.test/dir/index.html"
+        );
         assert_eq!(
             sanitize_filename("data:text/plain;base64,AAA"),
             "inline/32a12987.plain"
         );
         assert_eq!(sanitize_filename("blob:https://x/y.js"), "x/y__blob.js");
         assert_eq!(sanitize_filename("not a url at all"), "not a url at all");
-        assert_eq!(sanitize_filename("https://a.test:8443/p%20q.js"), "a.test_8443/p q.js");
+        assert_eq!(
+            sanitize_filename("https://a.test:8443/p%20q.js"),
+            "a.test_8443/p q.js"
+        );
         assert_eq!(sanitize_filename("http://x/y#frag"), "x/y__21d4c95");
         assert_eq!(sanitize_filename("data:,raw"), "inline/17d2a9b4.data");
         assert_eq!(sanitize_filename("ftp:/a/b"), "ftp/a/b");

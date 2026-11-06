@@ -156,7 +156,10 @@ fn the_page_world_default_strategy_matches_the_engine() {
     let mirrored = js_default_strategy(&source).expect("injected.js declares a default strategy");
 
     let engine = stackprofile::analyze(&json!({}));
-    let strategy = engine["strategy"].as_object().expect("strategy object").clone();
+    let strategy = engine["strategy"]
+        .as_object()
+        .expect("strategy object")
+        .clone();
 
     let engine_keys: std::collections::BTreeSet<&String> = strategy.keys().collect();
     let js_keys: std::collections::BTreeSet<&String> = mirrored.keys().collect();

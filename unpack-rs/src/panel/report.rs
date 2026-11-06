@@ -8,8 +8,10 @@
 use serde_json::{json, Value};
 
 use crate::jsnumber::js_number_to_string;
-use crate::panel::artifacts::{compute_recon_stats, escape_attr, escape_xml, serialize_inline_json};
 use crate::panel::analysis::build_semantic_analysis;
+use crate::panel::artifacts::{
+    compute_recon_stats, escape_attr, escape_xml, serialize_inline_json,
+};
 use crate::panel::assets::{field_number, field_str, js_truthy, keys_len, ScriptInput};
 use crate::panel::text::{format_ms, format_size, sanitize_path_part};
 
@@ -156,7 +158,11 @@ pub fn generate_investigation_index_html(investigation: &Value) -> String {
 <script>{}</script>
 </body>
 </html>"#,
-        styles, escape_html(&title), escape_html(&page_url), data, script,
+        styles,
+        escape_html(&title),
+        escape_html(&page_url),
+        data,
+        script,
     )
 }
 
@@ -473,10 +479,12 @@ pub fn generate_waterfall_html(timings: &[Value]) -> String {
             field_number(entry, "duration"),
         );
         rows.push_str("<text x=\"");
-        rows.push_str(&js_number_to_string(to_x(number_or(
-            response_end,
-            field_number(entry, "startTime") + duration,
-        )) + 6.0));
+        rows.push_str(&js_number_to_string(
+            to_x(number_or(
+                response_end,
+                field_number(entry, "startTime") + duration,
+            )) + 6.0,
+        ));
         rows.push_str("\" y=\"");
         rows.push_str(&js_number_to_string(y + 14.0));
         rows.push_str("\" fill=\"#888\" font-size=\"10\" font-family=\"monospace\">");
@@ -615,13 +623,29 @@ pub fn generate_table(timings: &[Value]) -> String {
         html.push_str("</td><td>");
         html.push_str(&format_ms(number_or(field_number(entry, "duration"), 0.0)));
         html.push_str("</td><td>");
-        html.push_str(&if dns > 0.0 { format_ms(dns) } else { "-".to_string() });
+        html.push_str(&if dns > 0.0 {
+            format_ms(dns)
+        } else {
+            "-".to_string()
+        });
         html.push_str("</td><td>");
-        html.push_str(&if tcp > 0.0 { format_ms(tcp) } else { "-".to_string() });
+        html.push_str(&if tcp > 0.0 {
+            format_ms(tcp)
+        } else {
+            "-".to_string()
+        });
         html.push_str("</td><td>");
-        html.push_str(&if ssl > 0.0 { format_ms(ssl) } else { "-".to_string() });
+        html.push_str(&if ssl > 0.0 {
+            format_ms(ssl)
+        } else {
+            "-".to_string()
+        });
         html.push_str("</td><td>");
-        html.push_str(&if ttfb > 0.0 { format_ms(ttfb) } else { "-".to_string() });
+        html.push_str(&if ttfb > 0.0 {
+            format_ms(ttfb)
+        } else {
+            "-".to_string()
+        });
         html.push_str("</td><td>");
         html.push_str(&if download > 0.0 {
             format_ms(download)
@@ -721,7 +745,8 @@ pub fn export_runtime_artifacts(
             if let Some(text) = text {
                 writer(&path, text.as_str().unwrap().as_bytes());
             } else if let Some(base64) = base64 {
-                if let Some(bytes) = crate::decoders::decode_base64_to_bytes(base64.as_str().unwrap())
+                if let Some(bytes) =
+                    crate::decoders::decode_base64_to_bytes(base64.as_str().unwrap())
                 {
                     writer(&path, &bytes);
                 }
@@ -749,7 +774,8 @@ pub fn export_semantic_analysis(
     runtime_entries: &[Value],
     runtime_manifest: &[Value],
 ) {
-    let analysis = build_semantic_analysis(js_assets, recon_data, runtime_entries, runtime_manifest);
+    let analysis =
+        build_semantic_analysis(js_assets, recon_data, runtime_entries, runtime_manifest);
     export_readable_artifacts(writer, &analysis);
     let pretty = |value: &Value| serde_json::to_string_pretty(value).unwrap_or_default();
     for (path, key) in [
@@ -769,7 +795,10 @@ pub fn export_semantic_analysis(
             writer(path, &pretty(value));
         }
     }
-    let investigation = analysis.get("investigation").cloned().unwrap_or(Value::Null);
+    let investigation = analysis
+        .get("investigation")
+        .cloned()
+        .unwrap_or(Value::Null);
     writer(
         "_analysis/index.html",
         &generate_investigation_index_html(&investigation),
@@ -827,7 +856,9 @@ mod tests {
             Value::Null,
         ];
         let want = exp["generateInvestigationIndexHTML"].as_array().unwrap();
-        let lengths = exp["generateInvestigationIndexHTMLLengths"].as_array().unwrap();
+        let lengths = exp["generateInvestigationIndexHTMLLengths"]
+            .as_array()
+            .unwrap();
         for (index, input) in cases.iter().enumerate() {
             let html = generate_investigation_index_html(input);
             let expected = want[index].as_str().unwrap();

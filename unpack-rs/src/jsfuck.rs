@@ -44,7 +44,10 @@ enum JValue {
     /// `Function("return this")()` — the global object.
     Global,
     /// A RegExp value with source and flags.
-    RegExp { source: String, flags: String },
+    RegExp {
+        source: String,
+        flags: String,
+    },
 }
 
 #[derive(serde::Serialize)]
@@ -104,7 +107,11 @@ pub fn detect_jsfuck(source: &str) -> JsfuckDetect {
             counted += 1;
         }
     }
-    let purity = if counted > 0 { hits as f64 / counted as f64 } else { 0.0 };
+    let purity = if counted > 0 {
+        hits as f64 / counted as f64
+    } else {
+        0.0
+    };
     if purity < 0.95 || hits < 12 {
         return JsfuckDetect {
             detected: false,
@@ -253,11 +260,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn skip_noise(&mut self) {
-        while self
-            .peek()
-            .map(|c| c.is_whitespace())
-            .unwrap_or(false)
-        {
+        while self.peek().map(|c| c.is_whitespace()).unwrap_or(false) {
             self.pos += 1;
         }
     }
@@ -344,11 +347,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn parse_suffixes(
-        &mut self,
-        mut value: JValue,
-        depth: u64,
-    ) -> Result<JValue, JsfuckError> {
+    fn parse_suffixes(&mut self, mut value: JValue, depth: u64) -> Result<JValue, JsfuckError> {
         // Real JS binds `this` at CALL time from the member-read receiver.
         let mut receiver: Option<JValue> = None;
         loop {
@@ -418,7 +417,9 @@ impl<'a> Interpreter<'a> {
                 to_display_string(base)
             ))),
             JValue::Arr(_) => {
-                let JValue::Arr(items) = base else { unreachable!() };
+                let JValue::Arr(items) = base else {
+                    unreachable!()
+                };
                 Ok(if let Some(idx) = canonical_index(&key) {
                     items.get(idx).cloned().unwrap_or(JValue::Undefined)
                 } else {
@@ -426,7 +427,9 @@ impl<'a> Interpreter<'a> {
                 })
             }
             JValue::Str(_) => {
-                let JValue::Str(text) = base else { unreachable!() };
+                let JValue::Str(text) = base else {
+                    unreachable!()
+                };
                 Ok(if let Some(idx) = canonical_index(&key) {
                     text.chars()
                         .nth(idx)
@@ -603,12 +606,11 @@ impl<'a> Interpreter<'a> {
             "at" => {
                 // Array.prototype.at / String.prototype.at share this arm; the
                 // receiver decides which.
-                let index = args
-                    .first()
-                    .map(to_number)
-                    .unwrap_or(f64::NAN);
+                let index = args.first().map(to_number).unwrap_or(f64::NAN);
                 if is_array(&this) {
-                    let JValue::Arr(items) = &this else { unreachable!() };
+                    let JValue::Arr(items) = &this else {
+                        unreachable!()
+                    };
                     let len = items.len() as f64;
                     if index.is_nan() {
                         return Ok(JValue::Undefined);
@@ -714,9 +716,10 @@ impl<'a> Interpreter<'a> {
                         JValue::Arr(_) | JValue::Str(_) => to_number(&this),
                         other => to_number(other),
                     };
-                    Ok(JValue::Str(
-                        crate::jsnumber::js_number_to_radix_string(n, radix as u32),
-                    ))
+                    Ok(JValue::Str(crate::jsnumber::js_number_to_radix_string(
+                        n,
+                        radix as u32,
+                    )))
                 }
                 _ => Ok(JValue::Str(to_display_string(&this))),
             },
@@ -770,7 +773,11 @@ fn js_plus(left: &JValue, right: &JValue) -> JValue {
     let l = unwrap_to_primitive(left);
     let r = unwrap_to_primitive(right);
     if matches!(l, JValue::Str(_)) || matches!(r, JValue::Str(_)) {
-        return JValue::Str(format!("{}{}", to_display_string(&l), to_display_string(&r)));
+        return JValue::Str(format!(
+            "{}{}",
+            to_display_string(&l),
+            to_display_string(&r)
+        ));
     }
     JValue::Num(to_number(&l) + to_number(&r))
 }
@@ -833,24 +840,28 @@ fn js_date_string() -> String {
 
 fn unescape_literal(raw: &str) -> String {
     static ESCAPE: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(
-            r"\\(?:(u[0-9a-fA-F]{4})|(x[0-9a-fA-F]{2})|([0-7]{1,3})|(\r|\n)|(.))",
-        )
-        .unwrap()
+        regex::Regex::new(r"\\(?:(u[0-9a-fA-F]{4})|(x[0-9a-fA-F]{2})|([0-7]{1,3})|(\r|\n)|(.))")
+            .unwrap()
     });
     ESCAPE
         .replace_all(raw, |caps: &regex::Captures| -> String {
             if let Some(m) = caps.get(1) {
                 let code = u32::from_str_radix(&m.as_str()[1..], 16).unwrap_or(0);
-                return char::from_u32(code & 0xFFFF).unwrap_or('\u{FFFD}').to_string();
+                return char::from_u32(code & 0xFFFF)
+                    .unwrap_or('\u{FFFD}')
+                    .to_string();
             }
             if let Some(m) = caps.get(2) {
                 let code = u32::from_str_radix(&m.as_str()[1..], 16).unwrap_or(0);
-                return char::from_u32(code & 0xFFFF).unwrap_or('\u{FFFD}').to_string();
+                return char::from_u32(code & 0xFFFF)
+                    .unwrap_or('\u{FFFD}')
+                    .to_string();
             }
             if let Some(m) = caps.get(3) {
                 let code = u32::from_str_radix(m.as_str(), 8).unwrap_or(0);
-                return char::from_u32(code & 0xFFFF).unwrap_or('\u{FFFD}').to_string();
+                return char::from_u32(code & 0xFFFF)
+                    .unwrap_or('\u{FFFD}')
+                    .to_string();
             }
             if caps.get(4).is_some() {
                 return String::new();
@@ -914,4 +925,3 @@ pub fn decode_jsfuck(source: &str) -> JsfuckDecode {
         },
     }
 }
-

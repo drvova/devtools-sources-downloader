@@ -2,7 +2,7 @@
 //!
 //! `tests/fixtures/panel/capture-policy.json` was captured by pulling
 //! `shouldRedactKey` and `isTextMime` out of the shipped page-world modules and
-//! running them over a corpus, and by reading the seven limits out of their
+//! running them over a corpus, and by reading the limits out of their
 //! declarations - so both the vocabulary and its verdicts come from the code
 //! being replaced rather than from a hand transcription. The corpus carries the
 //! cases a hand-port gets wrong: case-insensitivity, substrings (`tokens`,
@@ -35,7 +35,9 @@ fn assert_verdicts(section: &Value, pattern: &str) {
     let cases = section["cases"].as_object().expect("cases");
     assert!(!cases.is_empty(), "the corpus is empty");
     for (subject, want) in cases {
-        let want = want.as_bool().unwrap_or_else(|| panic!("{subject:?}: not a bool"));
+        let want = want
+            .as_bool()
+            .unwrap_or_else(|| panic!("{subject:?}: not a bool"));
         assert_eq!(
             regex.is_match(subject),
             want,
@@ -80,6 +82,17 @@ fn the_vocabulary_and_limits_match_the_page_world() {
     assert_eq!(policy::LIMITS.runtime_items, want("runtimeItems"));
     assert_eq!(policy::LIMITS.runtime_text, want("runtimeText"));
     assert_eq!(policy::LIMITS.runtime_binary, want("runtimeBinary"));
+    assert_eq!(policy::LIMITS.resource_urls, want("resourceUrls"));
+    assert_eq!(policy::LIMITS.script_urls, want("scriptUrls"));
+    assert_eq!(policy::LIMITS.endpoints, want("endpoints"));
+    assert_eq!(policy::LIMITS.response_text, want("responseText"));
+    assert_eq!(policy::LIMITS.socket_message, want("socketMessage"));
+    assert_eq!(policy::LIMITS.mutation_text, want("mutationText"));
+    assert_eq!(policy::LIMITS.element_text, want("elementText"));
+    assert_eq!(policy::LIMITS.element_label, want("elementLabel"));
+    assert_eq!(policy::LIMITS.class_names, want("classNames"));
+    assert_eq!(policy::LIMITS.query_items, want("queryItems"));
+    assert_eq!(policy::LIMITS.technologies, want("technologies"));
 }
 
 #[test]
@@ -109,9 +122,59 @@ fn the_injected_object_is_the_shape_the_page_world_reads() {
             "mutations",
             "runtimeItems",
             "runtimeText",
-            "runtimeBinary"
+            "runtimeBinary",
+            "resourceUrls",
+            "scriptUrls",
+            "endpoints",
+            "responseText",
+            "socketMessage",
+            "mutationText",
+            "elementText",
+            "elementLabel",
+            "classNames",
+            "queryItems",
+            "technologies"
         ]
     );
+}
+
+/// A `limit()` name that no policy key answers reads as 0 - the policy fails
+/// closed - so a typo silently captures nothing instead of failing. The reverse
+/// is just as invisible: a key nothing reads is a budget that no longer budgets.
+/// Neither direction is visible from the Rust side alone, so both are checked
+/// against the page world's own call sites.
+#[test]
+fn every_limit_name_the_page_world_reads_is_answered_and_every_key_is_read() {
+    let injected = policy::capture_policy();
+    let known: std::collections::BTreeSet<String> = injected["limits"]
+        .as_object()
+        .expect("limits")
+        .keys()
+        .cloned()
+        .collect();
+
+    let call = regex::Regex::new(r"limit\('([A-Za-z][A-Za-z0-9]*)'\)").expect("limit regex");
+    let hardcoded = regex::Regex::new(r"\.substring\(0, *[0-9]+\)").expect("substring regex");
+    let mut read: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for name in ["framework-introspect.js", "injected.js"] {
+        let path = format!("{}/src/js/{name}", env!("CARGO_MANIFEST_DIR"));
+        let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        for caps in call.captures_iter(&source) {
+            let key = caps[1].to_string();
+            assert!(
+                known.contains(&key),
+                "{name} reads limit('{key}'), which capture_policy() does not answer -                  it would read as 0 and capture nothing"
+            );
+            read.insert(key);
+        }
+        assert!(
+            !hardcoded.is_match(&source),
+            "{name} hardcodes a substring budget again; every one belongs in policy.rs"
+        );
+    }
+    assert!(!read.is_empty(), "no limit() call sites found");
+    let unused: Vec<&String> = known.difference(&read).collect();
+    assert!(unused.is_empty(), "policy keys nothing reads: {unused:?}");
 }
 
 /// The point of the move is one source of truth, so a page-world copy coming

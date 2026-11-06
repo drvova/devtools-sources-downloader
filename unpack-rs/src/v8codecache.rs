@@ -29,12 +29,7 @@ fn v8_known_runtime(magic: u32) -> Option<&'static str> {
 }
 
 fn u32(bytes: &[u8], at: usize) -> u32 {
-    u32::from_le_bytes([
-        bytes[at],
-        bytes[at + 1],
-        bytes[at + 2],
-        bytes[at + 3],
-    ])
+    u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
 }
 
 pub fn detect_v8_code_cache(bytes: &[u8]) -> bool {
@@ -103,7 +98,11 @@ pub fn parse_v8_code_cache(bytes: &[u8]) -> Option<V8CodeCache> {
         flag_hash: u32(bytes, 12),
         payload_offset,
         payload_length,
-        strings: extract_v8_strings(bytes, payload_offset, Some(payload_offset + payload_length as usize)),
+        strings: extract_v8_strings(
+            bytes,
+            payload_offset,
+            Some(payload_offset + payload_length as usize),
+        ),
     })
 }
 
@@ -153,10 +152,7 @@ pub fn extract_v8_strings(bytes: &[u8], from: usize, to: Option<usize>) -> Vec<S
 /// the injected form exists for parity and failure injection.
 pub type InflateImpl<'a> = dyn Fn(&[u8]) -> std::io::Result<Vec<u8>> + 'a;
 
-pub fn inflate_brotli_with(
-    bytes: &[u8],
-    injected: Option<&InflateImpl>,
-) -> Option<Vec<u8>> {
+pub fn inflate_brotli_with(bytes: &[u8], injected: Option<&InflateImpl>) -> Option<Vec<u8>> {
     if let Some(impl_fn) = injected {
         return impl_fn(bytes).ok();
     }
@@ -198,4 +194,3 @@ pub fn parse_sealed_v8(bytes: &[u8], injected: Option<&InflateImpl>) -> Option<S
         cache: parsed,
     })
 }
-

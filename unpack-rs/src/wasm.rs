@@ -386,7 +386,12 @@ pub fn parse_wasm_module(bytes: &[u8]) -> Option<WasmModuleInfo> {
                                 return false;
                             }
                             let seg_size = seg64 as usize;
-                            for found in scan_printable_strings(bytes, cursor, cursor + seg_size, WASM_MIN_STRING) {
+                            for found in scan_printable_strings(
+                                bytes,
+                                cursor,
+                                cursor + seg_size,
+                                WASM_MIN_STRING,
+                            ) {
                                 if !info.data_strings.contains(&found) {
                                     info.data_strings.push(found);
                                 }

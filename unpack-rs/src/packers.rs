@@ -80,12 +80,13 @@ fn base_decode_token(token: &str, base: i64) -> i64 {
 }
 
 enum PackerArg {
-    Str { value: String, split: Option<String> },
+    Str {
+        value: String,
+        split: Option<String>,
+    },
     Number(i64),
     Other,
 }
-
-
 
 fn is_js_space(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
@@ -120,9 +121,8 @@ fn read_packer_arg(text: &str, index: usize) -> Option<(PackerArg, usize)> {
         ));
     }
     let rest = &text[i..];
-    static NUM_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(r"^[-+]?(?:0x[0-9a-fA-F]+|\d+(?:\.\d+)?)").unwrap()
-    });
+    static NUM_RE: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(r"^[-+]?(?:0x[0-9a-fA-F]+|\d+(?:\.\d+)?)").unwrap());
     if let Some(m) = NUM_RE.find(rest) {
         let raw_num = m.as_str();
         // A literal must be followed by a delimiter, not by identifier junk.
@@ -380,7 +380,11 @@ pub fn detect_aaencode(source: &str) -> Option<Refusal> {
             kaomoji += 1;
         }
     }
-    let density = if total > 0 { kaomoji as f64 / total as f64 } else { 0.0 };
+    let density = if total > 0 {
+        kaomoji as f64 / total as f64
+    } else {
+        0.0
+    };
     if banner_hits >= 1 && density >= 0.05 {
         return Some(Refusal {
             tool: "aaencode",
@@ -460,21 +464,81 @@ struct ObfuscatorMarker {
 }
 
 const OBFUSCATOR_MARKER_TABLE: &[ObfuscatorMarker] = &[
-    ObfuscatorMarker { name: "banner", pattern: r"obfuscator\.io|javascript-obfuscator", case_insensitive: false },
-    ObfuscatorMarker { name: "hex identifiers", pattern: r"\b_0x[0-9a-fA-F]{3,}\b", case_insensitive: false },
-    ObfuscatorMarker { name: "string array rotation", pattern: r#"\[\s*['"][^'"]+['"]\s*\]\s*\.\s*concat|\.shift\s*\(\s*\)|\.push\s*\(\s*[\w$]+\s*\[\s*0\s*\]"#, case_insensitive: false },
-    ObfuscatorMarker { name: "rotation IIFE", pattern: r"\(\s*function\s*\([^)]*\)\s*\{[\s\S]*?parseInt", case_insensitive: false },
-    ObfuscatorMarker { name: "base64 decoder", pattern: r"atob\s*\(|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", case_insensitive: false },
-    ObfuscatorMarker { name: "rc4 decoder", pattern: r"\b_0x[0-9a-fA-F]+\s*\(\s*_0x[0-9a-fA-F]+\s*,\s*_0x[0-9a-fA-F]+", case_insensitive: false },
-    ObfuscatorMarker { name: "switch dispatcher", pattern: r"switch\s*\(\s*_?0x[\w$]*\s*\)|switch\s*\(\s*[\w$]+\s*\+\s*parseInt", case_insensitive: false },
-    ObfuscatorMarker { name: "boolean shorthand", pattern: r"!!\[\]|\[\s*\]", case_insensitive: false },
-    ObfuscatorMarker { name: "hex literals", pattern: r"=\s*0x[0-9a-fA-F]{2,}\b", case_insensitive: false },
-    ObfuscatorMarker { name: "self defending", pattern: r"self.?defending", case_insensitive: true },
-    ObfuscatorMarker { name: "debug protection", pattern: r"debug.?protect", case_insensitive: true },
-    ObfuscatorMarker { name: "console disable", pattern: r"console\s*\[|call\s*\(\s*this\s*,\s*console\)", case_insensitive: false },
-    ObfuscatorMarker { name: "opaque predicate", pattern: r#"\?\s*['"][^'"]*['"]\s*:\s*['"][^'"]*['"]"#, case_insensitive: false },
-    ObfuscatorMarker { name: "split string concat", pattern: r#"['"][^'"]{0,3}['"\s]\s*\+\s*concat"#, case_insensitive: false },
-    ObfuscatorMarker { name: "renamed properties", pattern: r"\.\s*_0x[0-9a-fA-F]{3,}\b", case_insensitive: false },
+    ObfuscatorMarker {
+        name: "banner",
+        pattern: r"obfuscator\.io|javascript-obfuscator",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "hex identifiers",
+        pattern: r"\b_0x[0-9a-fA-F]{3,}\b",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "string array rotation",
+        pattern: r#"\[\s*['"][^'"]+['"]\s*\]\s*\.\s*concat|\.shift\s*\(\s*\)|\.push\s*\(\s*[\w$]+\s*\[\s*0\s*\]"#,
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "rotation IIFE",
+        pattern: r"\(\s*function\s*\([^)]*\)\s*\{[\s\S]*?parseInt",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "base64 decoder",
+        pattern: r"atob\s*\(|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "rc4 decoder",
+        pattern: r"\b_0x[0-9a-fA-F]+\s*\(\s*_0x[0-9a-fA-F]+\s*,\s*_0x[0-9a-fA-F]+",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "switch dispatcher",
+        pattern: r"switch\s*\(\s*_?0x[\w$]*\s*\)|switch\s*\(\s*[\w$]+\s*\+\s*parseInt",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "boolean shorthand",
+        pattern: r"!!\[\]|\[\s*\]",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "hex literals",
+        pattern: r"=\s*0x[0-9a-fA-F]{2,}\b",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "self defending",
+        pattern: r"self.?defending",
+        case_insensitive: true,
+    },
+    ObfuscatorMarker {
+        name: "debug protection",
+        pattern: r"debug.?protect",
+        case_insensitive: true,
+    },
+    ObfuscatorMarker {
+        name: "console disable",
+        pattern: r"console\s*\[|call\s*\(\s*this\s*,\s*console\)",
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "opaque predicate",
+        pattern: r#"\?\s*['"][^'"]*['"]\s*:\s*['"][^'"]*['"]"#,
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "split string concat",
+        pattern: r#"['"][^'"]{0,3}['"\s]\s*\+\s*concat"#,
+        case_insensitive: false,
+    },
+    ObfuscatorMarker {
+        name: "renamed properties",
+        pattern: r"\.\s*_0x[0-9a-fA-F]{3,}\b",
+        case_insensitive: false,
+    },
 ];
 
 pub fn detect_obfuscator_io(text: &str) -> Option<Refusal> {
@@ -502,9 +566,9 @@ pub fn detect_obfuscator_io(text: &str) -> Option<Refusal> {
         return None;
     }
     let score = markers.len();
-    let has_strong = markers
-        .iter()
-        .any(|m| m.marker == "banner" || m.marker == "string array rotation" || m.marker == "rc4 decoder");
+    let has_strong = markers.iter().any(|m| {
+        m.marker == "banner" || m.marker == "string array rotation" || m.marker == "rc4 decoder"
+    });
     if !has_strong && score < 3 {
         return None;
     }
@@ -548,8 +612,11 @@ fn parse_array_literals(body: &str) -> Option<Vec<String>> {
                         '"' => buf.push('"'),
                         '0' => buf.push('\0'),
                         'x' => {
-                            let hex: String = chars[i + 1..(i + 3).min(chars.len())].iter().collect();
-                            if hex.chars().count() != 2 || !hex.chars().all(|h| h.is_ascii_hexdigit()) {
+                            let hex: String =
+                                chars[i + 1..(i + 3).min(chars.len())].iter().collect();
+                            if hex.chars().count() != 2
+                                || !hex.chars().all(|h| h.is_ascii_hexdigit())
+                            {
                                 return None;
                             }
                             let code = u32::from_str_radix(&hex, 16).ok()?;
@@ -617,10 +684,7 @@ fn parse_int_literal(raw: &str) -> Option<i64> {
     };
     if t.to_lowercase().starts_with("0x") {
         let hex = &t[2..];
-        let valid: String = hex
-            .chars()
-            .take_while(|c| c.is_ascii_hexdigit())
-            .collect();
+        let valid: String = hex.chars().take_while(|c| c.is_ascii_hexdigit()).collect();
         if valid.is_empty() {
             return None;
         }
@@ -815,17 +879,16 @@ fn inline_decoder_calls(source: &str, array_id: &str) -> InlineResult {
         cursor = end;
     }
     out.push_str(&source[cursor..]);
-    InlineResult {
-        source: out,
-    }
+    InlineResult { source: out }
 }
 
 fn decode_index(call_arg: i64, index: &DecoderIndex, literals: &[String]) -> Option<String> {
-    let effective = call_arg + if index.sign == '-' {
-        -index.offset
-    } else {
-        index.offset
-    };
+    let effective = call_arg
+        + if index.sign == '-' {
+            -index.offset
+        } else {
+            index.offset
+        };
     if effective < 0 || effective as usize >= literals.len() {
         return None;
     }
@@ -887,7 +950,9 @@ fn analyze_decoder_body(body: &str, params: &[String], array_id: &str) -> Option
         regex_escape(array_id)
     ))
     .ok()?;
-    let alias = alias_re.captures(body).map(|a| a.get(1).unwrap().as_str().to_string());
+    let alias = alias_re
+        .captures(body)
+        .map(|a| a.get(1).unwrap().as_str().to_string());
     let base = m.get(1).unwrap().as_str();
     let base_ok = base == array_id || alias.as_deref() == Some(base);
     if !base_ok {
@@ -924,7 +989,10 @@ fn analyze_decoder_body(body: &str, params: &[String], array_id: &str) -> Option
     }
     Some(DecoderIndex {
         offset,
-        sign: m.get(3).map(|s| s.as_str().chars().next().unwrap()).unwrap_or('+'),
+        sign: m
+            .get(3)
+            .map(|s| s.as_str().chars().next().unwrap())
+            .unwrap_or('+'),
     })
 }
 
@@ -938,7 +1006,11 @@ struct CallSites {
     has_unresolved: bool,
 }
 
-fn find_decoder_call_sites(source: &str, decoder_name: &str, decoder_range: (usize, usize)) -> CallSites {
+fn find_decoder_call_sites(
+    source: &str,
+    decoder_name: &str,
+    decoder_range: (usize, usize),
+) -> CallSites {
     let re = regex::Regex::new(&regex_escape(decoder_name)).expect("escaped name compiles");
     let mut sites = Vec::new();
     let mut has_unresolved = false;

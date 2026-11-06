@@ -21,7 +21,9 @@ use crate::util::{iso8601_now, utf16_prefix};
 
 /// `arrayContainsAny`.
 pub fn array_contains_any(values: &[String], candidates: &[String]) -> bool {
-    candidates.iter().any(|candidate| values.contains(candidate))
+    candidates
+        .iter()
+        .any(|candidate| values.contains(candidate))
 }
 
 /// `pushBoundaryLabel`.
@@ -121,19 +123,27 @@ fn label_regex(pattern: &str) -> regex::Regex {
 /// `inferNetworkBoundaryLabels`.
 fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     static AUTH: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"auth0|next-auth|firebase/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|token|refresh|clerk|okta|passport")
+        label_regex(
+            r"auth0|next-auth|firebase/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|token|refresh|clerk|okta|passport",
+        )
     });
     static ANALYTICS: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"google-analytics|googletagmanager|gtag|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadog|sentry|analytics|/collect(?-u:\b)|/track(?-u:\b)|/capture(?-u:\b)")
+        label_regex(
+            r"google-analytics|googletagmanager|gtag|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadog|sentry|analytics|/collect(?-u:\b)|/track(?-u:\b)|/capture(?-u:\b)",
+        )
     });
     static DATA: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"graphql|apollo|relay|axios|tanstack|react-query|swr|trpc|/api/|jsonrpc|rpc|query=|mutation=|xmlhttprequest|fetch")
+        label_regex(
+            r"graphql|apollo|relay|axios|tanstack|react-query|swr|trpc|/api/|jsonrpc|rpc|query=|mutation=|xmlhttprequest|fetch",
+        )
     });
     static ROUTER: LazyLock<regex::Regex> = LazyLock::new(|| {
         label_regex(r"_next/data/|prefetch|router|route|navigate|navigation|redirect=|callbackurl=")
     });
     static EDITOR: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"draft|editor|document|content|prosemirror|tiptap|quill|slate|monaco|codemirror")
+        label_regex(
+            r"draft|editor|document|content|prosemirror|tiptap|quill|slate|monaco|codemirror",
+        )
     });
     static STATE: LazyLock<regex::Regex> =
         LazyLock::new(|| label_regex(r"persist|rehydrate|redux|zustand|state"));
@@ -202,25 +212,39 @@ fn infer_boundary_labels(
     classifications: &BTreeMap<String, String>,
 ) -> Vec<Value> {
     static BOOTSTRAP: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"hydration|hydrateroot|reactdom\.hydrate|bootstrap|domcontentloaded|__webpack_require__|webpackchunk|parcelrequire|__vite__")
+        label_regex(
+            r"hydration|hydrateroot|reactdom\.hydrate|bootstrap|domcontentloaded|__webpack_require__|webpackchunk|parcelrequire|__vite__",
+        )
     });
     static ROUTER: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"router|routes(?-u:\b)|history\.pushstate|next/router|vue-router|react-router|createbrowserrouter|browserrouter|remix")
+        label_regex(
+            r"router|routes(?-u:\b)|history\.pushstate|next/router|vue-router|react-router|createbrowserrouter|browserrouter|remix",
+        )
     });
     static STATE: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"redux|zustand|mobx|recoil|vuex|pinia|createstore|configurestore|createslice|dispatch\(|subscribe\(|setstate\(")
+        label_regex(
+            r"redux|zustand|mobx|recoil|vuex|pinia|createstore|configurestore|createslice|dispatch\(|subscribe\(|setstate\(",
+        )
     });
     static DATA: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"graphql|apollo|relay|axios|tanstack/query|react-query|swr|trpc|fetch\(|xmlhttprequest|/api/|urql")
+        label_regex(
+            r"graphql|apollo|relay|axios|tanstack/query|react-query|swr|trpc|fetch\(|xmlhttprequest|/api/|urql",
+        )
     });
     static AUTH: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"auth0|next-auth|firebase/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|tokenrefresh|clerk|okta|passport")
+        label_regex(
+            r"auth0|next-auth|firebase/auth|supabase\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|tokenrefresh|clerk|okta|passport",
+        )
     });
     static ANALYTICS: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"gtag|google-analytics|googletagmanager|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadogrum|sentry|analytics\.track|fbq\(")
+        label_regex(
+            r"gtag|google-analytics|googletagmanager|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadogrum|sentry|analytics\.track|fbq\(",
+        )
     });
     static EDITOR: LazyLock<regex::Regex> = LazyLock::new(|| {
-        label_regex(r"monaco|codemirror|tiptap|prosemirror|quill|slate|draftjs|tinymce|ckeditor|editorjs|ace\.edit")
+        label_regex(
+            r"monaco|codemirror|tiptap|prosemirror|quill|slate|draftjs|tinymce|ckeditor|editorjs|ace\.edit",
+        )
     });
     static VENDOR: LazyLock<regex::Regex> = LazyLock::new(|| {
         label_regex(r"node_modules|chunk-vendors|polyfill|core-js|regenerator-runtime|cdn")
@@ -263,7 +287,12 @@ fn infer_boundary_labels(
         );
     }
     if STATE.is_match(&sample) {
-        push_boundary_label(&mut matches, "state", 24.0, Some("contains state container signals"));
+        push_boundary_label(
+            &mut matches,
+            "state",
+            24.0,
+            Some("contains state container signals"),
+        );
     }
     if DATA.is_match(&sample) || startup_signals.iter().any(|s| s == "graphql-client") {
         push_boundary_label(
@@ -417,7 +446,10 @@ fn apply_boundary_labels(entry: &mut Value, matches: Vec<Value>) {
             "boundaryLabels".to_string(),
             serde_json::to_value(&outcome.labels).unwrap(),
         );
-        map.insert("primaryBoundary".to_string(), Value::String(outcome.primary));
+        map.insert(
+            "primaryBoundary".to_string(),
+            Value::String(outcome.primary),
+        );
         map.insert(
             "boundaryReasons".to_string(),
             serde_json::to_value(&outcome.reasons).unwrap(),
@@ -504,10 +536,7 @@ fn strip_boundary_entry(entry: &Value, kind: &str) -> Value {
 
 /// `buildBoundaryLabels`: labels the assets and origins in place and returns
 /// the report.
-pub fn build_boundary_labels(
-    assets: &mut [ScriptAsset],
-    origins: &mut [RuntimeOrigin],
-) -> Value {
+pub fn build_boundary_labels(assets: &mut [ScriptAsset], origins: &mut [RuntimeOrigin]) -> Value {
     let classifications: BTreeMap<String, String> = assets
         .iter()
         .map(|asset| (asset.id.clone(), asset.classification.clone()))
@@ -534,9 +563,7 @@ pub fn build_boundary_labels(
     });
     let chunks: Vec<Value> = tagged_chunks
         .iter()
-        .map(|asset| {
-            strip_boundary_entry(&serde_json::to_value(*asset).unwrap(), "chunk")
-        })
+        .map(|asset| strip_boundary_entry(&serde_json::to_value(*asset).unwrap(), "chunk"))
         .collect();
 
     let mut tagged_runtime: Vec<&RuntimeOrigin> = origins
@@ -714,11 +741,12 @@ fn collect_flow_events(
             absolute_times.push(timestamp);
         }
     }
-    let absolute_base = absolute_times
-        .iter()
-        .cloned()
-        .fold(f64::INFINITY, f64::min);
-    let absolute_base = if absolute_base.is_finite() { absolute_base } else { 0.0 };
+    let absolute_base = absolute_times.iter().cloned().fold(f64::INFINITY, f64::min);
+    let absolute_base = if absolute_base.is_finite() {
+        absolute_base
+    } else {
+        0.0
+    };
 
     for (index, asset) in assets.iter().enumerate() {
         let value = serde_json::to_value(asset).unwrap();
@@ -729,7 +757,11 @@ fn collect_flow_events(
         let event = build_flow_event("chunk", &asset.id, &value, asset_time);
         events.push(event.clone());
         event_map.insert(
-            event.get("id").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            event
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string(),
             event,
         );
         asset_horizon = asset_horizon.max(asset_time + asset.duration);
@@ -747,7 +779,11 @@ fn collect_flow_events(
         let event = build_flow_event("runtime", &record_id, origin, runtime_time);
         events.push(event.clone());
         event_map.insert(
-            event.get("id").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            event
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string(),
             event,
         );
     }
@@ -763,7 +799,11 @@ fn collect_flow_events(
         let event = build_flow_event("network", &record_id, operation, operation_time);
         events.push(event.clone());
         event_map.insert(
-            event.get("id").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            event
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string(),
             event,
         );
     }
@@ -955,9 +995,13 @@ fn score_flow_transition(from_event: &Value, to_event: &Value, delta_ms: Option<
     if from_kind == "network" && to_kind == "network" {
         score += 8.0;
     }
-    let boundary_list = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+    let boundary_list =
+        |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<Vec<String>>();
     let contains = |candidates: &[&str]| -> bool {
-        array_contains_any(&boundary_list(candidates), std::slice::from_ref(&to_boundary))
+        array_contains_any(
+            &boundary_list(candidates),
+            std::slice::from_ref(&to_boundary),
+        )
     };
     if from_boundary == "bootstrap" && contains(&["router", "state", "data", "auth"]) {
         score += 18.0;
@@ -1044,7 +1088,11 @@ fn summarize_boundary_transitions(flows: &[Value]) -> Vec<Value> {
         group.count += 1;
         group.total_confidence += field_number(flow, "confidence");
         let relation = field_str(flow, "relation");
-        match group.relations.iter_mut().find(|(name, _)| *name == relation) {
+        match group
+            .relations
+            .iter_mut()
+            .find(|(name, _)| *name == relation)
+        {
             Some((_, count)) => *count += 1,
             None => group.relations.push((relation, 1)),
         }
@@ -1075,8 +1123,14 @@ fn summarize_boundary_transitions(flows: &[Value]) -> Vec<Value> {
         if left_count != right_count {
             return right_count.cmp(&left_count);
         }
-        let left_confidence = left.get("averageConfidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let right_confidence = right.get("averageConfidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let left_confidence = left
+            .get("averageConfidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let right_confidence = right
+            .get("averageConfidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
         right_confidence
             .partial_cmp(&left_confidence)
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -1172,8 +1226,14 @@ fn build_boundary_chains(flows: &[Value]) -> Vec<Value> {
         if left_count != right_count {
             return right_count.cmp(&left_count);
         }
-        let left_confidence = left.get("averageConfidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let right_confidence = right.get("averageConfidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let left_confidence = left
+            .get("averageConfidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let right_confidence = right
+            .get("averageConfidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
         right_confidence
             .partial_cmp(&left_confidence)
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -1208,7 +1268,10 @@ fn strip_flow_event(event: &Value) -> Value {
     }
     stripped.insert(
         "boundaryLabels".to_string(),
-        event.get("boundaryLabels").cloned().unwrap_or_else(|| json!([])),
+        event
+            .get("boundaryLabels")
+            .cloned()
+            .unwrap_or_else(|| json!([])),
     );
     stripped.insert(
         "approxTime".to_string(),
@@ -1220,7 +1283,10 @@ fn strip_flow_event(event: &Value) -> Value {
     );
     stripped.insert("url".to_string(), Value::String(field_str(event, "url")));
     stripped.insert("file".to_string(), Value::String(field_str(event, "file")));
-    stripped.insert("method".to_string(), Value::String(field_str(event, "method")));
+    stripped.insert(
+        "method".to_string(),
+        Value::String(field_str(event, "method")),
+    );
     stripped.insert(
         "status".to_string(),
         js_number_value(field_number(event, "status")),
@@ -1351,8 +1417,8 @@ pub fn build_cross_boundary_flows(
     for a in 0..timed_events.len() {
         let mut b = a + 1;
         while b < timed_events.len() && b < a + 5 {
-            let delta_ms =
-                field_number(timed_events[b], "approxTime") - field_number(timed_events[a], "approxTime");
+            let delta_ms = field_number(timed_events[b], "approxTime")
+                - field_number(timed_events[a], "approxTime");
             if delta_ms <= 0.0 || delta_ms > 4000.0 {
                 break;
             }
@@ -1362,7 +1428,8 @@ pub fn build_cross_boundary_flows(
                 continue;
             }
             let relation = infer_flow_relation(timed_events[a], timed_events[b]);
-            let evidence = describe_flow_transition(timed_events[a], timed_events[b], Some(delta_ms));
+            let evidence =
+                describe_flow_transition(timed_events[a], timed_events[b], Some(delta_ms));
             add_boundary_flow(
                 &mut flows,
                 &mut flow_map,
@@ -1416,7 +1483,11 @@ fn count_property<'a>(items: impl Iterator<Item = &'a Value>, key: &str) -> Coun
     let mut counts = Counts::default();
     for item in items {
         let value = field_str(item, key);
-        let value = if value.is_empty() { "unknown".to_string() } else { value };
+        let value = if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            value
+        };
         counts.add(value);
     }
     counts
@@ -1799,7 +1870,11 @@ fn count_origin_kinds(origins: &[RuntimeOrigin]) -> Counts {
     let mut counts = Counts::default();
     for origin in origins {
         let value = field_str(origin, "kind");
-        let value = if value.is_empty() { "unknown".to_string() } else { value };
+        let value = if value.is_empty() {
+            "unknown".to_string()
+        } else {
+            value
+        };
         counts.add(value);
     }
     counts
@@ -1808,9 +1883,7 @@ fn count_origin_kinds(origins: &[RuntimeOrigin]) -> Counts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::panel::assets::{
-        build_runtime_origins, prepare_script_assets, ScriptInput,
-    };
+    use crate::panel::assets::{build_runtime_origins, prepare_script_assets, ScriptInput};
     use crate::panel::text::js_number_value;
     use crate::util::utf16_len;
 
@@ -2152,7 +2225,11 @@ mod tests {
             "e4",
             Some(5.0),
         );
-        assert_eq!(Value::Array(flows.clone()), exp["addBoundaryFlow"], "addBoundaryFlow");
+        assert_eq!(
+            Value::Array(flows.clone()),
+            exp["addBoundaryFlow"],
+            "addBoundaryFlow"
+        );
         assert_eq!(
             Value::Array(summarize_boundary_transitions(&flows)),
             exp["summarizeBoundaryTransitions"],
@@ -2163,7 +2240,11 @@ mod tests {
             exp["buildBoundaryChains"],
             "buildBoundaryChains"
         );
-        assert_eq!(strip_flow_transition(&flows[0]), exp["stripFlowTransition"], "stripFlowTransition");
+        assert_eq!(
+            strip_flow_transition(&flows[0]),
+            exp["stripFlowTransition"],
+            "stripFlowTransition"
+        );
         assert_eq!(
             strip_flow_event(&flows[0]["from"]),
             exp["stripFlowEvent"],

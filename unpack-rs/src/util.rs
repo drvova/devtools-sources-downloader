@@ -155,6 +155,9 @@ mod tests {
     #[test]
     fn epoch_formatting() {
         assert_eq!(iso8601_from_unix_secs(0), "1970-01-01T00:00:00.000Z");
-        assert_eq!(iso8601_from_unix_secs(1_767_225_600), "2026-01-01T00:00:00.000Z");
+        assert_eq!(
+            iso8601_from_unix_secs(1_767_225_600),
+            "2026-01-01T00:00:00.000Z"
+        );
     }
 }

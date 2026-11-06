@@ -83,7 +83,10 @@
             tag: lower(element.tagName || 'div'),
             id: element.id || '',
             classes: element.className
-                ? String(element.className).split(/\s+/).filter(Boolean).slice(0, 8)
+                ? String(element.className)
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, limit('classNames'))
                 : [],
             childCount: element.children ? element.children.length : 0,
             textSample: limitString(element.textContent || ''),
@@ -282,7 +285,7 @@
                     );
                 }),
                 preview: safeValue(
-                    queryItems.slice(0, 6).map(function (item) {
+                    queryItems.slice(0, limit('queryItems')).map(function (item) {
                         return {
                             hash: item && item.queryHash ? item.queryHash : '',
                             key: item && item.queryKey ? item.queryKey : '',
@@ -412,7 +415,7 @@
                 'generic-app',
             strategy: captureStatus.strategy || stackProfile.strategy || null,
             technologies: Array.isArray(stackProfile.technologies)
-                ? stackProfile.technologies.slice(0, 12)
+                ? stackProfile.technologies.slice(0, limit('technologies'))
                 : [],
             roots: collectFrameworkRoots(),
             router: collectRouterState(),

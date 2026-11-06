@@ -23,7 +23,10 @@
 #[cfg(target_arch = "wasm32")]
 use crate::pipeline::{self, Asset, UnpackOptions};
 #[cfg(target_arch = "wasm32")]
-use crate::{beautify, bundler, decoders, digest, detectors, jscbytecode, jsfuck, packers, panel, scanner, sourcemaps, transforms, v8codecache, wasm as wasm_mod};
+use crate::{
+    beautify, bundler, decoders, detectors, digest, jscbytecode, jsfuck, packers, panel, scanner,
+    sourcemaps, transforms, v8codecache, wasm as wasm_mod,
+};
 
 #[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "env")]
@@ -280,7 +283,6 @@ fn arg_usize(array: &[serde_json::Value], i: usize) -> Option<usize> {
     array.get(i).and_then(|v| v.as_u64()).map(|n| n as usize)
 }
 
-
 #[cfg(target_arch = "wasm32")]
 fn arg_options(array: &[serde_json::Value], i: usize) -> Result<HostOptions, String> {
     serde_json::from_value(array.get(i).cloned().unwrap_or(serde_json::Value::Null))
@@ -369,11 +371,6 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         // returns either a document string, the analysis object, or a list of
         // {path, content} files (binary payloads as {path, base64}) so the
         // extension keeps the zip and the DOM while the logic lives here.
-
-
-
-
-
         "panelDescribeCaptureReason" => Ok(serde_json::Value::String(
             panel::report::describe_capture_reason(
                 a.first().filter(|v| !v.is_null()),
@@ -381,22 +378,16 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
             ),
         )),
 
-
-
-
-
         "panelFinalizeZipWithRecon" => {
-            let assets: Vec<panel::assets::ScriptInput> = serde_json::from_value(
-                a.first().cloned().unwrap_or(serde_json::Value::Null),
-            )
-            .map_err(|e| e.to_string())?;
+            let assets: Vec<panel::assets::ScriptInput> =
+                serde_json::from_value(a.first().cloned().unwrap_or(serde_json::Value::Null))
+                    .map_err(|e| e.to_string())?;
             let recon = a.get(1).cloned().unwrap_or(serde_json::Value::Null);
             let snapshot = a.get(2).cloned().unwrap_or(serde_json::Value::Null);
             let runtime_payloads = arg_array(a, 3);
-            let options: HostOptions = serde_json::from_value(
-                a.get(4).cloned().unwrap_or(serde_json::Value::Null),
-            )
-            .unwrap_or_default();
+            let options: HostOptions =
+                serde_json::from_value(a.get(4).cloned().unwrap_or(serde_json::Value::Null))
+                    .unwrap_or_default();
             let options = options.into_native();
             let mut files: Vec<serde_json::Value> = Vec::new();
             let report = {
@@ -507,12 +498,12 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                     .collect(),
             ))
         }
-        "findSourceMapRef" => Ok(match sourcemaps::find_source_map_ref(
-            &arg_str(a, 0).ok_or("findSourceMapRef: text")?,
-        ) {
-            Some(r) => source_map_ref_json(r),
-            None => serde_json::Value::Null,
-        }),
+        "findSourceMapRef" => Ok(
+            match sourcemaps::find_source_map_ref(&arg_str(a, 0).ok_or("findSourceMapRef: text")?) {
+                Some(r) => source_map_ref_json(r),
+                None => serde_json::Value::Null,
+            },
+        ),
         "parseSourceMap" => {
             let json_text = arg_str(a, 0).ok_or("parseSourceMap: json")?;
             match sourcemaps::parse_source_map(&json_text) {
@@ -528,12 +519,14 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 Err(_) => Ok(serde_json::Value::Null),
             }
         }
-        "decodeInlineSourceMap" => Ok(match sourcemaps::decode_inline_source_map(
-            &arg_str(a, 0).ok_or("decodeInlineSourceMap: dataUri")?,
-        ) {
-            Some(text) => serde_json::Value::String(text),
-            None => serde_json::Value::Null,
-        }),
+        "decodeInlineSourceMap" => Ok(
+            match sourcemaps::decode_inline_source_map(
+                &arg_str(a, 0).ok_or("decodeInlineSourceMap: dataUri")?,
+            ) {
+                Some(text) => serde_json::Value::String(text),
+                None => serde_json::Value::Null,
+            },
+        ),
         "resolveMapUrl" => Ok(serde_json::Value::String(sourcemaps::resolve_map_url(
             &arg_str(a, 0).ok_or("resolveMapUrl: scriptUrl")?,
             &arg_str(a, 1).ok_or("resolveMapUrl: mapRef")?,
@@ -543,8 +536,9 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
             arg_usize(a, 1).ok_or("assetSlug: index")?,
         ))),
         "unpackAsset" => {
-            let asset: HostAsset = serde_json::from_value(a.first().cloned().unwrap_or(serde_json::Value::Null))
-                .map_err(|e| format!("unpackAsset: asset json: {e}"))?;
+            let asset: HostAsset =
+                serde_json::from_value(a.first().cloned().unwrap_or(serde_json::Value::Null))
+                    .map_err(|e| format!("unpackAsset: asset json: {e}"))?;
             let opts = arg_options(a, 1)?;
             let result = pipeline::unpack_asset(&asset.into_native(), &opts.into_native());
             Ok(serde_json::json!({
@@ -585,33 +579,49 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 "files": files_json(files),
             }))
         }
-        "decodeJsfuck" => serde_json::to_value(jsfuck::decode_jsfuck(&arg_str(a, 0).ok_or("decodeJsfuck: source")?))
-            .map_err(|e| e.to_string()),
-        "detectJsfuck" => serde_json::to_value(jsfuck::detect_jsfuck(&arg_str(a, 0).ok_or("detectJsfuck: source")?))
-            .map_err(|e| e.to_string()),
-        "detectPacker" => Ok(match packers::detect_packer(&arg_str(a, 0).ok_or("detectPacker: text")?) {
-            Some(found) => serde_json::to_value(found).map_err(|e| e.to_string())?,
-            None => serde_json::Value::Null,
-        }),
-        "unpackPacker" => Ok(match packers::unpack_packer(&arg_str(a, 0).ok_or("unpackPacker: text")?) {
-            Some(text) => serde_json::Value::String(text),
-            None => serde_json::Value::Null,
-        }),
-        "transformStringArray" => Ok(match packers::transform_string_array(&arg_str(a, 0).ok_or("transformStringArray: source")?) {
-            Some(text) => serde_json::Value::String(text),
-            None => serde_json::Value::Null,
-        }),
-        "detectStringArray" => Ok(match packers::detect_string_array(&arg_str(a, 0).ok_or("detectStringArray: source")?) {
-            Some(detected) => serde_json::to_value(detected).map_err(|e| e.to_string())?,
-            None => serde_json::Value::Null,
-        }),
+        "decodeJsfuck" => serde_json::to_value(jsfuck::decode_jsfuck(
+            &arg_str(a, 0).ok_or("decodeJsfuck: source")?,
+        ))
+        .map_err(|e| e.to_string()),
+        "detectJsfuck" => serde_json::to_value(jsfuck::detect_jsfuck(
+            &arg_str(a, 0).ok_or("detectJsfuck: source")?,
+        ))
+        .map_err(|e| e.to_string()),
+        "detectPacker" => Ok(
+            match packers::detect_packer(&arg_str(a, 0).ok_or("detectPacker: text")?) {
+                Some(found) => serde_json::to_value(found).map_err(|e| e.to_string())?,
+                None => serde_json::Value::Null,
+            },
+        ),
+        "unpackPacker" => Ok(
+            match packers::unpack_packer(&arg_str(a, 0).ok_or("unpackPacker: text")?) {
+                Some(text) => serde_json::Value::String(text),
+                None => serde_json::Value::Null,
+            },
+        ),
+        "transformStringArray" => Ok(
+            match packers::transform_string_array(
+                &arg_str(a, 0).ok_or("transformStringArray: source")?,
+            ) {
+                Some(text) => serde_json::Value::String(text),
+                None => serde_json::Value::Null,
+            },
+        ),
+        "detectStringArray" => Ok(
+            match packers::detect_string_array(&arg_str(a, 0).ok_or("detectStringArray: source")?) {
+                Some(detected) => serde_json::to_value(detected).map_err(|e| e.to_string())?,
+                None => serde_json::Value::Null,
+            },
+        ),
         "detectV8CodeCache" => Ok(serde_json::Value::Bool(v8codecache::detect_v8_code_cache(
             &arg_bytes(a, 0).unwrap_or_default(),
         ))),
-        "parseV8CodeCache" => Ok(match v8codecache::parse_v8_code_cache(&arg_bytes(a, 0).unwrap_or_default()) {
-            Some(cache) => serde_json::to_value(cache).map_err(|e| e.to_string())?,
-            None => serde_json::Value::Null,
-        }),
+        "parseV8CodeCache" => Ok(
+            match v8codecache::parse_v8_code_cache(&arg_bytes(a, 0).unwrap_or_default()) {
+                Some(cache) => serde_json::to_value(cache).map_err(|e| e.to_string())?,
+                None => serde_json::Value::Null,
+            },
+        ),
         "extractV8Strings" => serde_json::to_value(v8codecache::extract_v8_strings(
             &arg_bytes(a, 0).unwrap_or_default(),
             arg_usize(a, 1).unwrap_or(0),
@@ -655,10 +665,12 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
                 "cache": parsed,
             }))
         }
-        "parseJscHeader" => Ok(match jscbytecode::parse_jsc_header(&arg_bytes(a, 0).unwrap_or_default()) {
-            Some(header) => serde_json::to_value(header).map_err(|e| e.to_string())?,
-            None => serde_json::Value::Null,
-        }),
+        "parseJscHeader" => Ok(
+            match jscbytecode::parse_jsc_header(&arg_bytes(a, 0).unwrap_or_default()) {
+                Some(header) => serde_json::to_value(header).map_err(|e| e.to_string())?,
+                None => serde_json::Value::Null,
+            },
+        ),
         "detectJscBytecode" => Ok(serde_json::Value::Bool(jscbytecode::detect_jsc_bytecode(
             &arg_bytes(a, 0).unwrap_or_default(),
         ))),
@@ -689,17 +701,21 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
             arg_usize(a, 2).ok_or("readJscSharedTable: length")?,
         ))
         .map_err(|e| e.to_string()),
-        "findJscSharedTable" => Ok(match jscbytecode::find_jsc_shared_table(&arg_bytes(a, 0).unwrap_or_default()) {
-            Some(table) => serde_json::to_value(table).map_err(|e| e.to_string())?,
-            None => serde_json::Value::Null,
-        }),
+        "findJscSharedTable" => Ok(
+            match jscbytecode::find_jsc_shared_table(&arg_bytes(a, 0).unwrap_or_default()) {
+                Some(table) => serde_json::to_value(table).map_err(|e| e.to_string())?,
+                None => serde_json::Value::Null,
+            },
+        ),
         "detectWasmModule" => Ok(serde_json::Value::Bool(wasm_mod::detect_wasm_module(
             &arg_bytes(a, 0).unwrap_or_default(),
         ))),
-        "parseWasmModule" => Ok(match wasm_mod::parse_wasm_module(&arg_bytes(a, 0).unwrap_or_default()) {
-            Some(info) => serde_json::to_value(info).map_err(|e| e.to_string())?,
-            None => serde_json::Value::Null,
-        }),
+        "parseWasmModule" => Ok(
+            match wasm_mod::parse_wasm_module(&arg_bytes(a, 0).unwrap_or_default()) {
+                Some(info) => serde_json::to_value(info).map_err(|e| e.to_string())?,
+                None => serde_json::Value::Null,
+            },
+        ),
         _ => Err(format!("xu_call: unknown function {name}")),
     }
 }
