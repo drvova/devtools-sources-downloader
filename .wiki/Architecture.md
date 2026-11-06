@@ -290,4 +290,4 @@ structure (enumerate a live object, recurse, read the page) and stay.
 | Engine wasm | ~2.2 MB (release, `opt-level = "z"`, LTO, stripped) |
 | Bridge exports | 51 |
 | Dispatch arms | 44 |
-| Rust tests | 68 unit + 85 integration |
+| Rust tests | 68 unit + 86 integration |

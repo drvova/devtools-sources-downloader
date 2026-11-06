@@ -68,7 +68,7 @@ change one and change the other, or the two gates drift apart while both still p
 | Suite | Count | Proves |
 | --- | --- | --- |
 | `src/**` unit tests | 68 | each module's contract, in place — scanner walkers, escape decoding, base64 round-trips, JS number formatting, the two whitespace sets, zip CRC/offsets, and every panel module's oracle |
-| `tests/unpack_test.rs` | 67 | engine behavior against fixtures: scanner, decoders, every peel layer, packers, JSFuck, bundle splitting, source maps, the binary formats, and the full asset pipeline |
+| `tests/unpack_test.rs` | 68 | engine behavior against fixtures: scanner, decoders, every peel layer, packers, JSFuck, bundle splitting, source maps, the binary formats, the full asset pipeline, and the published SHA-256 vectors |
 | `tests/stack_profile_test.rs` | 6 | 28 captured snapshots match the page-world analyzer by value **and** by serialized text; a coverage guard asserts the fixtures still span every detector, trait and strategy; the confidence-tie case drives `analyze` over a real snapshot and checks the order it produces (reading the expected array straight out of the fixture would pass no matter what `analyze` did); a non-object snapshot falls back to the generic profile |
 | `tests/capture_policy_test.rs` | 9 | both patterns over their corpora, the limits, the injected shape, the GraphQL body predicate against the engine constant and its word-boundary edges, the injected strategy against the engine default, that every limit name the page world reads is answered and every key is read, and a guard that neither page-world module carries a local copy again |
 | `tests/text_helpers.rs` | 3 | `sanitizeFilename`, `sanitizePageTitle`, and the helper chain against node oracles |
