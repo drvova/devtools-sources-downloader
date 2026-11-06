@@ -106,10 +106,13 @@ fn the_oracle_covers_every_detector_trait_and_strategy() {
 #[test]
 fn confidence_ties_break_by_name_the_way_locale_compare_does() {
     // Node's `localeCompare` orders this fixed vocabulary exactly as a code-unit
-    // comparison does. The snapshot above pins the outcome; this names the
-    // assumption the port relies on.
+    // comparison does. This drives `analyze` over the tie scenario and checks the
+    // order it produces: reading the expected array straight out of the fixture,
+    // as this used to, passed no matter what `analyze` did.
     let oracle = oracle();
-    let names: Vec<String> = oracle["remix-webpack-wasm-tie"]["profile"]["technologies"]
+    let scenario = &oracle["remix-webpack-wasm-tie"];
+    let profile = stackprofile::analyze(&scenario["snapshot"]);
+    let names: Vec<String> = profile["technologies"]
         .as_array()
         .expect("technologies")
         .iter()

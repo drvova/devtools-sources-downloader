@@ -548,7 +548,7 @@ wrong offset or size cannot pass.
 | --- | --- |
 | `util.rs` | `utf16_len/prefix/suffix` (JS slice semantics — never splits a surrogate pair), `civil_from_unix_secs` (Howard Hinnant's algorithm, shared by ISO-8601 and DOS stamps), `now_unix_millis` (the wasm clock seam), `regex_escape`, `BAD_PATH_CHARS`, and the two whitespace sets |
 | `jsnumber.rs` | `js_number_to_string` (ECMA-262 7.1.12.1 — the `k`/`n` digit-position algorithm, so `1e-7` prints `1e-7` and `1e20` prints 21 digits), `js_number_to_radix_string`, `js_string_to_number`, `js_escape` |
-| `digest.rs` | SHA-256 over text and bytes; `sha256_hex_bytes` answers `None` for empty input |
+| `digest.rs` | SHA-256 over text and bytes; `sha256_hex_bytes` answers `None` for empty input. Pinned to the published FIPS 180-4 vectors, because determinism alone cannot catch a wrong-but-consistent hash |
 
 ### Two whitespace sets, deliberately
 

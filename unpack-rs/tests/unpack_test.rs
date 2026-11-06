@@ -447,6 +447,25 @@ fn asset_pipeline_budget_refusal_is_reported_not_silently_dropped() {
     assert_eq!(huge.files.len(), 0);
 }
 
+/// Determinism cannot catch a wrong-but-consistent hash, so the published
+/// FIPS 180-4 vectors pin the function itself. Without these, a `sha256_hex`
+/// that returned its input reversed would pass every other digest test.
+#[test]
+fn digest_sha256_matches_the_published_vectors() {
+    assert_eq!(
+        sha256_hex(""),
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+    assert_eq!(
+        sha256_hex("abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+    assert_eq!(
+        sha256_hex_bytes(b"abc").as_deref(),
+        Some("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
+        "the byte and text forms must agree on the same input"
+    );
+}
 #[test]
 fn digest_sha256_of_identical_text_is_stable_and_input_sensitive() {
     let a = sha256_hex("payload");
