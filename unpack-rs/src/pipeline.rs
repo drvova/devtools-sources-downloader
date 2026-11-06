@@ -93,6 +93,7 @@ impl Asset {
 /// Injected text fetcher for external source-map resolution.
 type FetchText<'a> = Option<&'a dyn Fn(&str) -> Option<String>>;
 
+#[derive(Clone)]
 pub struct UnpackOptions<'a> {
     pub index: Option<usize>,
     pub zip_path: String,
@@ -162,8 +163,12 @@ pub struct AssetResult {
     pub files: Vec<File>,
 }
 
+/// A report that cannot be serialized is a bug, not an empty file. `serde_json`
+/// only fails here on a non-finite float, and writing `""` in its place would
+/// hide that behind a zero-byte artifact; a panic is a trap in wasm, which the
+/// dispatcher records for `lastEngineFailure` to report.
 fn pretty_json<T: serde::Serialize>(value: &T) -> String {
-    serde_json::to_string_pretty(value).unwrap_or_default()
+    serde_json::to_string_pretty(value).expect("a report must serialize")
 }
 
 // Binary pass for cached-bytecode assets (V8 code cache, JSC bytecode,

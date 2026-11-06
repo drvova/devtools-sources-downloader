@@ -38,11 +38,7 @@ pub struct BundleModule {
 }
 
 pub fn extract_bundle_modules(text: &str, max_modules: Option<usize>) -> Vec<BundleModule> {
-    // JS quirk preserved: maxModules || LIMITS.maxModules — zero is falsy.
-    let cap = match max_modules {
-        Some(0) | None => LIMITS.max_modules,
-        Some(n) => n,
-    };
+    let cap = crate::util::limit_or(max_modules, LIMITS.max_modules);
     let map_start = text.find("__webpack_modules__");
     let open_index = match map_start {
         Some(at) => text[at..].find('{').map(|r| at + r),

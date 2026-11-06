@@ -822,19 +822,12 @@ fn js_date_string() -> String {
         .map(|d| d.as_secs())
         .unwrap_or(0);
     let days = secs / 86_400;
-    let rem = secs % 86_400;
     let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     // 1970-01-01 was a Thursday (index 4).
     let weekday = names[((days + 4) % 7) as usize];
-    let iso = crate::util::iso8601_from_unix_secs(secs);
-    let (date, _time) = iso.split_once('T').unwrap_or((iso.as_str(), ""));
-    let (year, rest) = date.split_once('-').unwrap_or((date, ""));
-    let (month, day) = rest.split_once('-').unwrap_or((rest, ""));
+    let (year, month, day, hour, minute, second) = crate::util::civil_from_unix_secs(secs);
     format!(
-        "{weekday} {month} {day} {year} {:02}:{:02}:{:02} GMT+0000 (Coordinated Universal Time)",
-        rem / 3600,
-        (rem % 3600) / 60,
-        rem % 60
+        "{weekday} {month:02} {day:02} {year} {hour:02}:{minute:02}:{second:02} GMT+0000 (Coordinated Universal Time)"
     )
 }
 

@@ -34,11 +34,7 @@ pub fn looks_minified(text: &str) -> bool {
 /// with two-space indent; content inside parentheses stays inline; strings,
 /// templates, comments and regexes pass through untouched.
 pub fn beautify_js(text: &str, max_bytes: Option<usize>) -> String {
-    // JS quirk preserved: maxBytes || LIMITS.maxBeautifyBytes — zero is falsy.
-    let limit = match max_bytes {
-        Some(0) | None => LIMITS.max_beautify_bytes,
-        Some(n) => n,
-    };
+    let limit = crate::util::limit_or(max_bytes, LIMITS.max_beautify_bytes);
     if utf16_len(text) > limit {
         return text.to_string();
     }

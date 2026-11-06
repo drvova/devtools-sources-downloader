@@ -24,25 +24,6 @@ impl Counts {
         self.0.insert(key, Value::from(next));
     }
 
-    pub fn get(&self, key: &str) -> Option<u64> {
-        self.0.get(key).and_then(|value| value.as_u64())
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    pub fn keys(&self) -> impl Iterator<Item = &String> {
-        self.0.keys()
-    }
-
-    pub fn to_value(&self) -> Value {
-        Value::Object(self.0.clone())
-    }
 }
 
 impl Serialize for Counts {

@@ -219,7 +219,7 @@ pub fn finalize_zip_with_recon(
     let script_assets = assets_from_inputs(js_assets);
     // The JavaScript hardcodes this prefix at the runtime call site, so the
     // script pass's prefix never applies to the runtime pass.
-    let mut runtime_options = clone_options(options);
+    let mut runtime_options = options.clone();
     runtime_options.path_prefix = "_unpack-runtime".to_string();
 
     let (script_report, runtime_report) = {
@@ -237,21 +237,6 @@ pub fn finalize_zip_with_recon(
 
 /// The unpack options are borrowed through `fetch_text` and `inflate`, so the
 /// runtime pass gets its own copy with a different prefix.
-fn clone_options<'a>(options: &UnpackOptions<'a>) -> UnpackOptions<'a> {
-    UnpackOptions {
-        index: options.index,
-        zip_path: options.zip_path.clone(),
-        max_depth: options.max_depth,
-        max_modules: options.max_modules,
-        max_beautify_bytes: options.max_beautify_bytes,
-        path_prefix: options.path_prefix.clone(),
-        fetch_text: options.fetch_text,
-        inflate: options.inflate,
-        shared_jsc_strings: options.shared_jsc_strings,
-        shared_jsc_source: options.shared_jsc_source.clone(),
-    }
-}
-
 /// The panel's export summary line, built from the merged report's totals.
 pub fn export_summary(report: &Value) -> String {
     let totals = report.get("totals").cloned().unwrap_or(Value::Null);

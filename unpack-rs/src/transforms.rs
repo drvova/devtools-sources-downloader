@@ -379,11 +379,7 @@ fn collect_refusals(text: &str) -> Vec<Refusal> {
 /// its metadata, so a caller can write real layer artifacts without
 /// inflating the JSON report.
 pub fn peel_text(text: &str, max_depth: Option<usize>) -> PeelResult {
-    // JS quirk preserved: opts.maxDepth || LIMITS.maxDepth — zero is falsy.
-    let max_depth = match max_depth {
-        Some(0) | None => DEFAULT_MAX_DEPTH,
-        Some(n) => n,
-    };
+    let max_depth = crate::util::limit_or(max_depth, DEFAULT_MAX_DEPTH);
     let mut stages: Vec<Stage> = Vec::new();
     let mut outputs: Vec<String> = Vec::new();
     let refusals = collect_refusals(text);

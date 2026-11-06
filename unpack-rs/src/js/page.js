@@ -14,9 +14,6 @@ import {
 // The archive is assembled in the engine: everything here collects
 // [{path, content}] / [{path, base64}] and one call turns it into bytes. The
 // engine's own file lists use that same shape, so they append straight in.
-function collectFiles(target, files) {
-    target.push.apply(target, files);
-}
 
 // Saving is the one part that cannot leave the DOM.
 function saveBytes(name, bytes) {
@@ -123,11 +120,7 @@ function renderStackProfile(profile, captureStatus) {
               : 'generic-app';
     captureConfidenceEl.textContent =
         activeProfile && activeProfile.confidence ? activeProfile.confidence + '%' : '--';
-    captureReasonEl.textContent = describeCaptureReason(activeStatus, activeProfile);
-}
-
-function describeCaptureReason(status, profile) {
-    return panelDescribeCaptureReason(status, profile);
+    captureReasonEl.textContent = panelDescribeCaptureReason(activeStatus, activeProfile);
 }
 
 // The page-profile analysis lives in the engine: the page world collects the
@@ -478,7 +471,7 @@ function finalizeZipWithRecon(files, jsAssets, reconData, pageSnapshot) {
             result = panelFinalizeZipWithRecon(jsAssets, reconData, pageSnapshot, runtimePayloads, {
                 pathPrefix: '_unpack',
             });
-            collectFiles(files, result.files);
+            files.push.apply(files, result.files);
         } catch (err) {
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download All';

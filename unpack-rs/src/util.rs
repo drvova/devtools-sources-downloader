@@ -47,8 +47,6 @@ pub fn utf16_suffix(text: &str, n: usize) -> &str {
     text
 }
 
-/// `new Date().toISOString()` without a time crate: civil-from-days
-/// (Howard Hinnant's algorithm) over the Unix epoch.
 /// Civil date and time for a Unix second count: (year, month, day, hour,
 /// minute, second). Howard Hinnant's `civil_from_days`, which the zip writer
 /// needs for DOS timestamps as much as the reports need for ISO 8601.
@@ -171,6 +169,15 @@ pub fn is_ecmascript_whitespace(c: char) -> bool {
 
 /// JS `\w`: ASCII word characters only.
 pub const JS_W: &str = r"A-Za-z0-9_";
+
+/// The JS `opts.x || DEFAULT` idiom: zero is falsy, so an explicit `Some(0)`
+/// means "unset" exactly like `None` does.
+pub fn limit_or(value: Option<usize>, default: usize) -> usize {
+    match value {
+        Some(0) | None => default,
+        Some(n) => n,
+    }
+}
 
 #[cfg(test)]
 mod tests {
