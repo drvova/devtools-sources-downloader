@@ -61,7 +61,7 @@ realistic payload shape.
 | `skip_template(text, i)` | as above, but `${` recurses through `find_balanced` so a `}` inside an interpolation does not close the template. |
 | `skip_line_comment` | to just past the next `\n`, or EOF. |
 | `skip_block_comment` | to just past `*/`, or EOF. |
-| `is_regex_start(text, i)` | walks back over whitespace. Start of text → true. Otherwise the previous char must **not** be alphanumeric, `_`, `$`, `)`, or `]`. That single rule is what distinguishes division from a regex literal. |
+| `is_regex_start(text, i)` | walks back over whitespace (`util::is_ascii_js_space_byte`). Start of text → true. Otherwise the previous char must **not** be alphanumeric, `_`, `$`, `)`, or `]`. That single rule is what distinguishes division from a regex literal. |
 | `skip_regex(text, i)` | tracks `[` … `]` character classes so `[/]` does not end the literal; consumes trailing flags. A raw newline aborts and returns `i+1` (not a regex after all). |
 | `collect_string_literals(text, min)` | walks the text; on a quote, records `{start, end, quote, raw, value}` where `value = decode_escapes(raw)`, kept only when `utf16_len(value) >= min`. Skips comments and regexes so their quotes never open a literal. |
 | `find_balanced(text, open_index)` | `{`/`[`/`(` → the index **just past** the matching close, or `None`. Skips strings, templates, comments and regexes while counting. |
@@ -546,9 +546,21 @@ wrong offset or size cannot pass.
 
 | Module | Role |
 | --- | --- |
-| `util.rs` | `utf16_len/prefix/suffix` (JS slice semantics — never splits a surrogate pair), `civil_from_unix_secs` (Howard Hinnant's algorithm, shared by ISO-8601 and DOS stamps), `now_unix_millis` (the wasm clock seam), `regex_escape`, `BAD_PATH_CHARS` |
+| `util.rs` | `utf16_len/prefix/suffix` (JS slice semantics — never splits a surrogate pair), `civil_from_unix_secs` (Howard Hinnant's algorithm, shared by ISO-8601 and DOS stamps), `now_unix_millis` (the wasm clock seam), `regex_escape`, `BAD_PATH_CHARS`, and the two whitespace sets |
 | `jsnumber.rs` | `js_number_to_string` (ECMA-262 7.1.12.1 — the `k`/`n` digit-position algorithm, so `1e-7` prints `1e-7` and `1e20` prints 21 digits), `js_number_to_radix_string`, `js_string_to_number`, `js_escape` |
 | `digest.rs` | SHA-256 over text and bytes; `sha256_hex_bytes` answers `None` for empty input |
+
+### Two whitespace sets, deliberately
+
+`is_ascii_js_space` / `is_ascii_js_space_byte` cover space, tab, LF, VT, FF and CR — the
+ASCII subset. `is_ecmascript_whitespace` covers the **full** ECMAScript `\s`, adding U+00A0,
+U+FEFF, U+1680, U+2000–200A, U+2028, U+2029, U+202F, U+205F and U+3000.
+
+They are separate because they mean different things. Every pattern in the engine scans
+minified source, where those extra characters do not appear between tokens — widening the
+class would change what every one of them matches. Only `ToNumber` uses the full set, because
+`Number(string)` genuinely trims `\s`. Keeping the two distinguishable **by name** is what
+stops a well-meant widening from silently changing the scanner.
 
 `BAD_PATH_CHARS` has **one definition on purpose**: widening the set for one producer used
 to leave the other four writing names it would reject. There are two forms — one for a path
