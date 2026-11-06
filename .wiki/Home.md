@@ -75,10 +75,10 @@ beside the Rust sources are simply not Rust sources. That is what makes the flat
 | --- | --- |
 | Rust source | ~18.0k lines: 19 files in `src/`, 15 in `src/panel/` |
 | JavaScript | ~3.0k lines, all platform layer |
-| Engine wasm | ~2.2 MB (2 201 236 bytes; release, `opt-level = "z"`, LTO, stripped) |
+| Engine wasm | ~2.2 MB (2 200 952 bytes; release, `opt-level = "z"`, LTO, stripped) |
 | Bridge exports | 51 |
 | wasm dispatch arms | 44 |
-| Rust tests | 67 unit + 85 integration |
+| Rust tests | 68 unit + 85 integration |
 | JS tests | 68 cases against the shipped wasm |
 | Browser e2e | 2 suites, 54 assertions |
 
