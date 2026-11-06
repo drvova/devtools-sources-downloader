@@ -1049,8 +1049,10 @@ fn binary_pass_jsc_asset_lands_functions_json_with_the_oracle_tree() {
     let tools = stage_tools(&res.entry.stages);
     assert!(tools.iter().any(|d| d.contains("jsc-bytecode")));
     let stage_detail_lines = stage_details(&res.entry.stages);
+    // Delimited, not bare: `"17 functions".contains("7 functions")` is true, so
+    // the undelimited form could pass on the wrong count.
     assert!(
-        stage_detail_lines[0].contains("7 functions"),
+        stage_detail_lines[0].contains(", 7 functions,"),
         "stage detail must name the function count, got: {}",
         stage_detail_lines[0]
     );
@@ -1070,6 +1072,14 @@ fn binary_pass_jsc_asset_lands_functions_json_with_the_oracle_tree() {
 // Minimal shared EncoderStringTable from real claude.exe records: count,
 // offset per ordinal, records laid out in ordinal order (the writer's own
 // layout); unneeded ordinals point at a zero-length marker both readers skip.
+//
+// This is a round trip, so on its own it cannot catch a layout misreading shared
+// by the writer and the reader. The layout is validated against real bytes
+// elsewhere: `jsc_cached_function_tree_matches_the_unbuned_oracle` walks the
+// captured `jsc-chunk.jsc`, which reaches `read_jsc_shared_table` through the
+// real walker, and compares the whole tree against a captured oracle. What this
+// test adds is the record VALUES and the hole handling, which the real chunk
+// exercises only where its own records happen to land.
 fn build_shared_table(corrupt_ordinal: Option<u32>) -> Vec<u8> {
     let records_json = fixture_json("jsc-shared-records.json");
     let count = records_json["count"].as_u64().unwrap() as u32;
@@ -1418,7 +1428,7 @@ fn binary_pass_cjs_asset_lands_functions_json_with_real_names() {
     assert!(tools.iter().any(|d| d.contains("jsc-bytecode")));
     let details = stage_details(&chunk_entry.stages);
     assert!(
-        details[0].contains("17 functions"),
+        details[0].contains(", 17 functions,"),
         "stage detail must name the count, got: {}",
         details[0]
     );
