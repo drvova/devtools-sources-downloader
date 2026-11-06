@@ -53,9 +53,9 @@ living beside the Rust sources are simply not Rust sources.
 
 | | |
 | --- | --- |
-| Rust source | ~17.1k lines: 19 files in `src/` (18 modules + `lib.rs`) and 14 in `src/panel/` |
-| JavaScript | ~2.9k lines, all platform layer |
+| Rust source | ~17.8k lines: 19 files in `src/` (18 modules + `lib.rs`) and 14 in `src/panel/` |
+| JavaScript | ~3.0k lines, all platform layer |
 | Engine wasm | ~2.2 MB (release, `opt-level = "z"`, LTO, stripped) |
-| Rust tests | 64 unit + 81 integration |
+| Rust tests | 64 unit + 82 integration |
 | JS tests | 67 cases against the shipped wasm |
 | Browser e2e | 2 suites (stubbed-API page, real unpacked extension) |

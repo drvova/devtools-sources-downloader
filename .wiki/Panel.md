@@ -20,11 +20,27 @@ The rules the page world applies, as data:
 | `REDACT_KEY_PATTERN` | `token\|secret\|password\|passwd\|cookie\|authorization\|bearer\|jwt\|session` |
 | `TEXT_MIME_PATTERN` | `(?:javascript\|ecmascript\|typescript\|json\|text\|xml\|svg\|html\|css)` |
 | `GRAPHQL_URL_MARKER` | `graphql` |
-| limits | items 12, keys 24, string 240, mutations 500, runtime items 200, runtime text 256 KiB, runtime binary 1 MiB |
-
 A key matching the redaction pattern is replaced with `[redacted]` before it can reach the
 archive. This rule had **zero test coverage** while it lived inside a page-world bundle;
 moving it here is what made it testable (`tests/capture_policy_test.rs`).
+
+Eighteen budgets bound what a capture keeps:
+
+| Limit | Value | Limit | Value |
+| --- | --- | --- | --- |
+| `items` | 12 | `runtimeItems` | 200 |
+| `keys` | 24 | `runtimeText` | 256 KiB |
+| `string` | 240 | `runtimeBinary` | 1 MiB |
+| `mutations` | 500 | `responseText` | 10 000 |
+| `resourceUrls` | 160 | `socketMessage` | 2 000 |
+| `scriptUrls` | 80 | `mutationText` | 200 |
+| `endpoints` | 20 | `elementText` | 80 |
+| `classNames` | 8 | `elementLabel` | 40 |
+| `queryItems` | 6 | `technologies` | 12 |
+
+The page world reads these by name through a `limit(name)` accessor that answers 0 for an
+unknown name — so a renamed key can never become an unbounded slice, and a test asserts that
+every name the page world reads is answered and every key in the object is read.
 
 ## Stack profile (`stackprofile.rs`)
 

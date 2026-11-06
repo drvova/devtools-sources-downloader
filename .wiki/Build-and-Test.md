@@ -53,7 +53,7 @@ change one and change the other, or the two gates drift apart while both still p
 | `src/**` unit tests | 64 | each module's contract, in place |
 | `tests/unpack_test.rs` | 67 | engine behavior against fixtures: scanner, decoders, every peel layer, packers, JSFuck, bundle splitting, source maps, the binary formats, and the full asset pipeline |
 | `tests/stack_profile_test.rs` | 6 | 28 captured snapshots match the page-world analyzer by value **and** by serialized text; a coverage guard asserts the fixtures still span every detector, trait and strategy; confidence ties break by name the way `localeCompare` does; a non-object snapshot falls back to the generic profile |
-| `tests/capture_policy_test.rs` | 5 | both patterns over their corpora, the seven limits, the injected shape, and a guard that neither page-world module carries a local copy again |
+| `tests/capture_policy_test.rs` | 6 | both patterns over their corpora, the limits, the injected shape, that every limit name the page world reads is answered and every key is read, and a guard that neither page-world module carries a local copy again |
 | `tests/text_helpers.rs` | 3 | JS string semantics |
 | `test/unpack.test.mjs` | 67 | the same API through the wasm bridge — i.e. the *shipped artifact* |
 | `test/browser-e2e.mjs` | 47 assertions | the built bundle in a real browser: injects, captures, clicks Download All, reads the produced zip |
