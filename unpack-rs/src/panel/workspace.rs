@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use crate::panel::assets::{field_number, field_str, js_truthy};
 use crate::panel::boundary::{
     array_contains_any, chain_touches_boundary, flow_touches_any_boundary, flow_touches_boundary,
+    BoundaryLabel,
     matches_any_boundary, matches_boundary_entry,
 };
 use crate::panel::text::js_number_value;
@@ -56,102 +57,130 @@ fn chain_touches_any_boundary(chain: &Value, boundaries: &[String]) -> bool {
         .any(|boundary| crate::panel::boundary::chain_touches_boundary(chain, boundary))
 }
 
-/// `getBoundaryTitle`.
-fn get_boundary_title(boundary: &str) -> String {
-    let title = match boundary {
-        "bootstrap" => "Bootstrap workspace",
-        "router" => "Router workspace",
-        "state" => "State workspace",
-        "data" => "Data workspace",
-        "auth" => "Auth workspace",
-        "analytics" => "Analytics workspace",
-        "editor" => "Editor workspace",
-        "vendor" => "Vendor workspace",
-        _ => return format!("{boundary} workspace"),
-    };
-    title.to_string()
+/// Everything the workspace views say about one boundary.
+///
+/// Held as one table because these were three separate matches on the same key -
+/// a title arm, a description arm and a questions arm - so adding a boundary
+/// meant finding all three, and missing one silently fell back to the generic
+/// text while the other two looked correct.
+struct BoundaryProfile {
+    label: BoundaryLabel,
+    title: &'static str,
+    description: &'static str,
+    questions: &'static [&'static str],
 }
 
-/// `getBoundaryDescription`.
-fn get_boundary_description(boundary: &str) -> String {
-    let description = match boundary {
-        "bootstrap" => {
-            "Focus on initial loaders, hydration code, runtime bootstraps, and early execution pivots."
-        }
-        "router" => {
-            "Focus on navigation, route loaders, route-linked chunks, and follow-on route activity."
-        }
-        "state" => {
-            "Focus on stores, persistence, rehydration, and state-driven transitions into other subsystems."
-        }
-        "data" => {
-            "Focus on API clients, GraphQL, fetch/XHR activity, and data-triggered runtime behavior."
-        }
-        "auth" => {
-            "Focus on session setup, token handling, login/logout paths, and downstream auth-driven requests."
-        }
-        "analytics" => {
-            "Focus on telemetry, tracking beacons, pageview/reporting paths, and analytics fan-out."
-        }
-        "editor" => {
-            "Focus on rich-text/editor runtimes, content workflows, and document mutation paths."
-        }
-        "vendor" => {
-            "Focus on third-party/framework code that spawns runtime artifacts or crosses into business logic."
-        }
-        _ => return "Focus on artifacts labeled for this subsystem.".to_string(),
-    };
-    description.to_string()
-}
-
-/// `getBoundaryQuestions`.
-fn get_boundary_questions(boundary: &str) -> Vec<String> {
-    let questions: &[&str] = match boundary {
-        "bootstrap" => &[
+const PROFILES: [BoundaryProfile; 8] = [
+    BoundaryProfile {
+        label: BoundaryLabel::Bootstrap,
+        title: "Bootstrap workspace",
+        description: "Focus on initial loaders, hydration code, runtime bootstraps, and early execution pivots.",
+        questions: &[
             "What actually starts the application?",
             "Which chunks materialize runtime artifacts first?",
             "Where does bootstrap hand off to router, state, or data code?",
         ],
-        "router" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::Router,
+        title: "Router workspace",
+        description: "Focus on navigation, route loaders, route-linked chunks, and follow-on route activity.",
+        questions: &[
             "Which chunks own navigation?",
             "What route-linked requests or runtime artifacts follow router activity?",
             "Which entrypoints look route-specific?",
         ],
-        "state" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::State,
+        title: "State workspace",
+        description: "Focus on stores, persistence, rehydration, and state-driven transitions into other subsystems.",
+        questions: &[
             "Which stores or persistence seams are present?",
             "Does state drive data fetches or router changes?",
             "Which runtime artifacts look state-derived?",
         ],
-        "data" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::Data,
+        title: "Data workspace",
+        description: "Focus on API clients, GraphQL, fetch/XHR activity, and data-triggered runtime behavior.",
+        questions: &[
             "Which requests look like the primary API layer?",
             "Which chunks and runtimes trigger requests?",
             "Are GraphQL or other data clients obvious?",
         ],
-        "auth" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::Auth,
+        title: "Auth workspace",
+        description: "Focus on session setup, token handling, login/logout paths, and downstream auth-driven requests.",
+        questions: &[
             "Where is session or token handling initialized?",
             "Which requests belong to login/session refresh?",
             "What does auth trigger next: data, router, or analytics?",
         ],
-        "analytics" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::Analytics,
+        title: "Analytics workspace",
+        description: "Focus on telemetry, tracking beacons, pageview/reporting paths, and analytics fan-out.",
+        questions: &[
             "Which beacons or SDK seams are present?",
             "What subsystem activity feeds analytics?",
             "Which chunks likely own telemetry wiring?",
         ],
-        "editor" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::Editor,
+        title: "Editor workspace",
+        description: "Focus on rich-text/editor runtimes, content workflows, and document mutation paths.",
+        questions: &[
             "Which assets or runtimes look content- or editor-related?",
             "What runtime materialization follows editor activity?",
             "Does editor activity lead into state or data flows?",
         ],
-        "vendor" => &[
+    },
+    BoundaryProfile {
+        label: BoundaryLabel::Vendor,
+        title: "Vendor workspace",
+        description: "Focus on third-party/framework code that spawns runtime artifacts or crosses into business logic.",
+        questions: &[
             "Which third-party bundles are most influential?",
             "Which runtime artifacts come from vendor/framework code?",
             "Where does vendor code cross into app subsystems?",
         ],
-        _ => &[
+    },
+];
+
+/// The boundary names arrive as data, so an unknown one falls back to generic
+/// text rather than panicking.
+fn profile(boundary: &str) -> Option<&'static BoundaryProfile> {
+    PROFILES.iter().find(|profile| profile.label == boundary)
+}
+
+/// `getBoundaryTitle`.
+fn get_boundary_title(boundary: &str) -> String {
+    profile(boundary)
+        .map(|profile| profile.title.to_string())
+        .unwrap_or_else(|| format!("{boundary} workspace"))
+}
+
+/// `getBoundaryDescription`.
+fn get_boundary_description(boundary: &str) -> String {
+    profile(boundary)
+        .map(|profile| profile.description.to_string())
+        .unwrap_or_else(|| "Focus on artifacts labeled for this subsystem.".to_string())
+}
+
+/// `getBoundaryQuestions`.
+fn get_boundary_questions(boundary: &str) -> Vec<String> {
+    let questions = profile(boundary)
+        .map(|profile| profile.questions)
+        .unwrap_or(&[
             "Which artifacts belong here?",
             "Which flows enter or leave this boundary?",
-        ],
-    };
+        ]);
     questions.iter().map(|q| q.to_string()).collect()
 }
 
@@ -391,10 +420,16 @@ fn build_framework_state_workspace(analysis: &Value, existing_workspaces: &[Valu
         .filter(|v| js_truthy(v))
         .cloned()
         .unwrap_or_else(|| json!({}));
-    let boundaries: Vec<String> = ["bootstrap", "router", "state", "data", "auth"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    let boundaries: Vec<String> = [
+        BoundaryLabel::Bootstrap,
+        BoundaryLabel::Router,
+        BoundaryLabel::State,
+        BoundaryLabel::Data,
+        BoundaryLabel::Auth,
+    ]
+    .iter()
+    .map(|label| label.as_str().to_string())
+    .collect();
     let chunks: Vec<Value> = items_of(analysis, "chunkMap")
         .into_iter()
         .filter(|item| matches_any_boundary(item, &boundaries))
@@ -595,7 +630,9 @@ fn build_journey_views(analysis: &Value, workspaces: &[Value]) -> Vec<Value> {
         .iter()
         .map(|workspace| (field_str(workspace, "id"), workspace.clone()))
         .collect();
-    let focus = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+    let focus = |items: &[BoundaryLabel]| {
+        items.iter().map(|label| label.as_str().to_string()).collect::<Vec<String>>()
+    };
     vec![
         build_journey_view(
             "initial-load",
@@ -603,10 +640,15 @@ fn build_journey_views(analysis: &Value, workspaces: &[Value]) -> Vec<Value> {
             "Trace how bootstrap code, runtime materialization, routing, and data startup fit together during first load.",
             analysis,
             &workspace_map,
-            &focus(&["bootstrap", "router", "data", "state"]),
+            &focus(&[
+                BoundaryLabel::Bootstrap,
+                BoundaryLabel::Router,
+                BoundaryLabel::Data,
+                BoundaryLabel::State,
+            ]),
             &|flow| {
-                field_str(flow, "fromBoundary") == "bootstrap"
-                    || field_str(flow, "toBoundary") == "bootstrap"
+                field_str(flow, "fromBoundary") == BoundaryLabel::Bootstrap.as_str()
+                    || field_str(flow, "toBoundary") == BoundaryLabel::Bootstrap.as_str()
                     || field_str(flow, "relation") == "imports-boundary"
                     || field_str(flow, "relation") == "materializes-runtime"
             },
@@ -617,8 +659,13 @@ fn build_journey_views(analysis: &Value, workspaces: &[Value]) -> Vec<Value> {
             "Slice the session/auth path and its downstream transitions into data, router, and analytics.",
             analysis,
             &workspace_map,
-            &focus(&["auth", "data", "router", "analytics"]),
-            &|flow| flow_touches_boundary(flow, "auth"),
+            &focus(&[
+                BoundaryLabel::Auth,
+                BoundaryLabel::Data,
+                BoundaryLabel::Router,
+                BoundaryLabel::Analytics,
+            ]),
+            &|flow| flow_touches_boundary(flow, BoundaryLabel::Auth.as_str()),
         ),
         build_journey_view(
             "route-change",
@@ -626,8 +673,13 @@ fn build_journey_views(analysis: &Value, workspaces: &[Value]) -> Vec<Value> {
             "Slice the navigation path through router, data, state, and analytics activity.",
             analysis,
             &workspace_map,
-            &focus(&["router", "data", "state", "analytics"]),
-            &|flow| flow_touches_boundary(flow, "router"),
+            &focus(&[
+                BoundaryLabel::Router,
+                BoundaryLabel::Data,
+                BoundaryLabel::State,
+                BoundaryLabel::Analytics,
+            ]),
+            &|flow| flow_touches_boundary(flow, BoundaryLabel::Router.as_str()),
         ),
         build_journey_view(
             "runtime-materialization",
@@ -635,7 +687,11 @@ fn build_journey_views(analysis: &Value, workspaces: &[Value]) -> Vec<Value> {
             "Show which chunks create runtime artifacts and how those artifacts lead into requests or more runtime generation.",
             analysis,
             &workspace_map,
-            &focus(&["bootstrap", "vendor", "data"]),
+            &focus(&[
+                BoundaryLabel::Bootstrap,
+                BoundaryLabel::Vendor,
+                BoundaryLabel::Data,
+            ]),
             &|flow| {
                 field_str(flow, "relation") == "materializes-runtime"
                     || field_str(flow, "relation") == "spawns-runtime"
@@ -659,18 +715,9 @@ pub fn build_investigation_workspace(analysis: &Value) -> Value {
                 .collect()
         })
         .unwrap_or_else(|| {
-            [
-                "bootstrap",
-                "router",
-                "state",
-                "data",
-                "auth",
-                "analytics",
-                "editor",
-                "vendor",
-            ]
-            .iter()
-            .map(|s| s.to_string())
+            BoundaryLabel::ALL
+                .iter()
+                .map(|label| label.as_str().to_string())
             .collect()
         });
     let mut workspaces: Vec<Value> = categories
