@@ -13,6 +13,9 @@
   (:export
    ;; paths
    #:repo-root
+   #:unpack-rs-dir
+   #:dist-dir
+   #:cache-dir
    #:find-on-path
    #:node-exe
    #:cargo-exe
@@ -30,7 +33,6 @@
    #:split-lines
    #:read-headers
    #:read-exactly
-   #:read-until-double-crlf
    #:read-until-eof
    #:file-size
    ;; text
@@ -39,7 +41,6 @@
    #:read-sexp
    #:read-sexp-file
    #:write-sexp-file
-   #:sexp-string
    #:sexp-selftest
    #:sexp-error
    ;; json: the wire boundary only (DevTools Protocol, Chrome's manifest.json).
@@ -47,7 +48,6 @@
    #:json-decode
    #:json-encode
    #:json-selftest
-   #:json-key->keyword
    #:keyword->json-key))
 
 (defpackage :vovas.cdp.ws
@@ -58,7 +58,7 @@
    #:ws-send-text
    #:ws-read-message
    #:ws-close
-   #:ws-open-p
+   #:ws-conn-open-p
    #:ws-error
    #:ws-error-message))
 
@@ -72,10 +72,10 @@
   (:nicknames :vcdp)
   (:use :cl)
   (:import-from :vovas.tools.util
-   #:repo-root #:find-on-path #:log-line
+   #:repo-root #:unpack-rs-dir #:dist-dir #:cache-dir #:find-on-path #:log-line
    #:json-decode #:json-encode #:url-encode)
   (:import-from :vovas.cdp.ws
-   #:ws-connect #:ws-send-text #:ws-read-message #:ws-close #:ws-open-p)
+   #:ws-connect #:ws-send-text #:ws-read-message #:ws-close #:ws-conn-open-p)
   (:import-from :vovas.cdp.http #:http-request)
   (:export
    ;; lifecycle
@@ -104,6 +104,6 @@
   (:nicknames :vt)
   (:use :cl)
   (:import-from :vovas.tools.util
-   #:repo-root #:log-line #:json-decode #:npm-argv)
+   #:repo-root #:unpack-rs-dir #:dist-dir #:cache-dir #:log-line #:json-decode #:npm-argv)
   (:import-from :vovas.cdp #:smoke-test #:panel-check)
   (:export #:main #:build #:check #:pack))

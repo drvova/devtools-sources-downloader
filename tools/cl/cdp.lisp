@@ -32,7 +32,7 @@ that needs a stable profile can name one. Returns the browser handle (also bound
 to *browser*)."
   (let* ((chrome (ensure-chrome))
          (udd (uiop:merge-pathnames*
-               (format nil "unpack-rs/.cache/cdp-profile/~a/"
+               (format nil "cdp-profile/~a/"
                        (or profile-name (format nil "~d" (get-universal-time))))
                (repo-root)))
          (argv (append (list (namestring chrome)
@@ -220,8 +220,8 @@ Returns (values value type); signals on JS exceptions."
     (let* ((bytes (cl-base64:base64-string-to-usb8-array data))
            (path (or file
                      (uiop:merge-pathnames*
-                      (format nil "unpack-rs/.cache/cdp-shot-~d.png" (get-universal-time))
-                      (repo-root)))))
+                      (format nil "cdp-shot-~d.png" (get-universal-time))
+                      (cache-dir)))))
       (with-open-file (f path :direction :output :if-exists :supersede
                               :element-type '(unsigned-byte 8))
         (write-sequence bytes f))

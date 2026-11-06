@@ -57,12 +57,12 @@ sbcl --load tools/cl/run.lisp
 
 ```lisp
 (vcdp:launch :headless t)          ; or (vcdp:attach 9222) to a browser you already run
-(vcdp:tabs)                        ; every target as a hash-table
+(vcdp:tabs)                        ; every target as a plist
 (vcdp:use "example")               ; connect to the target whose id/url/title matches
 (vcdp:nav "http://localhost:3000")
 (vcdp:eval* "document.title")      ; => value, type
 (vcdp:shot :file "shot.png")
-(vcdp:call "Network.enable")       ; anything not wrapped yet
+(vcdp:call (vcdp:*browser*) "Network.enable") ; anything not wrapped yet
 (vcdp:kill)
 ```
 

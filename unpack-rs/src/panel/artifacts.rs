@@ -32,11 +32,27 @@ fn runtime_folder_name(kind: &str) -> &'static str {
     }
 }
 
-fn mime_matches(pattern: &str, mime_type: &str) -> bool {
-    regex::Regex::new(pattern)
-        .expect("mime pattern compiles")
-        .is_match(mime_type)
-}
+/// The mime table, compiled once. It used to build a fresh `Regex` on every
+/// call, inside the loop below, once per runtime entry.
+static MIME_TABLE: LazyLock<Vec<(regex::Regex, &'static str)>> = LazyLock::new(|| {
+    [
+        (r"(?i)javascript|ecmascript|typescript", "js"),
+        (r"(?i)json", "json"),
+        (r"(?i)html", "html"),
+        (r"(?i)css", "css"),
+        (r"(?i)svg", "svg"),
+        (r"(?i)xml", "xml"),
+        (r"(?i)text", "txt"),
+    ]
+    .into_iter()
+    .map(|(pattern, extension)| {
+        (
+            regex::Regex::new(pattern).expect("mime pattern compiles"),
+            extension,
+        )
+    })
+    .collect()
+});
 
 /// `runtimeExtension`.
 fn runtime_extension(entry: &Value) -> String {
@@ -46,17 +62,9 @@ fn runtime_extension(entry: &Value) -> String {
     if kind == "wasm" || WASM.is_match(&mime_type) {
         return "wasm".to_string();
     }
-    for (pattern, extension) in [
-        (r"(?i)javascript|ecmascript|typescript", "js"),
-        (r"(?i)json", "json"),
-        (r"(?i)html", "html"),
-        (r"(?i)css", "css"),
-        (r"(?i)svg", "svg"),
-        (r"(?i)xml", "xml"),
-        (r"(?i)text", "txt"),
-    ] {
-        if mime_matches(pattern, &mime_type) {
-            return extension.to_string();
+    for (pattern, extension) in MIME_TABLE.iter() {
+        if pattern.is_match(&mime_type) {
+            return (*extension).to_string();
         }
     }
     match kind.as_str() {

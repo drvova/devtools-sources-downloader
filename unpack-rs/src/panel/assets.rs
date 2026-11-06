@@ -620,16 +620,18 @@ pub fn prepare_script_assets(inputs: &[ScriptInput], recon: Option<&Value>) -> V
 }
 
 
-/// `countPropertyValues`: values keyed by the given property, falsy -> unknown.
-pub fn count_property_values(items: &[ScriptAsset], key: &str) -> Counts {
+/// `countPropertyValues` for the one property the panel counts: classification,
+/// falsy -> unknown. The former `key: &str` parameter only ever received
+/// "classification" while carrying a dead "bundler" arm and a silent `_ =>`
+/// fallback that would have counted "unknown" for any typo.
+pub fn count_classifications(items: &[ScriptAsset]) -> Counts {
     let mut counts = Counts::default();
     for item in items {
-        let value = match key {
-            "classification" => item.classification.clone(),
-            "bundler" => item.bundler.clone(),
-            _ => String::new(),
+        let value = if item.classification.is_empty() {
+            "unknown".to_string()
+        } else {
+            item.classification.clone()
         };
-        let value = if value.is_empty() { "unknown".to_string() } else { value };
         counts.add(value);
     }
     counts
@@ -671,7 +673,7 @@ pub fn build_chunk_summary(assets: &[ScriptAsset]) -> Value {
     serde_json::json!({
         "totalScripts": assets.len(),
         "bundlersObserved": bundlers_observed,
-        "classifications": count_property_values(assets, "classification"),
+        "classifications": count_classifications(assets),
         "boundaryLabels": count_boundary_labels(assets),
         "sourceMapEmbedded": source_map_embedded,
         "dynamicImporters": dynamic_importers,
@@ -948,7 +950,10 @@ pub fn build_runtime_summary(origins: &[RuntimeOrigin]) -> Value {
                 .unwrap_or(false)
         })
         .count();
-    let mut boundary_labels: BTreeMap<String, usize> = BTreeMap::new();
+    // Counts, not BTreeMap: this object is serialized into the analysis, and the
+    // JavaScript emitted first-seen order. PORTING.md records the alphabetical
+    // BTreeMap as the bug that was fixed everywhere else; this counter was missed.
+    let mut boundary_labels = Counts::default();
     for item in origins {
         for label in item
             .get("boundaryLabels")
@@ -957,7 +962,7 @@ pub fn build_runtime_summary(origins: &[RuntimeOrigin]) -> Value {
             .unwrap_or_default()
         {
             if let Some(label) = label.as_str() {
-                *boundary_labels.entry(label.to_string()).or_insert(0) += 1;
+                boundary_labels.add(label);
             }
         }
     }

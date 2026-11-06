@@ -1769,7 +1769,7 @@ pub fn build_framework_runtime_summary(
             _ => Value::Null,
         },
         "captureReason": field_str(&capture_status, "reasonText"),
-        "assetClasses": crate::panel::assets::count_property_values(assets, "classification"),
+        "assetClasses": crate::panel::assets::count_classifications(assets),
         "bundlersObserved": bundlers,
         "boundaries": match boundary_labels {
             Some(labels) => labels.get("summary").cloned().unwrap_or(Value::Null),

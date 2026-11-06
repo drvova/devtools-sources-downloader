@@ -59,8 +59,7 @@ registry. Returns 0 when every check passes, 1 otherwise."
   (let ((checks 0)
         (ok t)
         (dist (string-right-trim "/" (namestring
-                                      (uiop:merge-pathnames* "unpack-rs/dist/"
-                                                             (repo-root)))))
+                                      (dist-dir))))
         (browser nil))
     (flet ((check (name condition &optional detail)
              (if condition

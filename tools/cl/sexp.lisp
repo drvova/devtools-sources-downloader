@@ -48,8 +48,11 @@ Signals SEXP-ERROR when the text is empty, malformed, or holds more than one for
                     (error (e) (sexp-error "~a: ~a" source e)))))
         (when (eq form :eof)
           (sexp-error "~a: no form" source))
-        ;; a second form is a mistake in a data file, never a second value
-        (let ((extra (handler-case (read in nil :eof) (error () :eof))))
+        ;; A second form is a mistake in a data file, never a second value. A
+        ;; read error here means trailing garbage (an unbalanced paren, a stray
+        ;; token) and must be refused: swallowing it as :eof let `(:a) )))` pass.
+        (let ((extra (handler-case (read in nil :eof)
+                       (error (e) (sexp-error "~a: trailing text: ~a" source e)))))
           (unless (eq extra :eof)
             (sexp-error "~a: more than one form" source)))
         (check-sexp-symbols form source)

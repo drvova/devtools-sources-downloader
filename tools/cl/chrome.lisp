@@ -8,7 +8,7 @@
   "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json")
 
 (defun cft-cache-dir ()
-  (uiop:merge-pathnames* "unpack-rs/.cache/browser/" (repo-root)))
+  (uiop:merge-pathnames* "browser/" (cache-dir)))
 
 (defun version-key (name)
   "win64-141.0.7390.65 -> (141 0 7390 65), or NIL when the name does not fit."

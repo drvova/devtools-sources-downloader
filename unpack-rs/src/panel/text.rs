@@ -389,12 +389,11 @@ fn round_decimal_half_away(decimal: &str, digits: usize) -> String {
         kept.push(b'0');
     }
     let next = frac_part.as_bytes().get(digits).copied().unwrap_or(b'0');
-    let rest_zeros = frac_part
-        .as_bytes()
-        .iter()
-        .skip(digits + 1)
-        .all(|b| *b == b'0');
-    let round_up = next > b'5' || (next == b'5' && !rest_zeros) || (next == b'5' && rest_zeros);
+    // The former expression spelled out `next > b'5' || (next == b'5' && !rest)
+    // || (next == b'5' && rest)`, which is exhaustive over `next == b'5'` and so
+    // always rounded a trailing 5 up. `rest_zeros` was computed only to be
+    // multiplied out again.
+    let round_up = next >= b'5';
     let mut int_digits: Vec<u8> = int_part.bytes().collect();
     if round_up {
         let mut carry = true;

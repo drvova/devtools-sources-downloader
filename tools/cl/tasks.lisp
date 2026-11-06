@@ -4,12 +4,6 @@
 
 (in-package :vovas.tools)
 
-(defun unpack-rs-dir ()
-  (uiop:merge-pathnames* "unpack-rs/" (repo-root)))
-
-(defun dist-dir ()
-  (uiop:merge-pathnames* "dist/" (unpack-rs-dir)))
-
 ;;; ---------- build ----------
 
 (defun verify-dist ()
@@ -73,7 +67,7 @@ Returns 0 on success, 1 on failure."
 
 (defun gate-report-file ()
   "Where a gate run records its own result, as a sexp file."
-  (uiop:merge-pathnames* "unpack-rs/.cache/gate.sexp" (repo-root)))
+  (uiop:merge-pathnames* "gate.sexp" (cache-dir)))
 
 (defun gate-step-argv (label opts)
   "Resolve one step's runner and argv. A step names exactly one of npm or cargo."
