@@ -50,15 +50,15 @@ fn normalize_graphql_payload(body: &Value) -> Value {
         let from_query = payload
             .get("query")
             .filter(|v| js_truthy(v))
-            .map(value_text);
-        let from_body = payload.get("body").filter(|v| js_truthy(v)).map(value_text);
+            .map(graphql_value_text);
+        let from_body = payload.get("body").filter(|v| js_truthy(v)).map(graphql_value_text);
         from_query.or(from_body).unwrap_or_default()
     };
     let capture = OPERATION.captures(&query);
     let operation_name = payload
         .get("operationName")
         .filter(|v| js_truthy(v))
-        .map(value_text)
+        .map(graphql_value_text)
         .unwrap_or_else(|| {
             capture
                 .as_ref()
@@ -78,7 +78,10 @@ fn normalize_graphql_payload(body: &Value) -> Value {
     })
 }
 
-fn value_text(value: &Value) -> String {
+/// Unlike `assets::value_text`, this renders an array or object as
+/// `[object Object]` instead of coercing it to a number, because a GraphQL
+/// variable that is a structure must not silently become `0` in the report.
+fn graphql_value_text(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
         Value::Null => String::new(),
@@ -93,7 +96,7 @@ fn parse_graphql_operation(entry: &Value) -> Option<Value> {
     if entry.is_null() {
         return None;
     }
-    let url = value_text(entry.get("url").unwrap_or(&Value::Null));
+    let url = graphql_value_text(entry.get("url").unwrap_or(&Value::Null));
     let body = entry.get("requestBody").cloned().unwrap_or(Value::Null);
     if !url.to_lowercase().contains("graphql") && !looks_like_graphql_body(&body) {
         return None;
@@ -224,7 +227,7 @@ pub fn build_module_graph(
         .and_then(|r| r.get("page"))
         .and_then(|p| p.get("url"))
         .filter(|v| js_truthy(v))
-        .map(value_text)
+        .map(graphql_value_text)
         .unwrap_or_else(|| "page".to_string());
     add_node("page".to_string(), "page", page_label, None);
 
@@ -302,7 +305,7 @@ pub fn build_module_graph(
         if !related.is_empty() {
             for chunk in related {
                 add_edge(
-                    value_text(&chunk),
+                    graphql_value_text(&chunk),
                     runtime_id.clone(),
                     field_str(origin, "originType"),
                     None,
@@ -312,7 +315,7 @@ pub fn build_module_graph(
             add_edge(
                 format!(
                     "runtime:{}",
-                    value_text(origin.get("blobId").unwrap_or(&Value::Null))
+                    graphql_value_text(origin.get("blobId").unwrap_or(&Value::Null))
                 ),
                 runtime_id.clone(),
                 "spawns".to_string(),
@@ -431,7 +434,7 @@ pub fn build_startup_chain(
                 .and_then(|s| s.get("profile"))
                 .filter(|v| js_truthy(v))
         })
-        .map(value_text)
+        .map(graphql_value_text)
         .unwrap_or_else(|| "generic-app".to_string());
 
     json!({

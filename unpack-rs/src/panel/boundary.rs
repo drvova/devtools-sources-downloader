@@ -11,8 +11,8 @@ use std::sync::LazyLock;
 use serde_json::{json, Map, Value};
 
 use crate::panel::assets::{
-    field_number, field_str, get_bare_file_name, js_truthy, unique_strings, BoundaryDetail,
-    RuntimeOrigin, ScriptAsset,
+    field_number, field_str, get_bare_file_name, js_truthy, unique_strings, value_text,
+    BoundaryDetail, RuntimeOrigin, ScriptAsset,
 };
 use crate::panel::graph::{collect_graphql_operations, collect_network_operations};
 use crate::panel::model::{js_number, Counts};
@@ -1541,14 +1541,6 @@ pub fn build_cross_boundary_flows(
         "events": labeled.iter().take(120).map(|event| strip_flow_event(event)).collect::<Vec<Value>>(),
         "transitions": flows.iter().take(180).map(strip_flow_transition).collect::<Vec<Value>>(),
     })
-}
-
-fn value_text(value: &Value) -> String {
-    match value {
-        Value::String(text) => text.clone(),
-        Value::Null => String::new(),
-        other => crate::jsnumber::js_number_to_string(js_number(other)),
-    }
 }
 
 /// `countPropertyValues` over an iterator of JSON objects.

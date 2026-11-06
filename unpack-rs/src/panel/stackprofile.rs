@@ -13,6 +13,7 @@ use serde_json::{json, Map, Value};
 use std::sync::LazyLock;
 
 use crate::panel::assets::js_truthy;
+use crate::panel::text::js_number_value;
 use crate::util::now_unix_millis;
 
 /// Reported by the profile, mirroring the page-world module's `VERSION`.
@@ -32,17 +33,6 @@ static RELAY_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)relay").unw
 /// `Math.max(min, Math.min(max, value))`.
 fn clamp(value: f64, min: f64, max: f64) -> f64 {
     min.max(max.min(value))
-}
-
-/// A JSON number written the way `JSON.stringify` writes it: a whole value
-/// loses the decimal point, so `1600.0` serialises as `1600`. `serde_json`
-/// keeps the two apart, and the profile is compared as text.
-fn js_number(value: f64) -> Value {
-    if value.fract() == 0.0 && value.abs() < 9e15 {
-        json!(value as i64)
-    } else {
-        json!(value)
-    }
 }
 
 /// `String(value || '').toLowerCase()`.
@@ -183,7 +173,7 @@ fn strategy_num(strategy: &Map<String, Value>, key: &str) -> f64 {
 }
 
 fn set_num(strategy: &mut Map<String, Value>, key: &str, value: f64) {
-    strategy.insert(key.to_string(), js_number(value));
+    strategy.insert(key.to_string(), js_number_value(value));
 }
 
 /// `buildStrategy(profile)`: the capture timings the page world reads.
@@ -681,7 +671,7 @@ pub fn analyze(snapshot: &Value) -> Value {
             let mut entry = Map::new();
             entry.insert("name".into(), json!(item.name));
             entry.insert("category".into(), json!(item.category));
-            entry.insert("confidence".into(), js_number(item.confidence));
+            entry.insert("confidence".into(), js_number_value(item.confidence));
             entry.insert("evidence".into(), json!(item.evidence));
             Value::Object(entry)
         })
@@ -692,7 +682,7 @@ pub fn analyze(snapshot: &Value) -> Value {
     profile.insert("generatedAt".into(), json!(now_unix_millis()));
     profile.insert("technologies".into(), json!(technologies));
     profile.insert("traits".into(), json!(trait_names));
-    profile.insert("confidence".into(), js_number(confidence));
+    profile.insert("confidence".into(), js_number_value(confidence));
     profile.insert("evidence".into(), Value::Object(evidence));
     let profile_value = Value::Object(profile.clone());
     let strategy = build_strategy(&profile_value);

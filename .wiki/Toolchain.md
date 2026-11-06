@@ -35,6 +35,7 @@ sbcl --script tools/cl/run.lisp build        # wasm + bundle, then verify dist/
 sbcl --script tools/cl/run.lisp pack         # dist/ -> dist-<version>.zip
 sbcl --script tools/cl/run.lisp smoke        # end-to-end CDP selftest
 sbcl --script tools/cl/run.lisp panel        # the extension's panel registers
+sbcl --script tools/cl/run.lisp version
 ```
 
 Build the standalone binary once and drop the `sbcl` prefix:
@@ -64,8 +65,9 @@ sbcl --load tools/cl/run.lisp
 (vcdp:screenshot "shot.png")
 ```
 
-The WebSocket and HTTP clients are written from scratch, so there is no CDP library in the
-dependency set — and the extension's panel can be driven and screenshotted directly.
+The WebSocket and HTTP clients are written from scratch — RFC 6455 masking, fragmentation,
+ping/pong and close handling included — so there is no CDP library in the dependency set, and
+the extension's panel can be driven and screenshotted directly.
 
 ## The gate is data
 
@@ -83,9 +85,21 @@ marked `(fast t)`. A step names its runner (`:npm` or `:cargo`) and the argv it 
  (:step "extension e2e" :npm ("run" "test:e2e:ext")))
 ```
 
-Order matters: the first failing step stops the run. Every symbol in the file is a keyword;
-only `t` and `nil` are bare, and a bare symbol is refused by name — because reading a data
-file in a package that `:use`s CL silently turns `step` into `CL:STEP`.
+Order matters: the first failing step stops the run.
+
+### Why every symbol is a keyword
+
+Reading a data file in a package that `:use`s CL silently turns `step` into `CL:STEP` — the
+stepper macro — and the form then compares unequal to `:step` with nothing in the file to
+explain why. Any bare name colliding with a CL export (`type`, `values`, `list`, `error`,
+`file`, `check`) is affected.
+
+So the vocabulary is restricted: **every symbol must be a keyword, `t`, or `nil`**, and a bare
+symbol is refused with "write it as :gate". `*READ-EVAL*` is `NIL`, so a data file can never
+execute code. A round-trip selftest covers every type the format admits — booleans, negative
+numbers, escaped quotes, backslashes, embedded newlines — because a reader that "works" can
+silently change a value's type. Reading `t` in the keyword package interns `:T`, which is
+truthy and would have silently kept every step in `--fast` mode.
 
 ## What `panel` checks that nothing else did
 
@@ -97,8 +111,37 @@ DevTools window. Three things make that harder than it sounds:
   and `UI.panels` holds no extension panel. Only `--auto-open-devtools-for-tabs` plus a page
   opened *after* the extension settles produces a real DevTools window.
 - The tab strip cannot answer the question: at laptop width it overflows into a chevron, and
-  the DevTools UI lives behind shadow roots.
-- The frontend keeps its own registry — `Object.keys(UI.panels)`, keyed by full origin plus
-  the panel title with spaces removed.
+  the DevTools UI lives behind shadow roots — `querySelectorAll` and
+  `DOM.performSearch(…, {pierce:true})` both return nothing useful.
+- The frontend keeps its own registry — `Object.keys(UI.panels)` — keyed by full origin plus
+  the panel title with spaces removed:
+  `chrome-extension://<id>SourcesDownloader`.
 
-So the check asks the app for its own model instead of scraping pixels.
+So the check asks the app for its own model instead of scraping pixels. A registry is immune
+to layout, overflow and shadow DOM; pixels are not.
+
+## Why this exists at all
+
+`npm run verify` gives one exit code for seven steps. The Lisp driver gives a verdict and a
+timing per step, and — the actual point — a **live browser you can interrogate**. When the
+panel registers but renders wrong, `vovas panel` tells you whether the panel is missing or the
+probe is looking at the wrong surface, and the REPL lets you check the second hypothesis
+without editing anything.
+
+## Hard-won details worth keeping
+
+- `uiop:run-program :cwd` is **silently ignored** on SBCL 2.6.9; `sb-ext:run-program
+  :directory` honours it. The wrapper calls `sb-ext` directly.
+- `uiop:run-program` returns `(values stdout stderr exit-code)` — the reverse of the natural
+  order — so the wrapper normalises once and never at call sites.
+- `ignore-errors` does **not** return an error flag; its second value is the body's second
+  value. Use an explicit `(values value ok-p)`.
+- `defconstant` on a string mints a fresh object per compile, so reloading signals
+  `DEFCONSTANT-UNEQL`. String config values are `defparameter`.
+- A test harness that does not `force-output` after each verdict cannot name the step that
+  hung.
+- `jzon` parses JSON arrays as **vectors**, so results need `loop … across`, not `dolist`.
+- A shadow-root walker must iterate `childNodes`, not `children` — `children` holds elements
+  only, so a text collector silently returns nothing against 53 KB of `innerHTML`.
+- A **named** `--user-data-dir` profile restores the previous window size, so `--window-size`
+  silently does not apply on later runs. Use a fresh profile when geometry matters.
