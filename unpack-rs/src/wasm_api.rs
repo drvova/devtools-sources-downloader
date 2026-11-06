@@ -329,7 +329,7 @@ fn dispatch(name: &str, a: &[serde_json::Value]) -> DispatchResult {
         }
         // The engine's own last failure, read after a trap (see the module
         // header). Always answered, never an error itself.
-        "lastFailureX" => Ok(last_failure_value()),
+        "lastFailure" => Ok(last_failure_value()),
         "panelCapturePolicy" => Ok(panel::policy::capture_policy()),
         "panelStackProfileAnalyze" => Ok(panel::stackprofile::analyze(
             a.first().unwrap_or(&serde_json::Value::Null),
