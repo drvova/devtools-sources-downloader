@@ -27,9 +27,67 @@ static CHARCODE_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(
 static EVAL_HEAD_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(EVAL_HEAD).unwrap());
 static FUNCTION_HEAD_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(FUNCTION_HEAD).unwrap());
 
+/// An obfuscation layer the engine can detect.
+///
+/// This enum is the single definition of a layer's name. `detect_layers`
+/// produces it, `apply_transform` matches on it, and `as_str` is the only place
+/// the wire spelling lives - so renaming a layer is a compile error at every
+/// use instead of a detector whose transform silently stops firing through a
+/// `_ => None` tail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Tool {
+    EvalUnwrap,
+    Base64,
+    HexEscape,
+    Unescape,
+    CharCode,
+    Reverse,
+    Rot13,
+    Packer,
+    JsFuck,
+    StringArray,
+}
+
+impl Tool {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Tool::EvalUnwrap => "eval-unwrap",
+            Tool::Base64 => "base64",
+            Tool::HexEscape => "hex-escape",
+            Tool::Unescape => "unescape",
+            Tool::CharCode => "charcode",
+            Tool::Reverse => "reverse",
+            Tool::Rot13 => "rot13",
+            Tool::Packer => "packer",
+            Tool::JsFuck => "jsfuck",
+            Tool::StringArray => "string-array",
+        }
+    }
+}
+
+impl std::fmt::Display for Tool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl serde::Serialize for Tool {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+/// Compares against the wire spelling, so call sites and tests can write
+/// `finding.tool == "base64"` without converting first.
+impl PartialEq<&str> for Tool {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, PartialEq)]
 pub struct Finding {
-    pub tool: &'static str,
+    pub tool: Tool,
     pub score: f64,
     pub detail: String,
 }
@@ -78,7 +136,7 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     };
     if !payloads.is_empty() {
         findings.push(Finding {
-            tool: "eval-unwrap",
+            tool: Tool::EvalUnwrap,
             score: 0.7 + (payloads.len() as f64 / 20.0).min(0.3),
             detail: format!("{eval_count} eval() / {fn_count} Function() call(s)"),
         });
@@ -86,7 +144,7 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     if let Some(base64) = longest_base64_literal(text) {
         let len = utf16_len(&base64);
         findings.push(Finding {
-            tool: "base64",
+            tool: Tool::Base64,
             score: 0.5 + (len as f64 / 4000.0).min(0.3),
             detail: format!("{len} char literal"),
         });
@@ -94,21 +152,21 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     let hex_escapes = HEX_ESCAPE_RE.find_iter(text).count();
     if hex_escapes > 8 && (hex_escapes * 4) as f64 > utf16_len(text) as f64 * 0.15 {
         findings.push(Finding {
-            tool: "hex-escape",
+            tool: Tool::HexEscape,
             score: 0.6,
             detail: format!("{hex_escapes} \\x escapes"),
         });
     }
     if UNICODE_PERCENT_RE.find_iter(text).count() > 8 {
         findings.push(Finding {
-            tool: "unescape",
+            tool: Tool::Unescape,
             score: 0.6,
             detail: "%uXXXX encoding".to_string(),
         });
     }
     if CHARCODE_RE.is_match(text) {
         findings.push(Finding {
-            tool: "charcode",
+            tool: Tool::CharCode,
             score: 0.65,
             detail: "String.fromCharCode list".to_string(),
         });
@@ -116,7 +174,7 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     let reversed: String = text.chars().rev().collect();
     if gain(&reversed) > gain(text) + 2 {
         findings.push(Finding {
-            tool: "reverse",
+            tool: Tool::Reverse,
             score: 0.45,
             detail: "reversed source".to_string(),
         });
@@ -124,7 +182,7 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     let rot13 = rot13(text);
     if gain(&rot13) > gain(text) + 2 {
         findings.push(Finding {
-            tool: "rot13",
+            tool: Tool::Rot13,
             score: 0.42,
             detail: "rot13 source".to_string(),
         });
@@ -133,7 +191,7 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     // predicate is the collector), so the transform never guesses.
     if let Some(packer) = detect_packer(text) {
         findings.push(Finding {
-            tool: "packer",
+            tool: Tool::Packer,
             score: 0.9,
             detail: format!(
                 "Dean Edwards packer, base {}, {} words",
@@ -145,14 +203,14 @@ pub fn detect_layers(text: &str) -> Vec<Finding> {
     let jsf = detect_jsfuck(text);
     if jsf.detected {
         findings.push(Finding {
-            tool: "jsfuck",
+            tool: Tool::JsFuck,
             score: 0.95,
             detail: format!("jsfuck, purity {:.1}%", jsf.purity * 100.0),
         });
     }
     if let Some(string_array) = detect_string_array(text) {
         findings.push(Finding {
-            tool: "string-array",
+            tool: Tool::StringArray,
             score: 0.8,
             detail: format!(
                 "string array {}, {} literals",

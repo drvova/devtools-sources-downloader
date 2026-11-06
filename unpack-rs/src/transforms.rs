@@ -298,10 +298,10 @@ fn unwrap_reverse(text: &str) -> String {
 
 /// JS applyTransform: routes a tool to its transform; None = the layer did
 /// not yield fresh text.
-fn apply_transform(tool: &str, text: &str) -> Option<String> {
+fn apply_transform(tool: crate::detectors::Tool, text: &str) -> Option<String> {
     match tool {
-        "eval-unwrap" => unwrap_eval(text),
-        "base64" => {
+        crate::detectors::Tool::EvalUnwrap => unwrap_eval(text),
+        crate::detectors::Tool::Base64 => {
             let result = unwrap_base64(text)?;
             match result {
                 Base64Unwrap::NeedsInflate(format, bytes) => {
@@ -321,18 +321,17 @@ fn apply_transform(tool: &str, text: &str) -> Option<String> {
                 }
             }
         }
-        "hex-escape" => unwrap_hex_escapes(text),
-        "unescape" => unwrap_unescape(text),
-        "charcode" => unwrap_charcode(text),
-        "reverse" => Some(unwrap_reverse(text)),
-        "rot13" => Some(rot13(text)),
-        "packer" => unpack_packer(text),
-        "string-array" => transform_string_array(text),
-        "jsfuck" => {
+        crate::detectors::Tool::HexEscape => unwrap_hex_escapes(text),
+        crate::detectors::Tool::Unescape => unwrap_unescape(text),
+        crate::detectors::Tool::CharCode => unwrap_charcode(text),
+        crate::detectors::Tool::Reverse => Some(unwrap_reverse(text)),
+        crate::detectors::Tool::Rot13 => Some(rot13(text)),
+        crate::detectors::Tool::Packer => unpack_packer(text),
+        crate::detectors::Tool::StringArray => transform_string_array(text),
+        crate::detectors::Tool::JsFuck => {
             let decoded = decode_jsfuck(text);
             decoded.value
         }
-        _ => None,
     }
 }
 
