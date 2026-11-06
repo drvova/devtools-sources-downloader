@@ -448,7 +448,7 @@ function collectReconAndFinalize(files, jsAssets, pageSnapshot) {
         'var recon=(window.__CAPTURE__&&window.__CAPTURE__.recon)||{};\n' +
         'var runtimeItems=recon.runtime||[];\n' +
         'var runtime=[];\n' +
-        'for(var j=0;j<runtimeItems.length;j++){var item=runtimeItems[j]||{};runtime.push({index:j,id:item.id||("runtime-"+j),kind:item.kind||"unknown",mimeType:item.mimeType||"",source:item.source||"",url:item.url||"",objectUrl:item.objectUrl||"",blobId:item.blobId||null,note:item.note||"",size:item.size||0,textLength:item.textLength||0,byteLength:item.byteLength||0,truncated:!!item.truncated,timestamp:item.timestamp||0,scriptType:item.scriptType||"",workerType:item.workerType||"",scope:item.scope||"",updateViaCache:item.updateViaCache||"",params:item.params||null,stack:item.stack||"",hasText:typeof item.text==="string",hasBase64:typeof item.base64==="string"});}\n' +
+        'for(var j=0;j<runtimeItems.length;j++){var item=runtimeItems[j]||{};var copy={};for(var k in item){if(k!=="text"&&k!=="base64")copy[k]=item[k];}copy.index=j;copy.id=copy.id||("runtime-"+j);copy.kind=copy.kind||"unknown";copy.hasText=typeof item.text==="string";copy.hasBase64=typeof item.base64==="string";runtime.push(copy);}\n' +
         'var page={title:document.title||"",url:location.href||"",origin:location.origin||"",protocol:location.protocol||"",referrer:document.referrer||"",userAgent:navigator.userAgent||""};\n' +
         'var stackProfile=(window.__CAPTURE__&&window.__CAPTURE__.profile)||null;\n' +
         'var captureStatus=(window.__CAPTURE__&&window.__CAPTURE__.status)||null;\n' +
