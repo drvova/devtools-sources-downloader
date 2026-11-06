@@ -215,8 +215,9 @@ Three properties, each of which is a bug somebody already had:
   the report shows where the bytes went.
 
 Each `TextStage` carries `{depth, tool, inputBytes, outputBytes, digest, sourceUrl}`. The
-`sourceUrl` is extracted with `//[#@]\s*sourceURL\s*=\s*(\S+)` from the **output** — so a
-peeled layer that names itself is recorded.
+`sourceUrl` is extracted with the shared `SOURCE_URL_COMMENT` pattern
+(`//[#@]\s*sourceURL\s*=\s*(\S+)`) from the **output** — so a peeled layer that names itself
+is recorded. The bundler compiles the same constant, so the pattern is written once.
 
 ### Refusals
 
@@ -413,10 +414,17 @@ the `u32` product and offset sum wrap, and a wrapped sum can *pass* a bounds che
 slicing past the buffer.
 
 **The function tree** (`analyze_jsc_module`) binds code blocks whose instruction stream opens
-on `enter` (opcode 134), walks exactly the declared length under the opcode table loaded from
+on `enter`, walks exactly the declared length under the opcode table loaded from
 `jsc_opcodes.txt` (id, name, operand bytes, padding), and ends on a transfer of control.
 Candidates are ranked tight-first then smallest-gap. One bad slot is **counted**, not raised:
 a corrupt slot must not discard the rest of the module.
+
+The `enter` id is **read out of the table by name**, not restated as a constant. It used to be
+`const JSC_ENTER_OPCODE: u8 = 134`, which duplicated the row `134 enter 0 0` that the parser
+already loads — two facts that could disagree the moment the table was regenerated, and the
+failure would be silent: the walker would look for the wrong byte and find no op stream. A
+missing `enter` row now means no op stream can be walked, so the scan reports nothing rather
+than matching the wrong byte.
 
 ## Bundles, beautification, source maps
 

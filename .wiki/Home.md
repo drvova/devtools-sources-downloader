@@ -23,7 +23,7 @@ console.
 ## The short version of how it works
 
 ```
-page world (JS)  →  __RESOURCE_TRACKER__, __RECON__, __FRAMEWORK_STATE__
+page world (JS)  →  window.__CAPTURE__  {policy, tracker, recon, status, profile, frameworkState}
        │
        ▼  polled through chrome.devtools.inspectedWindow.eval
 panel (JS shim)  →  collects, filters, calls the engine
@@ -75,11 +75,11 @@ beside the Rust sources are simply not Rust sources. That is what makes the flat
 | --- | --- |
 | Rust source | ~17.9k lines: 19 files in `src/`, 14 in `src/panel/` |
 | JavaScript | ~3.0k lines, all platform layer |
-| Engine wasm | ~2.2 MB (2 200 246 bytes; release, `opt-level = "z"`, LTO, stripped) |
+| Engine wasm | ~2.2 MB (2 201 236 bytes; release, `opt-level = "z"`, LTO, stripped) |
 | Bridge exports | 51 |
 | wasm dispatch arms | 44 |
-| Rust tests | 64 unit + 82 integration |
-| JS tests | 67 cases against the shipped wasm |
+| Rust tests | 65 unit + 85 integration |
+| JS tests | 68 cases against the shipped wasm |
 | Browser e2e | 2 suites, 54 assertions |
 
 ## The five ideas that explain the design

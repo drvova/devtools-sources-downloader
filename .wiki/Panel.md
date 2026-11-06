@@ -110,9 +110,35 @@ unknown name — so a renamed key can never become an unbounded slice, it become
 A test asserts every name the page world reads is answered and every key in the object is
 read.
 
-The object is injected as `window.__CAPTURE_POLICY__` ahead of the page-world scripts. **A
-missing policy fails closed**: zero budgets and no redaction pattern, so nothing is decoded
-and nothing is kept.
+The object is injected as `window.__CAPTURE__ = {policy: …}` ahead of the page-world
+scripts. **A missing policy fails closed**: zero budgets and no redaction pattern, so nothing
+is decoded and nothing is kept.
+
+It carries five rules and the budgets:
+
+| Key | Value |
+| --- | --- |
+| `redactKey` | the redaction pattern |
+| `textMime` | the text-vs-bytes MIME pattern |
+| `graphqlUrl` | the URL marker `graphql` |
+| `graphqlBody` | `(?:^|\b)(query|mutation|subscription)\b|operationName` |
+| `graphqlBodyKeys` | `["query", "operationName", "extensions"]` |
+| `defaultStrategy` | the engine's own `default_strategy()` map |
+| `limits` | the eighteen budgets below |
+
+The GraphQL **body** predicate is policy too. It used to be spelled twice — `(?-u:\b)` in the
+engine, `\b` in the page world — which is one rule in two dialects and free to drift. Now one
+string is compiled on both sides: the page world as a `RegExp`, the engine with
+`unicode(false)` so its word boundary is ASCII exactly like JavaScript's. `operationName` is
+part of the alternation because it is a plain substring test, not a word-boundary one.
+
+The **default strategy** rides here for the same reason. The page world needs usable timings
+before the panel's analysed profile arrives, and it used to carry a thirteen-key transcription
+to do it — five of which it never read. A field-for-field test held the pair together, but a
+guard around a copy is still a copy. Now `defaultStrategy()` reads `POLICY.defaultStrategy`,
+and its fallback carries **zeros only**: a missing policy must not leave capture waiting
+forever (`elapsed >= undefined` is false, so the boot gate would never open), and zeros cannot
+drift the way `bootDelayMs: 1200` could.
 
 ## Stack profile — `stackprofile.rs`
 
@@ -181,9 +207,13 @@ profile. Every rule appends a human-readable `reasons` entry.
 
 The strategy carries the timings the page world's readiness gates read: `bootDelayMs`,
 `networkQuietMs`, `mutationQuietMs`, `runtimeQuietMs`, `socketQuietMs`, `workerGraceMs`,
-`maxCaptureMs`. The page world keeps its own defaults because it needs usable timings
-*before* the panel's analysis arrives — and `tests/stack_profile_test.rs` pins the mirror so
-the two cannot drift.
+`maxCaptureMs`.
+
+The page world needs usable timings *before* the panel's analysis arrives, so it used to keep
+its own thirteen-key copy of these. That copy is gone: `default_strategy()` is `pub`, rides in
+the injected capture policy, and the page world reads it from there. Its fallback carries
+zeros only, so there is no second set of values left to drift — and the test that used to
+compare the two copies now asserts that no copy exists.
 
 Technologies sort by **confidence desc, then name asc**; traits sort by name.
 
@@ -329,8 +359,12 @@ That fallback chain is why a webpack `"./chunk-abc.js"` still binds to the asset
 `build_startup_chain` sorts scripts by `startTime` and runtime origins by `timestamp`, takes
 the first 40 of each, and reports the capture profile alongside.
 
-`looks_like_graphql_body` accepts a string containing `query|mutation|subscription` or
-`operationName`, or an object with a truthy `query`/`operationName`/`extensions`.
+`looks_like_graphql_body` compiles `policy::GRAPHQL_BODY_PATTERN` with `unicode(false)` — so
+its `\b` is an ASCII word boundary exactly like JavaScript's — and matches it against a string
+body; for an object body it checks `policy::GRAPHQL_BODY_KEYS` (`query`, `operationName`,
+`extensions`) for a truthy value. `unqueryable` and `requery` are **not** queries; that
+negative is pinned by a test, because a word-boundary difference between the two engines would
+only ever show up there.
 
 ## Analysis assembly — `analysis.rs`
 

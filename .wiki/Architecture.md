@@ -10,10 +10,14 @@ cannot see the engine's internals, and the engine never touches the DOM.
   framework-introspect.js   devtools.js                 src/panel/*.rs
   (page's own JS context)   (extension page)            (engine.wasm)
         │                        │                            │
-        │  window.__RESOURCE_TRACKER__                        │
-        │  window.__RECON__          │                       │
-        │  window.__CAPTURE_STATUS__ │  unpack-bridge.js     │
-        └────────────────────────────┴───────────────────────┘
+        │  window.__CAPTURE__    │  unpack-bridge.js          │
+        │    .policy .tracker    │  (JSON over a C ABI)       │
+        │    .recon  .status     │                            │
+        │    .profile .snapshot  │                            │
+        │    .signals            │                            │
+        │    .frameworkState     │                            │
+        │    .introspector       │                            │
+        └────────────────────────┴────────────────────────────┘
               polled via chrome.devtools.inspectedWindow.eval
 ```
 
@@ -69,17 +73,28 @@ real fix, not a preference: the script is injected *before* the page loads, so a
 `documentElement` is still null, `observe()` throws, and the surrounding `catch` swallowed it
 — no mutation was ever recorded.
 
-### What it publishes
+### What it publishes — one channel
 
-| Global | Contents |
+Everything the extension owns lives under **one root**, `window.__CAPTURE__`, so it is
+distinguishable at a glance from the page's own globals (`__NEXT_DATA__`, `__NUXT__`,
+`__APOLLO_STATE__`, `__INITIAL_STATE__`, `__SWR_DATA__` and a dozen more) — which these files
+only ever read.
+
+| `__CAPTURE__.` | Contents |
 | --- | --- |
-| `__RESOURCE_TRACKER__` | every resource seen: url, type, source, status, loaded/unloaded |
-| `__RECON__` | xhr, fetch, websockets, sse, mutations, runtime payloads |
-| `__STACK_PROFILE__` / `__STACK_SNAPSHOT__` | technologies, traits, capture strategy |
-| `__STACK_SIGNALS__` | the live counters the readiness gates read |
-| `__CAPTURE_STATUS__` | readiness reason, activity counters, last-event timestamps |
-| `__FRAMEWORK_STATE__` | router, stores, query caches, hydration payloads, auth state |
-| `__CAPTURE_POLICY__` | injected by the panel — the redaction and budget rules |
+| `policy` | seeded by the panel — the redaction, MIME, GraphQL and strategy rules, plus the eighteen budgets |
+| `tracker` | every resource seen: url, type, source, status, loaded/unloaded |
+| `trackerReady` | the readiness flag the panel polls |
+| `recon` | xhr, fetch, websockets, sse, mutations, runtime payloads |
+| `profile` / `snapshot` | technologies, traits, capture strategy |
+| `signals` | the live counters the readiness gates read |
+| `status` | readiness reason, activity counters, last-event timestamps |
+| `introspector` / `frameworkState` | router, stores, query caches, hydration payloads, auth state |
+
+`injected.js` and `framework-introspect.js` each take `CHANNEL` once at the top and write
+through it; `page.js` reads sub-properties inside its eval strings. Before this, ten separate
+properties were published and `__STACK_PROFILE__` was written by two different files — nothing
+marked which globals the extension owned and which it merely observed.
 
 ### The capture policy boundary
 
@@ -87,7 +102,7 @@ The policy is **engine data** (`src/panel/policy.rs`), serialized and prepended 
 injected script by `page.js::injectAndReload`:
 
 ```js
-var policy = 'window.__CAPTURE_POLICY__ = ' + JSON.stringify(panelCapturePolicy()) + ';\n';
+var policy = 'window.__CAPTURE__ = {policy: ' + JSON.stringify(panelCapturePolicy()) + '};\n';
 var code = policy + scripts.join('\n;\n');
 chrome.devtools.inspectedWindow.reload({ injectedScript: code, ignoreCache: true });
 ```
@@ -133,7 +148,7 @@ Kinds: `eval`, `function`, `blob`, `worker`, `shared-worker`, `service-worker`,
 
 ### Framework introspection
 
-`framework-introspect.js` builds `__FRAMEWORK_STATE__`:
+`framework-introspect.js` builds `CHANNEL.frameworkState`:
 
 ```
 {generatedAt, reason, page, profile, strategy,
@@ -162,7 +177,7 @@ fires, the UI never appears). A main panel is the pattern React DevTools uses.
 ```
 click  →  injectAndReload(buttonLabel, onComplete)
           ├─ fetch framework-introspect.js + injected.js as text
-          ├─ prepend window.__CAPTURE_POLICY__ = <engine policy>
+          ├─ prepend window.__CAPTURE__ = {policy: <engine policy>}
           ├─ inspectedWindow.reload({injectedScript, ignoreCache: true})
           └─ startPolling()
 
@@ -262,9 +277,9 @@ objects?"**
   created inside a `getResources` callback — a closure can look pure while living entirely on
   VM state.
 
-The same rule moved the capture policy: the *rules* are data (three patterns, eighteen
-numbers) and cross; the *predicates* that consume them are structure (enumerate a live object,
-recurse, read the page) and stay.
+The same rule moved the capture policy: the *rules* are data (five patterns and key lists,
+the default strategy, eighteen numbers) and cross; the *predicates* that consume them are
+structure (enumerate a live object, recurse, read the page) and stay.
 
 ## Numbers
 
@@ -275,3 +290,4 @@ recurse, read the page) and stay.
 | Engine wasm | ~2.2 MB (release, `opt-level = "z"`, LTO, stripped) |
 | Bridge exports | 51 |
 | Dispatch arms | 44 |
+| Rust tests | 65 unit + 85 integration |

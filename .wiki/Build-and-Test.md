@@ -25,7 +25,7 @@ it exists first and says so, rather than loading an empty extension.
 | `npm run dev` | development build (unminified, source maps) |
 | `npm run watch` | rebuild on save |
 | `npm run dev:ext` | watch build + a dedicated Chrome for Testing window, auto-reloading |
-| `npm test` | 67 cases against the shipped wasm |
+| `npm test` | 68 cases against the shipped wasm |
 | `npm run test:e2e` | loads the built bundle in a real browser, clicks Download All, reads the zip |
 | `npm run test:e2e:ext` | loads `dist/` as a real unpacked extension |
 | `npm run verify` | the whole gate — run this before committing |
@@ -67,12 +67,12 @@ change one and change the other, or the two gates drift apart while both still p
 
 | Suite | Count | Proves |
 | --- | --- | --- |
-| `src/**` unit tests | 64 | each module's contract, in place — scanner walkers, escape decoding, base64 round-trips, JS number formatting, zip CRC/offsets, and every panel module's oracle |
+| `src/**` unit tests | 65 | each module's contract, in place — scanner walkers, escape decoding, base64 round-trips, JS number formatting, zip CRC/offsets, and every panel module's oracle |
 | `tests/unpack_test.rs` | 67 | engine behavior against fixtures: scanner, decoders, every peel layer, packers, JSFuck, bundle splitting, source maps, the binary formats, and the full asset pipeline |
 | `tests/stack_profile_test.rs` | 6 | 28 captured snapshots match the page-world analyzer by value **and** by serialized text; a coverage guard asserts the fixtures still span every detector, trait and strategy; confidence ties break by name the way `localeCompare` does; a non-object snapshot falls back to the generic profile |
-| `tests/capture_policy_test.rs` | 6 | both patterns over their corpora, the limits, the injected shape, that every limit name the page world reads is answered and every key is read, and a guard that neither page-world module carries a local copy again |
+| `tests/capture_policy_test.rs` | 9 | both patterns over their corpora, the limits, the injected shape, the GraphQL body predicate against the engine constant and its word-boundary edges, the injected strategy against the engine default, that every limit name the page world reads is answered and every key is read, and a guard that neither page-world module carries a local copy again |
 | `tests/text_helpers.rs` | 3 | `sanitizeFilename`, `sanitizePageTitle`, and the helper chain against node oracles |
-| `test/unpack.test.mjs` | 67 | the same API through the wasm bridge — i.e. the *shipped artifact* |
+| `test/unpack.test.mjs` | 68 | the same API through the wasm bridge — i.e. the *shipped artifact* |
 | `test/browser-e2e.mjs` | 47 assertions | the built bundle in a real browser: injects, captures, clicks Download All, reads the produced zip |
 | `test/browser-e2e-extension.mjs` | 7 assertions | `dist/` as a real unpacked extension, in the real extension context |
 
