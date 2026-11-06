@@ -112,15 +112,19 @@ variable rebinds, the sheet keeps the old cons. Field writes go through `set-ite
 
 ## Open work
 
-Nothing is half-finished. The wiki is current, the tree is clean, the cell works.
+Nothing is half-finished. The wiki is current, the tree is clean, the cell works, and
+the product path has been run against a real page.
 
-Worth doing next, in rough order of value:
+**Decided, not deferred:** `PORTING.md` stays as its own document. Measuring the
+overlap showed it is not a second description of the system - its content is which
+JavaScript oddities are load-bearing and where the Rust deliberately diverges
+(`parseIntLiteral`'s hex handling, `wtfStringHash` keeping a `read32Big` that builds
+little-endian words, `assetSlug` truncating rather than erroring), none of which the
+wiki carries. Its opening now states that scope, so the question does not reopen, and
+its stale counts are corrected: 157 tests, and 68 node baseline cases rather than 67 -
+verified against `npm test`'s own report, which is also 68.
 
-1. **`PORTING.md` is 37 KB and predates the panel port.** It is accurate where it was
-   updated but it is now a second, older description of the same system as the wiki.
-   Consider folding anything still unique into `.wiki/` and retiring it, rather than
-   maintaining two.
-
+Nothing is queued.
 
 ## Conventions this repo actually uses
 

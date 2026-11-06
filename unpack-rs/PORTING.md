@@ -4,12 +4,17 @@ Behavior-faithful port of the DevTools sources-downloader unpack engine
 (`unpack.js` and its pure-transform modules, since replaced by
 `src/js/unpack-bridge.js` + the compiled `engine.wasm`)
 to the `devtools-unpack` crate. Same observable behavior, same test surface:
-every one of the 67 node baseline cases in
+every one of the 68 node baseline cases in
 `test/unpack.test.mjs` has a 1:1 Rust
 twin in `tests/unpack_test.rs` with the same test name (camelCase -> snake_case).
 
-Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 121/121
-(67 integration + 54 lib unit: 44 panel, 10 engine), `cargo clippy
+This document is a **porting record**, not a description of the system. The
+`.wiki/` says what the code is and does; this says what the port deliberately kept
+from the JavaScript it replaced, and where it diverges. Read the wiki to understand
+a module; read this before changing one, to know which oddities are load-bearing.
+
+Verification: `cargo build` 0 errors / 0 warnings, `cargo test` 157/157
+(89 integration across six files + 68 lib unit), `cargo clippy
 --all-targets -- -D warnings` clean. Fixtures are referenced in place
 (`env!("CARGO_MANIFEST_DIR")/test/fixtures`),
 never copied.
@@ -22,7 +27,7 @@ compiles this crate for `wasm32-unknown-unknown` (release), stages
 `js/engine.wasm` next to the bundles; `src/js/unpack-bridge.js` replaces the
 old six-file engine and keeps its export surface (`unpackAssetsIntoZip` became
 `unpackAssetsForZip` + `buildZip` when the archive moved into the engine). The
-67-case node suite runs against the bridge (wasm compiled synchronously at
+68-case node suite runs against the bridge (wasm compiled synchronously at
 import time via `WebAssembly.Module`/`Instance`), so the tests exercise the
 shipped artifact, not a parallel implementation. The panel has no runtime
 JavaScript dependencies at all: `jszip` and `file-saver` are gone, which took
@@ -104,7 +109,7 @@ Bridge seams (deliberate, documented):
 
 ## Test map
 
-All 67 cases from `unpack.test.mjs` are ported 1:1 (same name, snake_cased),
+All 68 cases from `unpack.test.mjs` are ported 1:1 (same name, snake_cased),
 plus 10 lib unit tests that pin JS semantics the integration suite exercises
 indirectly (number-to-string exponent form, radix strings, escape() including
 per-surrogate astral output, utf16 slicing, ISO-8601 epochs). The JSFuck
