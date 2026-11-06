@@ -21,8 +21,6 @@ use std::sync::LazyLock;
 static SCHEME_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"(?i)^[a-z]+://").unwrap());
 static QUERY_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"[?#].*$").unwrap());
-static SLUG_BAD_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"[\\:*?"<>|]"#).unwrap());
 static SLUG_SLASHES_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"/+").unwrap());
 static BINARY_EXT_RE: LazyLock<regex::Regex> =
@@ -32,7 +30,7 @@ static JS_EXT_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"
 pub fn asset_slug(url: &str, index: usize) -> String {
     let cleaned = SCHEME_RE.replace(url, "");
     let cleaned = QUERY_RE.replace(&cleaned, "");
-    let cleaned = SLUG_BAD_RE.replace_all(&cleaned, "_");
+    let cleaned = crate::util::BAD_PATH_CHARS.replace_all(&cleaned, "_");
     let mut cleaned = SLUG_SLASHES_RE.replace_all(&cleaned, "__").into_owned();
     if utf16_len(&cleaned) > 90 {
         cleaned = utf16_suffix(&cleaned, 90).to_string();

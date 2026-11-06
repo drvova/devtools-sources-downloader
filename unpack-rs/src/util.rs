@@ -1,4 +1,17 @@
-// Small shared helpers: JS-string semantics and time formatting.
+// Small shared helpers: JS-string semantics, time formatting, and the one
+// definition of the characters a generated file name may not contain.
+
+use std::sync::LazyLock;
+
+/// Characters a path segment may not contain. One definition on purpose:
+/// widening the set for one producer used to leave the other four writing names
+/// it would reject.
+pub static BAD_PATH_CHARS: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"[\\:*?"<>|]"#).unwrap());
+
+/// The same set plus `/`, for sanitising a whole path instead of one segment.
+pub static BAD_PATH_CHARS_WITH_SLASH: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"[\\/:*?"<>|]"#).unwrap());
 
 /// JS `String.length`: the number of UTF-16 code units.
 pub fn utf16_len(text: &str) -> usize {

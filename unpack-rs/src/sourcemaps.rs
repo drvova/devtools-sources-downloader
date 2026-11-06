@@ -114,14 +114,12 @@ fn clean_source_path(source: &str) -> String {
         LazyLock::new(|| regex::Regex::new(r"\\").unwrap());
     static LEADING_SLASHES: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^/+").unwrap());
-    static BAD_CHARS: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r#"[\\:*?"<>|]"#).unwrap());
     let path = WEBPACK_HTTP.replace(source, "");
     let path = WEBPACK_SLASH.replace(&path, "");
     let path = DOT_SLASH.replace(&path, "");
     let path = BACKSLASH.replace_all(&path, "/");
     let path = LEADING_SLASHES.replace(&path, "");
-    BAD_CHARS.replace_all(&path, "_").into_owned()
+    crate::util::BAD_PATH_CHARS.replace_all(&path, "_").into_owned()
 }
 
 static DATA_URI_RE: LazyLock<regex::Regex> =

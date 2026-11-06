@@ -85,10 +85,8 @@ pub fn safe_decode_uri_component(value: &str) -> String {
 /// `sanitizePathPart`: strip path-hostile characters, fall back on empty, and
 /// truncate to 100 UTF-16 units.
 pub fn sanitize_path_part(value: &str, fallback: &str) -> String {
-    static HOSTILE: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r#"[\\:*?"<>|]"#).unwrap());
     let trimmed = js_trim(value);
-    let replaced = HOSTILE.replace_all(trimmed, "_");
+    let replaced = crate::util::BAD_PATH_CHARS.replace_all(trimmed, "_");
     let resolved = if replaced.is_empty() {
         if fallback.is_empty() {
             "_"
@@ -324,9 +322,7 @@ pub fn format_size(bytes: f64) -> String {
 
 /// `sanitizePageTitle`.
 pub fn sanitize_page_title(title: &str) -> String {
-    static HOSTILE: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r#"[\\/:*?"<>|]"#).unwrap());
-    let replaced = HOSTILE.replace_all(title, "_");
+    let replaced = crate::util::BAD_PATH_CHARS_WITH_SLASH.replace_all(title, "_");
     let truncated = if crate::util::utf16_len(&replaced) > 100 {
         utf16_prefix(&replaced, 100).to_string()
     } else {

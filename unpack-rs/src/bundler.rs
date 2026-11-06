@@ -117,25 +117,21 @@ pub fn module_file_name(module: &BundleModule) -> String {
     static WEBPACK_PREFIX: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^webpack(-internal)?://").unwrap());
     static DOT_SLASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^\./").unwrap());
-    static BAD_CHARS: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r#"[\\:*?"<>|]"#).unwrap());
     static LEADING_SLASHES: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^/+").unwrap());
     let cleaned = WEBPACK_PREFIX.replace(&url, "");
     let cleaned = DOT_SLASH.replace(&cleaned, "");
-    let cleaned = BAD_CHARS.replace_all(&cleaned, "_");
+    let cleaned = crate::util::BAD_PATH_CHARS.replace_all(&cleaned, "_");
     LEADING_SLASHES.replace(&cleaned, "").into_owned()
 }
 
 /// JS `safePath`: one sanitised pass per path segment.
 pub fn safe_path(path: &str) -> String {
-    static BAD_CHARS: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r#"[\\:*?"<>|]"#).unwrap());
     static DOT_SEGMENTS: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^\.+$").unwrap());
     path.split('/')
         .map(|segment| {
-            let cleaned = BAD_CHARS.replace_all(segment, "_");
+            let cleaned = crate::util::BAD_PATH_CHARS.replace_all(segment, "_");
             DOT_SEGMENTS.replace(&cleaned, "_").into_owned()
         })
         .collect::<Vec<_>>()
