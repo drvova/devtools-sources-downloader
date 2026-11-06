@@ -270,7 +270,7 @@ recurse, read the page) and stay.
 
 | | |
 | --- | --- |
-| Rust source | ~17.8k lines: 19 files in `src/`, 14 in `src/panel/` |
+| Rust source | ~17.9k lines: 19 files in `src/`, 14 in `src/panel/` |
 | JavaScript | ~3.0k lines, all platform layer |
 | Engine wasm | ~2.2 MB (release, `opt-level = "z"`, LTO, stripped) |
 | Bridge exports | 51 |

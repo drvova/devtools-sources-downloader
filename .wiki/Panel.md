@@ -359,9 +359,18 @@ re-deriving anything.
 ## Workspaces and journeys — `workspace.rs`
 
 Eight boundary workspaces plus a framework-state workspace. Each carries a title, a
-description, **focus questions**, and slices of the entrypoints, chunks, runtime records,
-events, transitions, top transitions and chains — capped at 10/10/10/24/24/10/10 so a page
-with 400 chunks still produces a readable slice.
+description, **focus questions**, and slices of the analysis — capped so a page with 400
+chunks still produces a readable slice:
+
+| Slice | Cap |
+| --- | --- |
+| chunks | 18 |
+| runtime records | 18 |
+| entrypoints | 10 |
+| events | 24 |
+| transitions | 24 |
+| top transitions | 10 |
+| chains | 10 |
 
 | Workspace | Question it is built to answer |
 | --- | --- |
