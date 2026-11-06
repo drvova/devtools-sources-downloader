@@ -27,9 +27,82 @@ pub fn array_contains_any(values: &[String], candidates: &[String]) -> bool {
 }
 
 /// `pushBoundaryLabel`.
-fn push_boundary_label(matches: &mut Vec<Value>, label: &str, score: f64, reason: Option<&str>) {
+/// A boundary the panel attributes code or network activity to.
+///
+/// The name is spelled once, in `as_str`. Everything else - both inference
+/// vocabularies, the report's category list, the workspace filters - refers to
+/// the variant, so renaming a boundary is a compile error instead of a label
+/// that silently stops appearing in reports.
+///
+/// The two inference vocabularies below deliberately hold DIFFERENT patterns for
+/// the same label, because they read different inputs: `infer_network_boundary_labels`
+/// matches URLs and request bodies, where a vendor appears as `datadog` and a
+/// draft route as `/draft`; `infer_boundary_labels` matches source text, where
+/// the same vendor appears as `datadogRUM` and the editor as `draftjs`. The
+/// divergence is the point, not drift - merging them would make one of the two
+/// inputs match the other's spelling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BoundaryLabel {
+    Bootstrap,
+    Router,
+    State,
+    Data,
+    Auth,
+    Analytics,
+    Editor,
+    Vendor,
+}
+
+impl BoundaryLabel {
+    /// Every label, in report order.
+    ///
+    /// `as_str`'s match is exhaustive, so a new variant fails the build there -
+    /// but this array is not derived from the enum, so a new variant must be
+    /// added here too or it will be attributed to chunks and never appear in the
+    /// report's category list. The boundary oracle pins the category output, so a
+    /// fixture that produces the new label catches the omission.
+    pub const ALL: [BoundaryLabel; 8] = [
+        BoundaryLabel::Bootstrap,
+        BoundaryLabel::Router,
+        BoundaryLabel::State,
+        BoundaryLabel::Data,
+        BoundaryLabel::Auth,
+        BoundaryLabel::Analytics,
+        BoundaryLabel::Editor,
+        BoundaryLabel::Vendor,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            BoundaryLabel::Bootstrap => "bootstrap",
+            BoundaryLabel::Router => "router",
+            BoundaryLabel::State => "state",
+            BoundaryLabel::Data => "data",
+            BoundaryLabel::Auth => "auth",
+            BoundaryLabel::Analytics => "analytics",
+            BoundaryLabel::Editor => "editor",
+            BoundaryLabel::Vendor => "vendor",
+        }
+    }
+}
+
+impl std::fmt::Display for BoundaryLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// Compares against the wire spelling, so call sites can write
+/// `label == "auth"` without converting first.
+impl PartialEq<&str> for BoundaryLabel {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+
+fn push_boundary_label(matches: &mut Vec<Value>, label: BoundaryLabel, score: f64, reason: Option<&str>) {
     for item in matches.iter_mut() {
-        if item.get("label").and_then(|v| v.as_str()) == Some(label) {
+        if item.get("label").and_then(|v| v.as_str()) == Some(label.as_str()) {
             let current = item.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
             item["score"] = js_number_value(current + score);
             if let Some(reason) = reason {
@@ -45,7 +118,7 @@ fn push_boundary_label(matches: &mut Vec<Value>, label: &str, score: f64, reason
         }
     }
     matches.push(json!({
-        "label": label,
+        "label": label.as_str(),
         "score": js_number_value(score),
         "reasons": match reason {
             Some(reason) => json!([reason]),
@@ -153,7 +226,7 @@ fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     if AUTH.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "auth",
+            BoundaryLabel::Auth,
             28.0,
             Some("network activity contains authentication or session signals"),
         );
@@ -161,7 +234,7 @@ fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     if ANALYTICS.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "analytics",
+            BoundaryLabel::Analytics,
             26.0,
             Some("network activity contains analytics or telemetry signals"),
         );
@@ -169,7 +242,7 @@ fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     if DATA.is_match(&sample) || looks_like_graphql_request(entry) {
         push_boundary_label(
             &mut matches,
-            "data",
+            BoundaryLabel::Data,
             24.0,
             Some("network activity contains data-fetching or API signals"),
         );
@@ -177,7 +250,7 @@ fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     if ROUTER.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "router",
+            BoundaryLabel::Router,
             18.0,
             Some("network activity contains routing or navigation signals"),
         );
@@ -185,7 +258,7 @@ fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     if EDITOR.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "editor",
+            BoundaryLabel::Editor,
             18.0,
             Some("network activity contains editor or content workflow signals"),
         );
@@ -193,7 +266,7 @@ fn infer_network_boundary_labels(entry: &Value) -> Vec<Value> {
     if STATE.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "state",
+            BoundaryLabel::State,
             14.0,
             Some("network activity contains state synchronization signals"),
         );
@@ -273,7 +346,7 @@ fn infer_boundary_labels(
     {
         push_boundary_label(
             &mut matches,
-            "bootstrap",
+            BoundaryLabel::Bootstrap,
             30.0,
             Some("bootstraps the page or runtime loader"),
         );
@@ -281,7 +354,7 @@ fn infer_boundary_labels(
     if !route_hints.is_empty() || ROUTER.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "router",
+            BoundaryLabel::Router,
             24.0,
             Some("contains route or navigation signals"),
         );
@@ -289,7 +362,7 @@ fn infer_boundary_labels(
     if STATE.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "state",
+            BoundaryLabel::State,
             24.0,
             Some("contains state container signals"),
         );
@@ -297,7 +370,7 @@ fn infer_boundary_labels(
     if DATA.is_match(&sample) || startup_signals.iter().any(|s| s == "graphql-client") {
         push_boundary_label(
             &mut matches,
-            "data",
+            BoundaryLabel::Data,
             24.0,
             Some("contains data-fetching or API signals"),
         );
@@ -305,7 +378,7 @@ fn infer_boundary_labels(
     if AUTH.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "auth",
+            BoundaryLabel::Auth,
             24.0,
             Some("contains authentication or session signals"),
         );
@@ -313,7 +386,7 @@ fn infer_boundary_labels(
     if ANALYTICS.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "analytics",
+            BoundaryLabel::Analytics,
             22.0,
             Some("contains analytics or telemetry signals"),
         );
@@ -321,7 +394,7 @@ fn infer_boundary_labels(
     if EDITOR.is_match(&sample) {
         push_boundary_label(
             &mut matches,
-            "editor",
+            BoundaryLabel::Editor,
             24.0,
             Some("contains editor/runtime authoring signals"),
         );
@@ -331,7 +404,7 @@ fn infer_boundary_labels(
     {
         push_boundary_label(
             &mut matches,
-            "vendor",
+            BoundaryLabel::Vendor,
             20.0,
             Some("looks like third-party or framework code"),
         );
@@ -344,7 +417,7 @@ fn infer_boundary_labels(
                     if classification == "vendor" || classification == "framework" {
                         push_boundary_label(
                             &mut matches,
-                            "vendor",
+                            BoundaryLabel::Vendor,
                             16.0,
                             Some("spawned from a vendor/framework chunk"),
                         );
@@ -590,7 +663,7 @@ pub fn build_boundary_labels(assets: &mut [ScriptAsset], origins: &mut [RuntimeO
     let runtime_labels = count_boundary_labels_values(origins);
     json!({
         "generatedAt": iso8601_now(),
-        "categories": ["bootstrap", "router", "state", "data", "auth", "analytics", "editor", "vendor"],
+        "categories": BoundaryLabel::ALL.iter().map(|l| l.as_str()).collect::<Vec<_>>(),
         "summary": {
             "chunkLabels": chunk_labels,
             "runtimeLabels": runtime_labels,
