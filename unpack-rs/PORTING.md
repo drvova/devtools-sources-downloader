@@ -312,8 +312,8 @@ VM.
 The analysis therefore runs in the engine and the page world only collects:
 
 - `injected.js` builds the snapshot - the one part that must read the page's
-  globals and DOM - publishes it as `window.__STACK_SNAPSHOT__`, and keeps
-  reading `window.__STACK_PROFILE__` exactly as before.
+  globals and DOM - publishes it as `window.__CAPTURE__.snapshot`, and keeps
+  reading `window.__CAPTURE__.profile` exactly as before.
 - `page.js` polls that snapshot, calls `panelStackProfileAnalyze`, and writes
   the profile back into the page, so the page's own readers - the capture
   strategy, `framework-introspect.js`, the recon export - see the same object
@@ -378,11 +378,17 @@ suite read it: a grep for `shouldRedactKey` and `MAX_ITEMS` across `test/`
 returned nothing. That is the shape of a rule that drifts quietly.
 
 The rules are data, so they cross as data. `panel::policy` holds them, the
-panel injects the object as `window.__CAPTURE_POLICY__` ahead of the page
+panel injects the object as `window.__CAPTURE__.policy` ahead of the page
 world's first line, and both modules read it:
 
-- `page.js` prepends `window.__CAPTURE_POLICY__ = <json>;` to the injected
+- `page.js` prepends `window.__CAPTURE__ = {policy: <json>};` to the injected
   script, so it is in scope before any page-world code runs and there is no
+- The page world's own channel is one root, `window.__CAPTURE__`, holding
+  `policy`, `recon`, `tracker`, `trackerReady`, `status`, `profile`,
+  `snapshot`, `signals`, `introspector` and `frameworkState`. It used to be
+  ten separate `window.__X__` properties, which were indistinguishable by
+  reading from the page's own globals (`__NEXT_DATA__`, `__NUXT__`,
+  `__APOLLO_STATE__` and the rest) that these files only ever read.
   window where a reader finds nothing.
 - `framework-introspect.js` builds `REDACT_RE` from `redactKey` and reads
   `limits.items` / `limits.keys` / `limits.string` through one `limit(name)`

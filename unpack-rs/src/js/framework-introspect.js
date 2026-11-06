@@ -1,12 +1,18 @@
 (function () {
     'use strict';
+    // The extension's own channel into the inspected page. Everything it
+    // publishes lives under one root, so it is distinguishable at a glance from
+    // the page's own globals - __NEXT_DATA__, __NUXT__, __APOLLO_STATE__ and the
+    // rest - which these files only ever read. The panel seeds `policy` before
+    // this file runs (page.js::injectAndReload).
+    var CHANNEL = window.__CAPTURE__ || (window.__CAPTURE__ = {});
 
     // The capture policy is engine-owned (panel/policy.rs) and injected by the
     // panel before this file runs (page.js::injectAndReload). There is no local
     // copy to drift from it, and a missing policy fails closed: every key is
     // redacted and every limit collapses to zero, which is loud rather than
     // silently unredacted.
-    var POLICY = window.__CAPTURE_POLICY__ || null;
+    var POLICY = CHANNEL.policy || null;
     function limit(name) {
         return POLICY && POLICY.limits ? POLICY.limits[name] || 0 : 0;
     }
@@ -399,8 +405,8 @@
 
     function collectFrameworkState(options) {
         options = options || {};
-        var stackProfile = options.stackProfile || window.__STACK_PROFILE__ || {};
-        var captureStatus = options.captureStatus || window.__CAPTURE_STATUS__ || {};
+        var stackProfile = options.stackProfile || CHANNEL.profile || {};
+        var captureStatus = options.captureStatus || CHANNEL.status || {};
         var state = {
             generatedAt: new Date().toISOString(),
             reason: options.reason || '',
@@ -442,11 +448,11 @@
     }
 
     function refreshFrameworkState(options) {
-        window.__FRAMEWORK_STATE__ = collectFrameworkState(options || {});
-        return window.__FRAMEWORK_STATE__;
+        CHANNEL.frameworkState = collectFrameworkState(options || {});
+        return CHANNEL.frameworkState;
     }
 
-    window.__FRAMEWORK_INTROSPECTOR__ = {
+    CHANNEL.introspector = {
         version: '1.0.0',
         collect: collectFrameworkState,
         refresh: refreshFrameworkState,

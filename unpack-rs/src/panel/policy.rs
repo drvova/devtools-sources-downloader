@@ -86,7 +86,7 @@ pub const LIMITS: Limits = Limits {
     technologies: 12,
 };
 
-/// The object the panel injects as `window.__CAPTURE_POLICY__`. The page world
+/// The object the panel injects as `window.__CAPTURE__.policy`. The page world
 /// reads these names directly, so they are part of the boundary contract:
 /// `tests/capture_policy_test.rs` pins the shape.
 pub fn capture_policy() -> Value {

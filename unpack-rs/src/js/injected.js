@@ -1,12 +1,18 @@
 (function () {
     'use strict';
+    // The extension's own channel into the inspected page. Everything it
+    // publishes lives under one root, so it is distinguishable at a glance from
+    // the page's own globals - __NEXT_DATA__, __NUXT__, __APOLLO_STATE__ and the
+    // rest - which these files only ever read. The panel seeds `policy` before
+    // this file runs (page.js::injectAndReload).
+    var CHANNEL = window.__CAPTURE__ || (window.__CAPTURE__ = {});
 
     var TRACKER = {
         resources: {},
         loaded: [],
         unloaded: [],
     };
-    window.__RESOURCE_TRACKER__ = TRACKER;
+    CHANNEL.tracker = TRACKER;
 
     var RECON = {
         xhr: [],
@@ -16,15 +22,15 @@
         mutations: [],
         runtime: [],
     };
-    window.__RECON__ = RECON;
+    CHANNEL.recon = RECON;
 
-    var FRAMEWORK_INTROSPECTOR = window.__FRAMEWORK_INTROSPECTOR__ || null;
+    var FRAMEWORK_INTROSPECTOR = CHANNEL.introspector || null;
 
     // The capture policy is engine-owned (panel/policy.rs) and injected by the
     // panel before this file runs (page.js::injectAndReload). There is no local
     // copy to drift from it, and a missing policy fails closed: zero budgets and
     // no redaction pattern, so nothing is decoded and nothing is kept.
-    var POLICY = window.__CAPTURE_POLICY__ || null;
+    var POLICY = CHANNEL.policy || null;
     function limit(name) {
         return POLICY && POLICY.limits ? POLICY.limits[name] || 0 : 0;
     }
@@ -72,7 +78,7 @@
         lastSocketAt: 0,
         lastWorkerAt: 0,
     };
-    window.__STACK_SIGNALS__ = SIGNALS;
+    CHANNEL.signals = SIGNALS;
 
     var CAPTURE_STATUS = {
         ready: false,
@@ -86,8 +92,8 @@
         signals: {},
         updatedAt: Date.now(),
     };
-    window.__CAPTURE_STATUS__ = CAPTURE_STATUS;
-    window.__STACK_PROFILE__ = {
+    CHANNEL.status = CAPTURE_STATUS;
+    CHANNEL.profile = {
         // The engine stamps the real version when it answers; this is the
         // placeholder the page world boots with.
         version: 'fallback',
@@ -249,9 +255,9 @@
 
     function refreshFrameworkState(trigger) {
         if (!FRAMEWORK_INTROSPECTOR || typeof FRAMEWORK_INTROSPECTOR.refresh !== 'function') return;
-        window.__FRAMEWORK_STATE__ = FRAMEWORK_INTROSPECTOR.refresh({
+        CHANNEL.frameworkState = FRAMEWORK_INTROSPECTOR.refresh({
             reason: trigger || 'capture-refresh',
-            stackProfile: window.__STACK_PROFILE__ || null,
+            stackProfile: CHANNEL.profile || null,
             captureStatus: CAPTURE_STATUS,
         });
     }
@@ -309,8 +315,8 @@
         // default strategy carries the capture, and every readiness gate below is
         // at least a second wide, so the analysed timings are always in place
         // before one can fire.
-        window.__STACK_SNAPSHOT__ = snapshot;
-        var profile = window.__STACK_PROFILE__ || {};
+        CHANNEL.snapshot = snapshot;
+        var profile = CHANNEL.profile || {};
         CAPTURE_STATUS.profile =
             profile.strategy && profile.strategy.profile ? profile.strategy.profile : 'generic-app';
         CAPTURE_STATUS.confidence = profile.confidence || 0;
@@ -334,7 +340,7 @@
     }
 
     function finishReady(reason, reasonText) {
-        window.__RESOURCE_TRACKER_READY__ = true;
+        CHANNEL.trackerReady = true;
         CAPTURE_STATUS.ready = true;
         updateCaptureStatus(reason, reasonText);
         refreshFrameworkState(reason || 'ready');
@@ -367,7 +373,7 @@
             elapsedMs: elapsed,
         };
 
-        if (window.__RESOURCE_TRACKER_READY__) return;
+        if (CHANNEL.trackerReady) return;
         if (elapsed >= strategy.maxCaptureMs)
             return finishReady(
                 'max-capture',

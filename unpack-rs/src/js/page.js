@@ -142,7 +142,9 @@ function publishStackProfile(snapshot) {
         latestStackSnapshotJson = json;
         latestStackProfile = panelStackProfileAnalyze(snapshot);
         chrome.devtools.inspectedWindow.eval(
-            'window.__STACK_PROFILE__ = ' + JSON.stringify(latestStackProfile) + '; true',
+            '(window.__CAPTURE__ = window.__CAPTURE__ || {}).profile = ' +
+                JSON.stringify(latestStackProfile) +
+                '; true',
             function (result, error) {
                 // A navigation mid-write leaves the page without the profile;
                 // dropping the cache makes the next poll publish it again.
@@ -213,7 +215,7 @@ function injectAndReload(buttonLabel, onComplete) {
             // The capture policy is engine-owned (panel::policy): it crosses
             // once, here, so the page world reads it from its first line.
             var policy =
-                'window.__CAPTURE_POLICY__ = ' + JSON.stringify(panelCapturePolicy()) + ';\n';
+                'window.__CAPTURE__ = {policy: ' + JSON.stringify(panelCapturePolicy()) + '};\n';
             var code = policy + scripts.join('\n;\n');
             chrome.devtools.inspectedWindow.reload({ injectedScript: code, ignoreCache: true });
             setActivity(
@@ -251,7 +253,7 @@ function startPolling() {
     pollingTimer = setInterval(function () {
         attempts++;
         chrome.devtools.inspectedWindow.eval(
-            'JSON.stringify({ ready: window.__RESOURCE_TRACKER_READY__, data: window.__RESOURCE_TRACKER__, site: { title: document.title || "", url: location.href || "", origin: location.origin || "" }, stackProfile: window.__STACK_PROFILE__ || null, stackSnapshot: window.__STACK_SNAPSHOT__ || null, captureStatus: window.__CAPTURE_STATUS__ || null })',
+            'JSON.stringify({ ready: (window.__CAPTURE__||{}).trackerReady, data: (window.__CAPTURE__||{}).tracker, site: { title: document.title || "", url: location.href || "", origin: location.origin || "" }, stackProfile: (window.__CAPTURE__||{}).profile || null, stackSnapshot: (window.__CAPTURE__||{}).snapshot || null, captureStatus: (window.__CAPTURE__||{}).status || null })',
             function (result, error) {
                 if (error) {
                     if (attempts >= maxAttempts) stopPolling();
@@ -443,14 +445,14 @@ function collectReconAndFinalize(files, jsAssets, pageSnapshot) {
         'var ck=document.cookie||"";\n' +
         'var timings=[];\n' +
         'try{var entries=performance.getEntriesByType("resource");for(var i=0;i<entries.length;i++){var e=entries[i];timings.push({name:e.name,initiatorType:e.initiatorType,duration:e.duration,transferSize:e.transferSize,encodedBodySize:e.encodedBodySize,decodedBodySize:e.decodedBodySize,startTime:e.startTime,domainLookupStart:e.domainLookupStart,domainLookupEnd:e.domainLookupEnd,connectStart:e.connectStart,connectEnd:e.connectEnd,secureConnectionStart:e.secureConnectionStart,requestStart:e.requestStart,responseStart:e.responseStart,responseEnd:e.responseEnd});}}catch(_){}\n' +
-        'var recon=window.__RECON__||{};\n' +
+        'var recon=(window.__CAPTURE__&&window.__CAPTURE__.recon)||{};\n' +
         'var runtimeItems=recon.runtime||[];\n' +
         'var runtime=[];\n' +
         'for(var j=0;j<runtimeItems.length;j++){var item=runtimeItems[j]||{};runtime.push({index:j,id:item.id||("runtime-"+j),kind:item.kind||"unknown",mimeType:item.mimeType||"",source:item.source||"",url:item.url||"",objectUrl:item.objectUrl||"",blobId:item.blobId||null,note:item.note||"",size:item.size||0,textLength:item.textLength||0,byteLength:item.byteLength||0,truncated:!!item.truncated,timestamp:item.timestamp||0,scriptType:item.scriptType||"",workerType:item.workerType||"",scope:item.scope||"",updateViaCache:item.updateViaCache||"",params:item.params||null,stack:item.stack||"",hasText:typeof item.text==="string",hasBase64:typeof item.base64==="string"});}\n' +
         'var page={title:document.title||"",url:location.href||"",origin:location.origin||"",protocol:location.protocol||"",referrer:document.referrer||"",userAgent:navigator.userAgent||""};\n' +
-        'var stackProfile=window.__STACK_PROFILE__||null;\n' +
-        'var captureStatus=window.__CAPTURE_STATUS__||null;\n' +
-        'var frameworkState=window.__FRAMEWORK_INTROSPECTOR__&&typeof window.__FRAMEWORK_INTROSPECTOR__.refresh==="function"?window.__FRAMEWORK_INTROSPECTOR__.refresh({reason:"recon-export",stackProfile:stackProfile,captureStatus:captureStatus}):(window.__FRAMEWORK_STATE__||null);\n' +
+        'var stackProfile=(window.__CAPTURE__&&window.__CAPTURE__.profile)||null;\n' +
+        'var captureStatus=(window.__CAPTURE__&&window.__CAPTURE__.status)||null;\n' +
+        'var introspector=window.__CAPTURE__&&window.__CAPTURE__.introspector;var frameworkState=introspector&&typeof introspector.refresh==="function"?introspector.refresh({reason:"recon-export",stackProfile:stackProfile,captureStatus:captureStatus}):((window.__CAPTURE__||{}).frameworkState||null);\n' +
         'return JSON.stringify({ls:ls,ss:ss,cookies:ck,timings:timings,recon:{xhr:recon.xhr||[],fetch:recon.fetch||[],websockets:recon.websockets||[],sse:recon.sse||[],mutations:recon.mutations||[],runtime:runtime},page:page,stackProfile:stackProfile,captureStatus:captureStatus,frameworkState:frameworkState});\n' +
         '})()';
 
@@ -536,7 +538,7 @@ function collectRuntimePayloads(runtimeEntries, onComplete) {
 
 function fetchRuntimePayload(index, onComplete) {
     var expr =
-        '(function(){var list=window.__RECON__&&window.__RECON__.runtime;if(!list||!list[' +
+        '(function(){var list=window.__CAPTURE__&&window.__CAPTURE__.recon&&window.__CAPTURE__.recon.runtime;if(!list||!list[' +
         index +
         ']) return null;var item=list[' +
         index +

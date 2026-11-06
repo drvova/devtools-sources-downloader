@@ -264,7 +264,7 @@ fn the_page_world_keeps_no_local_copy_of_the_policy() {
             "{name} declares a local capture limit again"
         );
         assert!(
-            source.contains("__CAPTURE_POLICY__"),
+            source.contains("CHANNEL.policy"),
             "{name} does not read the injected capture policy"
         );
         // The strategy fallback may carry zeros, never the engine's timings: a

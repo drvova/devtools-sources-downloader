@@ -185,7 +185,7 @@ const stub = (port) => `
         },
         eval: function (expr, cb) {
           if (typeof expr !== 'string') { cb(null, null); return; }
-          if (expr.indexOf('__RECON__.runtime') >= 0) {
+          if (expr.indexOf('var item=list[') >= 0) {
             var i = Number((expr.match(/runtime\\[(\\d+)\\]/) || [0, '-1'])[1]);
             cb(JSON.stringify({ text: i === 0 ? RUNTIME_TEXT : null, base64: null }), null);
             return;
@@ -194,7 +194,7 @@ const stub = (port) => `
             cb(JSON.stringify({ html: '<html><body>demo page</body></html>', title: 'demo' }), null);
             return;
           }
-          if (expr.indexOf('__RESOURCE_TRACKER_READY__') >= 0) {
+          if (expr.indexOf('trackerReady') >= 0) {
             cb(JSON.stringify({
               ready: true,
               data: { loaded: [], unloaded: [], visible: [], counts: { loaded: 0, unloaded: 0, visible: 0, total: 0 } },
@@ -204,7 +204,7 @@ const stub = (port) => `
             }), null);
             return;
           }
-          if (expr.indexOf('__RECON__') >= 0) {
+          if (expr.indexOf('var recon=') >= 0) {
             cb(JSON.stringify({
               ls: {}, ss: {}, cookies: '', timings: [],
               recon: { xhr: [], fetch: [], websockets: [], sse: [], mutations: [], runtime: [
@@ -390,14 +390,15 @@ async function main() {
                 '(function(){try{(0,eval)(' +
                 JSON.stringify(script) +
                 ');}catch(e){return JSON.stringify({error:String((e&&e.message)||e)});}' +
-                'return JSON.stringify({status:typeof window.__CAPTURE_STATUS__,' +
-                'stack:typeof window.__STACK_PROFILE__,' +
-                'framework:typeof window.__FRAMEWORK_STATE__,' +
-                'tracker:typeof window.__RESOURCE_TRACKER__,' +
-                'policy:typeof window.__CAPTURE_POLICY__,' +
-                'policyLimits:Object.keys((window.__CAPTURE_POLICY__||{}).limits||{})' +
+                'var C=window.__CAPTURE__||{};' +
+                'return JSON.stringify({status:typeof C.status,' +
+                'stack:typeof C.profile,' +
+                'framework:typeof C.frameworkState,' +
+                'tracker:typeof C.tracker,' +
+                'policy:typeof C.policy,' +
+                'policyLimits:Object.keys((C.policy||{}).limits||{})' +
                 '.sort().join(","),' +
-                'policyRedact:String((window.__CAPTURE_POLICY__||{}).redactKey||"")});})()',
+                'policyRedact:String((C.policy||{}).redactKey||"")});})()',
             returnByValue: true,
         });
         const worldState = JSON.parse(world.result.value || '{}');
@@ -432,7 +433,7 @@ async function main() {
 
         const fw = await cdp.send('Runtime.evaluate', {
             expression:
-                'JSON.stringify((function(){var s=window.__FRAMEWORK_STATE__||{};' +
+                'JSON.stringify((function(){var s=(window.__CAPTURE__||{}).frameworkState||{};' +
                 'var st=(s.stores||[])[0]||{};var r=s.router||{};var p=st.preview||{};' +
                 'return {router:r.framework,route:r.route,' +
                 'queryId:(r.query||{}).id,queryToken:(r.query||{}).sessionToken,' +
@@ -496,7 +497,7 @@ async function main() {
         });
         await reloaded;
         const before = await cdp.send('Runtime.evaluate', {
-            expression: 'String((((window.__RECON__||{}).mutations)||[]).length)',
+            expression: 'String(((((window.__CAPTURE__||{}).recon||{}).mutations)||[]).length)',
             returnByValue: true,
         });
         await cdp.send('Runtime.evaluate', {
@@ -509,9 +510,9 @@ async function main() {
         await new Promise((r) => setTimeout(r, 500));
         const recon = await cdp.send('Runtime.evaluate', {
             expression:
-                'JSON.stringify({mutations:(((window.__RECON__||{}).mutations)||[]).length,' +
-                'runtime:(((window.__RECON__||{}).runtime)||[]).length,' +
-                'framework:typeof window.__FRAMEWORK_STATE__})',
+                'JSON.stringify({mutations:((((window.__CAPTURE__||{}).recon||{}).mutations)||[]).length,' +
+                'runtime:((((window.__CAPTURE__||{}).recon||{}).runtime)||[]).length,' +
+                'framework:typeof (window.__CAPTURE__||{}).frameworkState})',
             returnByValue: true,
         });
         const captureState = JSON.parse(recon.result.value || '{}');
