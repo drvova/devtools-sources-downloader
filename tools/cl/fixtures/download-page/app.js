@@ -34,3 +34,15 @@ fetch('module.wasm')
     .then(function (result) {
         document.body.setAttribute('data-wasm', String(result.instance.exports.answer()));
     });
+
+// A GraphQL operation, so the body predicate and the operation parser run. The
+// fixture server answers 404 for a POST; the request is what gets recorded.
+fetch('graphql', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+        operationName: 'Fixture',
+        query: 'query Fixture($id: ID!) { viewer(id: $id) { login } }',
+        variables: { id: '1' },
+    }),
+});

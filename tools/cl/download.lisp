@@ -361,7 +361,15 @@ EXPECT-RUNTIME also requires the runtime payloads the fixture page generates."
             (check "packer layer unpacks to the payload"
                    (and (stringp text)
                         (search "console.log(\"packed ok\")" text))
-                   (and text (length text)))))))))
+                   (and text (length text))))))
+      ;; The fixture posts a GraphQL operation, so the body predicate and the
+      ;; operation parser have to run and name what was sent.
+      (let ((ops (zip-entry-text archive "_recon/graphql-operations.json")))
+        (check "archive records the GraphQL operation"
+               (and (stringp ops)
+                    (search "\"operationName\": \"Fixture\"" ops)
+                    (search "\"operationType\": \"query\"" ops))
+               (and ops (length ops)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; The check.

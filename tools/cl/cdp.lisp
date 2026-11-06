@@ -34,7 +34,7 @@ to *browser*)."
          (udd (uiop:merge-pathnames*
                (format nil "cdp-profile/~a/"
                        (or profile-name (format nil "~d" (get-universal-time))))
-               (repo-root)))
+               (cache-dir)))
          (argv (append (list (namestring chrome)
                              "--remote-debugging-port=0"
                              (format nil "--user-data-dir=~a" (namestring udd))
@@ -65,6 +65,19 @@ to *browser*)."
       (error "no chrome with remote debugging on port ~a (HTTP ~a)" port status)))
   (setf *browser* (%make-browser :process nil :port port)))
 
+(defun terminate-tree (process)
+  "Terminate PROCESS and every child it spawned.
+Chrome forks renderer, GPU and utility processes; terminating only the parent
+leaves them running and holding the profile directory, so a gate that launches a
+browser on every run leaks a process tree per run."
+  (let ((pid (ignore-errors (sb-ext:process-pid process))))
+    (if (and pid (member :win32 *features*))
+        (ignore-errors
+         (vovas.tools.util:run-program
+          (list (vovas.tools.util:powershell-exe) "-NoProfile" "-Command"
+                (format nil "taskkill /PID ~d /T /F | Out-Null" pid))))
+        (ignore-errors (uiop:terminate-process process :urgent t)))))
+
 (defun kill (&optional (browser *browser*))
   "Terminate a launched browser, close connections, remove its profile.
 No-op for attached browsers beyond closing the connection."
@@ -72,7 +85,7 @@ No-op for attached browsers beyond closing the connection."
     (when (browser-conn browser)
       (ignore-errors (ws-close (cdp-conn-ws (browser-conn browser)))))
     (when (browser-process browser)
-      (ignore-errors (uiop:terminate-process (browser-process browser) :urgent t)))
+      (terminate-tree (browser-process browser)))
     (when (browser-user-data-dir browser)
       (sleep 0.3)
       (ignore-errors (uiop:delete-directory-tree
