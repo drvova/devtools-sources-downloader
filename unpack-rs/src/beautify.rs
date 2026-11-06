@@ -138,7 +138,8 @@ pub fn beautify_js(text: &str, max_bytes: Option<usize>) -> String {
         }
         i += 1;
     }
-    // end_with_newline: true
+    // js-beautify's `end_with_newline` default, which the original relied on:
+    // the reformatter always leaves the output ending in a newline.
     if !out.ends_with('\n') {
         out.push('\n');
     }

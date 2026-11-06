@@ -29,24 +29,22 @@ pub fn js_number_to_string(value: f64) -> String {
     let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
     let digits = digits.trim_end_matches('0');
     let digits = if digits.is_empty() { "0" } else { digits };
-    let k = digits.len() as i32; // digit count
-                                 // Decimal point position after the first digit: for "1.05e2" -> n = 3.
+    let k = digits.len() as i32;
+    // ECMAScript Number::toString, whose own names these are: `k` is the digit
+    // count and `n` the position of the decimal point after the first digit.
+    // The branches below are that algorithm's five output shapes, so the shape
+    // of each one is the spec rather than a choice made here.
     let n = exp + 1;
-
     let body = if k <= n && n <= 21 {
-        // digits followed by zeros
         format!("{}{}", digits, "0".repeat((n - k) as usize))
     } else if 0 < n && n <= 21 {
-        // point inside the digits
         format!("{}.{}", &digits[..n as usize], &digits[n as usize..])
     } else if -6 < n && n <= 0 {
-        // 0.000digits
         format!("0.{}{}", "0".repeat((-n) as usize), digits)
     } else if k == 1 {
-        // single digit, exponential; JS prints the exponent as n-1
+        // The exponent is n-1, not n: JS counts from the first significant digit.
         format!("{}e{}{}", digits, sign(n - 1), (n - 1).abs())
     } else {
-        // multi digit, exponential
         format!(
             "{}.{}e{}{}",
             &digits[..1],
