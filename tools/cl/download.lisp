@@ -350,7 +350,18 @@ EXPECT-RUNTIME also requires the runtime payloads the fixture page generates."
                    (and info (length info))))))
       (check "runtime wasm payload is written"
              (find-if (lambda (e) (search "_runtime/wasm/" e)) entries)
-             (and entries (length entries))))))
+             (and entries (length entries)))
+      ;; The fixture carries a Dean Edwards packed script, so the peel has to
+      ;; detect the packer and recover what it unpacks to - the product's
+      ;; headline claim, exercised rather than assumed.
+      (let ((packer (find-if (lambda (e) (search "/layers/01-packer.js" e)) entries)))
+        (check "archive peels the packer layer" packer (and entries (length entries)))
+        (when packer
+          (let ((text (zip-entry-text archive packer)))
+            (check "packer layer unpacks to the payload"
+                   (and (stringp text)
+                        (search "console.log(\"packed ok\")" text))
+                   (and text (length text)))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; The check.

@@ -154,16 +154,23 @@ entries. Against `https://example.com` that is 43 entries.
 `fixtures/download-page` on a free port — an external script, an `eval`, a `Function`
 constructor, a worker, an inline source map, and a real WebAssembly module — so the run needs
 no network and reaches the paths `example.com` cannot exercise at all. That page produces 65
-entries and the run makes 19 assertions: the runtime manifest records `eval`, `function`,
+entries and the run makes 21 assertions: the runtime manifest records `eval`, `function`,
 `worker` and `wasm`; the `eval` and `Function` payloads are written to `_runtime/`; the inline
 map resolves to `_unpack/<asset>/source-map.json` with the original recovered from
-`sourcesContent` into `_unpack/<asset>/sources/app.ts`; and the wasm parser writes
-`_unpack/<asset>/wasm-info.json` naming the module's `answer` export.
+`sourcesContent` into `_unpack/<asset>/sources/app.ts`; the wasm parser writes
+`_unpack/<asset>/wasm-info.json` naming the module's `answer` export; and the packed script
+peels to `_unpack/<asset>/layers/01-packer.js`, whose contents are asserted to be the payload
+the packer encodes.
 
-Two of those matter more than they look, because without them the module had no product-level
-coverage at all — only unit tests. `decodeInlineSourceMap` and `resolveMapUrl` need a map in
-the fixture; `detect_wasm_module` and `parseWasmModule` need a module. The wasm one is
+Three of those matter more than they look, because without them the module had no
+product-level coverage at all — only unit tests. `decodeInlineSourceMap` and `resolveMapUrl`
+need a map in the fixture; `detect_wasm_module` and `parseWasmModule` need a module;
+`detect_packer` and `unpack_packer` need a genuinely packed script. The wasm module is
 hand-assembled bytes committed beside the page, so it needs no toolchain to regenerate.
+
+The packed script has to be the **real minified shape**: `detect_packer` keys on
+`function(p,a,c,k,e,` with no spaces, so a readable reformatting of the same algorithm is not
+detected at all. That cost one round trip.
 
 One asymmetry worth knowing: a worker entry carries a `url` and a `workerType`, not inline
 text, so it has no `_runtime/workers/` file — its script arrives as an unpacked asset under
