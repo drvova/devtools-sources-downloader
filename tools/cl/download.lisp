@@ -330,7 +330,15 @@ EXPECT-RUNTIME also requires the runtime payloads the fixture page generates."
         (dolist (kind '("eval" "function"))
           (check (format nil "runtime ~a payload is written" kind)
                  (find-if (lambda (e) (search (format nil "_runtime/~a/" kind) e)) entries)
-                 (and entries (length entries))))))))
+                 (and entries (length entries)))))
+      ;; The fixture's app.js carries an inline source map, so the unpack path has
+      ;; to decode it and recover the original from sourcesContent.
+      (check "archive resolves the inline source map"
+             (find-if (lambda (e) (search "/source-map.json" e)) entries)
+             (and entries (length entries)))
+      (check "archive recovers the mapped source"
+             (find-if (lambda (e) (search "/sources/app.ts" e)) entries)
+             (and entries (length entries))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; The check.

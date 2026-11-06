@@ -152,10 +152,15 @@ entries. Against `https://example.com` that is 43 entries.
 
 `--fixture` is the stronger form and the one to run when changing capture code. It serves
 `fixtures/download-page` on a free port — an external script, an `eval`, a `Function`
-constructor and a worker — so the run needs no network and reaches the runtime payload path
-that `example.com` cannot exercise at all. That page produces 58 entries, and the run then
-also asserts the runtime manifest records `eval`, `function` and `worker` kinds, and that the
-`eval` and `Function` payloads were written to `_runtime/`.
+constructor, a worker, and an inline source map — so the run needs no network and reaches the
+paths `example.com` cannot exercise at all. That page produces 61 entries, and the run then
+also asserts the runtime manifest records `eval`, `function` and `worker` kinds, that the
+`eval` and `Function` payloads were written to `_runtime/`, and that the inline map was
+resolved to `_unpack/<asset>/source-map.json` with the original recovered from
+`sourcesContent` into `_unpack/<asset>/sources/app.ts`.
+
+The source map matters more than it looks: without one in the fixture, `decodeInlineSourceMap`
+and `resolveMapUrl` had no product-level coverage at all — only unit tests.
 
 One asymmetry worth knowing: a worker entry carries a `url` and a `workerType`, not inline
 text, so it has no `_runtime/workers/` file — its script arrives as an unpacked asset under

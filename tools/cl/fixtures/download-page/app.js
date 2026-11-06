@@ -23,3 +23,6 @@ try {
 } catch (error) {
     document.body.setAttribute('data-worker-error', String(error));
 }
+
+// An inline source map, so the unpack path resolves one end to end.
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFwcC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvLyBhcHAudHMgLSB0aGUgb3JpZ2luYWwgdGhlIG1hcCBwb2ludHMgYXRcbmNvbnN0IGFuc3dlcjogbnVtYmVyID0gNDI7XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEifQ==
