@@ -74,14 +74,11 @@ pub fn skip_block_comment(text: &str, index: usize) -> usize {
     }
 }
 
-fn is_js_space(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | 0x0B | b'\x0C' | b'\r')
-}
 
 pub fn is_regex_start(text: &str, index: usize) -> bool {
     let b = text.as_bytes();
     let mut j = index as isize - 1;
-    while j >= 0 && is_js_space(b[j as usize]) {
+    while j >= 0 && crate::util::is_ascii_js_space_byte(b[j as usize]) {
         j -= 1;
     }
     if j < 0 {

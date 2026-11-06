@@ -88,9 +88,6 @@ enum PackerArg {
     Other,
 }
 
-fn is_js_space(c: char) -> bool {
-    matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
-}
 
 // Reads one argument after the packer's "}(" — a string literal, a number,
 // or a balanced non-literal token we only need to skip.
@@ -636,7 +633,7 @@ fn parse_array_literals(body: &str) -> Option<Vec<String>> {
                 return None; // unterminated literal
             }
             out.push(buf);
-        } else if c == ',' || is_js_space(c) {
+        } else if c == ',' || crate::util::is_ascii_js_space(c) {
             i += 1;
         } else {
             return None; // expressions in the array -> refuse (stay static)
@@ -1044,7 +1041,7 @@ fn find_decoder_call_sites(
             continue;
         }
         let mut open = end;
-        while open < source.len() && source[open..].starts_with(|c: char| is_js_space(c)) {
+        while open < source.len() && source[open..].starts_with(|c: char| crate::util::is_ascii_js_space(c)) {
             open += 1;
         }
         if !source[open..].starts_with('(') {

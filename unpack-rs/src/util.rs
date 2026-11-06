@@ -131,9 +131,43 @@ pub fn regex_escape(s: &str) -> String {
     out
 }
 
-/// JS `\s` as used by the engine's patterns: the ASCII subset
-/// (space, \t, \n, \v, \f, \r).
+/// The ASCII subset of ECMAScript whitespace, as a regex character class body:
+/// space, tab, LF, VT, FF, CR.
+///
+/// This is deliberately NOT the full `\s`. ECMAScript `\s` also matches
+/// U+00A0, U+FEFF, U+1680, U+2000-200A, U+2028, U+2029, U+202F, U+205F and
+/// U+3000. Every pattern below scans minified source, where those characters do
+/// not appear between tokens, and widening the class would change what all of
+/// them match. `is_ecmascript_whitespace` is the full set; only `ToNumber` uses
+/// it, because `Number(string)` trims `\s`.
 pub const JS_S: &str = r" \t\n\x0B\f\r";
+
+/// The ASCII subset of ECMAScript whitespace, for scanning decoded text.
+pub fn is_ascii_js_space(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
+}
+
+/// The byte form of [`is_ascii_js_space`], for scanning raw UTF-8.
+pub fn is_ascii_js_space_byte(c: u8) -> bool {
+    matches!(c, b' ' | b'\t' | b'\n' | 0x0B | b'\x0C' | b'\r')
+}
+
+/// The full ECMAScript `\s`: the ASCII subset plus U+00A0, U+FEFF, U+1680,
+/// U+2000-200A, U+2028, U+2029, U+202F, U+205F and U+3000.
+///
+/// Used only where JavaScript itself would trim `\s` rather than where the
+/// engine scans source, so the two sets stay distinguishable by name.
+pub fn is_ecmascript_whitespace(c: char) -> bool {
+    is_ascii_js_space(c)
+        || c == '\u{a0}'
+        || c == '\u{feff}'
+        || c == '\u{1680}'
+        || ('\u{2000}'..='\u{200a}').contains(&c)
+        || matches!(
+            c,
+            '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}'
+        )
+}
 
 /// JS `\w`: ASCII word characters only.
 pub const JS_W: &str = r"A-Za-z0-9_";
@@ -141,6 +175,44 @@ pub const JS_W: &str = r"A-Za-z0-9_";
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The two whitespace sets exist because they mean different things, so this
+    /// pins both directions: every ASCII member is in the full set, every
+    /// ECMAScript extra is in the full set and NOT in the ASCII one, and a
+    /// non-whitespace character is in neither. Without this the two could be
+    /// silently collapsed back into one and nothing would notice.
+    #[test]
+    fn the_ascii_and_ecmascript_whitespace_sets_differ_by_the_extras() {
+        for c in [' ', '\t', '\n', '\u{b}', '\u{c}', '\r'] {
+            assert!(is_ascii_js_space(c), "{c:?} is ASCII JS whitespace");
+            assert!(is_ecmascript_whitespace(c), "{c:?} is ECMAScript whitespace");
+        }
+        for c in [
+            '\u{a0}', '\u{feff}', '\u{1680}', '\u{2000}', '\u{200a}', '\u{2028}', '\u{2029}',
+            '\u{202f}', '\u{205f}', '\u{3000}',
+        ] {
+            assert!(
+                !is_ascii_js_space(c),
+                "{c:?} must not be in the ASCII subset"
+            );
+            assert!(is_ecmascript_whitespace(c), "{c:?} is ECMAScript whitespace");
+        }
+        assert!(!is_ascii_js_space('x'));
+        assert!(!is_ecmascript_whitespace('x'));
+    }
+
+    /// The byte form scans raw UTF-8, so it must agree with the char form over
+    /// the whole ASCII range rather than over a hand-picked few.
+    #[test]
+    fn the_byte_form_agrees_with_the_char_form_over_ascii() {
+        for byte in 0u8..=0x7f {
+            assert_eq!(
+                is_ascii_js_space_byte(byte),
+                is_ascii_js_space(byte as char),
+                "byte {byte:#04x} disagrees between the two forms"
+            );
+        }
+    }
 
     #[test]
     fn utf16_helpers() {

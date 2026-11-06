@@ -97,22 +97,10 @@ pub fn js_number_to_radix_string(value: f64, radix: u32) -> String {
     }
 }
 
-fn is_js_space(c: char) -> bool {
-    matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
-        || c == '\u{a0}'
-        || c == '\u{feff}'
-        || c == '\u{1680}'
-        || ('\u{2000}'..='\u{200a}').contains(&c)
-        || matches!(
-            c,
-            '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}'
-        )
-}
-
 /// JS ToNumber(string) for the grammar the recipes exercise: trimmed decimal
 /// and exponent forms, 0x hex, Infinity, and empty -> 0.
 pub fn js_string_to_number(s: &str) -> f64 {
-    let t = s.trim_matches(is_js_space);
+    let t = s.trim_matches(crate::util::is_ecmascript_whitespace);
     if t.is_empty() {
         return 0.0;
     }

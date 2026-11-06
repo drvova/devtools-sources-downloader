@@ -124,7 +124,7 @@ fn code_point_to_char(code: u32) -> char {
 pub fn decode_base64_to_bytes(base64: &str) -> Option<Vec<u8>> {
     let mut normalized: String = base64
         .chars()
-        .filter(|c| !matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\r' | '\u{c}'))
+        .filter(|c| !crate::util::is_ascii_js_space(*c))
         .map(|c| match c {
             '-' => '+',
             '_' => '/',
