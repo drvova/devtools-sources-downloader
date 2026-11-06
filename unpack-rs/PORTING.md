@@ -263,15 +263,17 @@ substitute (see "Census instead of oracle" below).
 
 ## Panel surface on the wasm bridge
 
-The wasm API carries the panel as well as the engine: five `xu_call` arms -
-`panelTrackerView`, `panelDescribeCaptureReason`,
-`panelFinalizeZipWithRecon`, `panelStackProfileAnalyze` and
-`panelCapturePolicy` - matching the bridge's exports. The document
-generators and exporters are not arms: the export run composes them
-internally, so exposing each one individually left ten arms nothing could
-reach, and `looksBinaryScript`/`decodeBase64ToBytes` duplicated the dedicated
-`xu_looks_binary_script`/`xu_b64decode` exports that the hot paths actually
-call. Four seams are worth naming:
+The wasm API carries the panel as well as the engine. The panel reaches it
+through ten bridge exports: seven `xu_call` arms - `sanitizeFilename`,
+`sanitizePageTitle`, `panelTrackerView`, `panelDescribeCaptureReason`,
+`panelFinalizeZipWithRecon`, `panelStackProfileAnalyze` and `panelCapturePolicy`
+- one `xu_call_bytes` arm, `buildZip`, so a multi-megabyte archive crosses as
+raw bytes, and two that call dedicated exports instead of an arm,
+`looksBinaryScript` and `decodeBase64ToBytes`, because the hot paths call
+`xu_looks_binary_script` and `xu_b64decode` directly. The document generators
+and exporters are not arms: the export run composes them internally, so exposing
+each one individually left ten arms nothing could reach. Four seams are worth
+naming:
 
 - **The clock is a host import.** `wasm32-unknown-unknown` has no clock and
   `SystemTime::now()` panics there, which took out every arm that stamps a
