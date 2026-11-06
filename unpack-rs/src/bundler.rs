@@ -28,7 +28,7 @@ static HEADER_CONT: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 
 static SOURCE_URL_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"//[#@]\s*sourceURL\s*=\s*(\S+)").unwrap());
+    LazyLock::new(|| regex::Regex::new(crate::transforms::SOURCE_URL_COMMENT).unwrap());
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct BundleModule {

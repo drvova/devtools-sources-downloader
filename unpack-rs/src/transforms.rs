@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 const DEFAULT_MAX_DEPTH: usize = 8;
-const SOURCE_URL_COMMENT: &str = r"//[#@]\s*sourceURL\s*=\s*(\S+)";
+pub const SOURCE_URL_COMMENT: &str = r"//[#@]\s*sourceURL\s*=\s*(\S+)";
 
 static SOURCE_URL_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(SOURCE_URL_COMMENT).unwrap());

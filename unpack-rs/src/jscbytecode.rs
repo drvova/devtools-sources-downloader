@@ -27,7 +27,6 @@ const JSC_OPCODE_SOURCE: &str = include_str!("jsc_opcodes.txt");
 
 const JSC_WIDE16: u8 = 0x83;
 const JSC_WIDE32: u8 = 0x85;
-const JSC_ENTER_OPCODE: u8 = 134;
 const JSC_ARRAY_ORDER: [&str; 7] = [
     "steps", "instr", "consts", "cscr", "idents", "fdecls", "fexprs",
 ];
@@ -229,6 +228,23 @@ pub fn recover_jsc_strings(bytes: &[u8]) -> Vec<String> {
 struct JscOpcodeInfo {
     pub name: String,
     pub operand_bytes: usize,
+}
+
+/// The opcode id of `enter`, read out of the table rather than restated.
+///
+/// The id is a property of `jsc_opcodes.txt` - the row `134 enter 0 0` - so a
+/// constant here is a second copy of one of that file's rows, free to disagree
+/// with it the moment the table is regenerated. `None` means the table has no
+/// `enter` row at all, in which case no op stream can be walked and the scan
+/// reports nothing rather than matching the wrong byte.
+fn jsc_enter_opcode() -> Option<u8> {
+    static ID: LazyLock<Option<u8>> = LazyLock::new(|| {
+        jsc_opcode_table()
+            .iter()
+            .position(|info| info.as_ref().is_some_and(|info| info.name == "enter"))
+            .map(|id| id as u8)
+    });
+    *ID
 }
 
 /// id -> (name, operand bytes including metadata)
@@ -486,7 +502,10 @@ fn bind_jsc_block(
             continue;
         }
         let stream_at = stream_at as usize;
-        if bytes[stream_at] != JSC_ENTER_OPCODE {
+        let Some(enter) = jsc_enter_opcode() else {
+            continue;
+        };
+        if bytes[stream_at] != enter {
             continue;
         }
         let ops = match walk_jsc_ops(bytes, stream_at, instr.0, table) {
@@ -1102,4 +1121,21 @@ pub fn analyze_jsc_module(bytes: &[u8], shared: Option<&[Option<String>]>) -> Js
     stats.valid = stats.blocks > 0 && stats.bind_failed == 0;
     stats.functions.sort_by_key(|f| f.record);
     stats
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The walker looks for one opcode byte, and it now comes from the table
+    /// rather than from a constant. If the table ever loses its `enter` row the
+    /// scan silently reports nothing, so the lookup is asserted directly.
+    #[test]
+    fn the_opcode_table_carries_an_enter_row() {
+        let id = jsc_enter_opcode().expect("jsc_opcodes.txt must define `enter`");
+        let info = jsc_opcode_table()[id as usize]
+            .as_ref()
+            .expect("the id came from this table");
+        assert_eq!(info.name, "enter");
+    }
 }
