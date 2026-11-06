@@ -150,7 +150,7 @@ fn trait_hit(traits: &mut Vec<(String, Vec<String>)>, name: &str, signal: Option
 }
 
 /// `createDefaultStrategy()`.
-fn default_strategy() -> Map<String, Value> {
+pub fn default_strategy() -> Map<String, Value> {
     let mut strategy = Map::new();
     strategy.insert("profile".into(), json!("generic-app"));
     strategy.insert("bootDelayMs".into(), json!(1200));

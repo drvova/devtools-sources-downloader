@@ -103,7 +103,10 @@ fn the_injected_object_is_the_shape_the_page_world_reads() {
         .expect("policy object")
         .keys()
         .collect();
-    assert_eq!(keys, ["redactKey", "textMime", "graphqlUrl", "limits"]);
+    assert_eq!(
+        keys,
+        ["redactKey", "textMime", "graphqlUrl", "defaultStrategy", "limits"]
+    );
     assert_eq!(injected["redactKey"], policy::REDACT_KEY_PATTERN);
     assert_eq!(injected["textMime"], policy::TEXT_MIME_PATTERN);
     assert_eq!(injected["graphqlUrl"], policy::GRAPHQL_URL_MARKER);
@@ -135,6 +138,22 @@ fn the_injected_object_is_the_shape_the_page_world_reads() {
             "queryItems",
             "technologies"
         ]
+    );
+}
+
+/// The page world used to keep its own copy of the default strategy, thirteen
+/// keys transcribed from `stackprofile::default_strategy`. Nothing compared the
+/// two, so a timing changed in Rust would have left the page world waiting on
+/// the old one. The injected value is now the engine's own map, and this pins
+/// that - the assertion is identity, not a transcription.
+#[test]
+fn the_injected_strategy_is_the_engine_default() {
+    let injected = policy::capture_policy();
+    let want = serde_json::Value::Object(devtools_unpack::panel::stackprofile::default_strategy());
+    assert_eq!(injected["defaultStrategy"], want);
+    assert_eq!(
+        injected["defaultStrategy"]["profile"], "generic-app",
+        "the profile name the page world reports"
     );
 }
 
@@ -178,10 +197,14 @@ fn every_limit_name_the_page_world_reads_is_answered_and_every_key_is_read() {
 }
 
 /// The point of the move is one source of truth, so a page-world copy coming
-/// back is the defect this guards - the same way the mirrored default strategy
-/// is guarded.
+/// back is the defect this guards - for the budgets, the redaction rule and the
+/// default strategy alike.
 #[test]
 fn the_page_world_keeps_no_local_copy_of_the_policy() {
+    let nonzero_strategy_literal = regex::Regex::new(
+        r"(?:bootDelay|networkQuiet|mutationQuiet|runtimeQuiet|socketQuiet|workerGrace|maxCapture)Ms:\s*[1-9]",
+    )
+    .expect("strategy literal regex");
     for name in ["framework-introspect.js", "injected.js"] {
         let path = format!("{}/src/js/{name}", env!("CARGO_MANIFEST_DIR"));
         let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
@@ -192,6 +215,12 @@ fn the_page_world_keeps_no_local_copy_of_the_policy() {
         assert!(
             source.contains("__CAPTURE_POLICY__"),
             "{name} does not read the injected capture policy"
+        );
+        // The strategy fallback may carry zeros, never the engine's timings: a
+        // non-zero literal here means the thirteen-key copy has come back.
+        assert!(
+            !nonzero_strategy_literal.is_match(&source),
+            "{name} hardcodes a capture timing again; the strategy is injected"
         );
     }
 }

@@ -82,6 +82,10 @@ pub fn capture_policy() -> Value {
         "redactKey": REDACT_KEY_PATTERN,
         "textMime": TEXT_MIME_PATTERN,
         "graphqlUrl": GRAPHQL_URL_MARKER,
+        // The page world needs usable timings before the panel's analysed
+        // profile arrives, and it used to keep its own copy of them. They are
+        // engine policy like the budgets below, so they ride here.
+        "defaultStrategy": crate::panel::stackprofile::default_strategy(),
         "limits": {
             "items": LIMITS.items,
             "keys": LIMITS.keys,

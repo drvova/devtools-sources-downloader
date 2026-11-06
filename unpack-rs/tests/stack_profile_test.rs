@@ -143,35 +143,37 @@ fn the_default_strategy_survives_when_no_rule_fires() {
     assert_eq!(strategy["preferHydratedDom"], json!(false));
 }
 
-/// The page world keeps its own copy of the default strategy
+/// The page world used to keep its own copy of the default strategy
 /// (`injected.js::defaultStrategy`) because it needs usable timings before the
-/// engine can answer - PORTING.md records that as a deliberate mirror. These
-/// values drive the capture gates, so a mirror that drifts is a defect: this
-/// reads the JavaScript literal and holds it to the engine's default field for
-/// field.
+/// engine can answer - PORTING.md recorded that as a deliberate mirror, and this
+/// test held it field for field against `stackprofile::default_strategy`.
+///
+/// The copy is gone: the strategy now rides in the injected capture policy, so
+/// there is no mirror left to drift. Two things remain worth guarding. The page
+/// world must read the injected value rather than declaring one again, and its
+/// fallback must carry no values of its own - only zeros - because a fallback
+/// holding real timings is a transcription that can drift exactly as the old
+/// copy did.
 #[test]
-fn the_page_world_default_strategy_matches_the_engine() {
+fn the_page_world_reads_the_default_strategy_instead_of_declaring_one() {
     let path = format!("{}/src/js/injected.js", env!("CARGO_MANIFEST_DIR"));
     let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
-    let mirrored = js_default_strategy(&source).expect("injected.js declares a default strategy");
-
-    let engine = stackprofile::analyze(&json!({}));
-    let strategy = engine["strategy"]
-        .as_object()
-        .expect("strategy object")
-        .clone();
-
-    let engine_keys: std::collections::BTreeSet<&String> = strategy.keys().collect();
-    let js_keys: std::collections::BTreeSet<&String> = mirrored.keys().collect();
-    assert_eq!(
-        js_keys, engine_keys,
-        "the mirrored default strategy lost or gained a field"
+    assert!(
+        source.contains("POLICY.defaultStrategy"),
+        "injected.js no longer reads the injected default strategy"
     );
-    for (key, want) in &strategy {
-        assert_eq!(
-            &mirrored[key], want,
-            "default strategy field `{key}` drifted from the engine"
-        );
+    let fallback = js_default_strategy(&source).expect("injected.js keeps a fallback");
+    assert!(
+        !fallback.is_empty(),
+        "the fallback parsed as empty, so this test would be vacuous"
+    );
+    for (key, value) in &fallback {
+        if let Some(number) = value.as_f64() {
+            assert_eq!(
+                number, 0.0,
+                "the fallback hardcodes `{key}` = {number}; the strategy is injected"
+            );
+        }
     }
 }
 

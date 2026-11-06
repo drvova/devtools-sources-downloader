@@ -31,27 +31,24 @@
     var TEXT_MIME_RE = new RegExp(POLICY ? POLICY.textMime : '$^', 'i');
     var GRAPHQL_URL = POLICY ? POLICY.graphqlUrl : '';
 
-    // Mirrors the engine's `default_strategy` (panel/stackprofile.rs): the page
-    // world needs usable timings before the panel's analysed profile arrives,
-    // and the engine's test pins its defaults to these same values.
+    // The engine owns the default strategy (panel/stackprofile.rs) and injects
+    // it with the rest of the capture policy. The fallback below carries no
+    // values of its own - only zeros - so it cannot drift from the engine the
+    // way a transcribed copy would. A missing policy therefore means "capture
+    // nothing, immediately" rather than a capture that never becomes ready.
     function defaultStrategy() {
+        if (POLICY && POLICY.defaultStrategy) return POLICY.defaultStrategy;
         return {
             profile: 'generic-app',
-            bootDelayMs: 1200,
-            networkQuietMs: 1000,
-            mutationQuietMs: 1200,
-            runtimeQuietMs: 1000,
-            socketQuietMs: 2200,
-            workerGraceMs: 1200,
-            maxCaptureMs: 18000,
-            preferHydratedDom: false,
-            captureFrameworkState: false,
-            captureGraphQLOps: false,
-            prioritizeSourceMaps: false,
-            reasons: ['Generic adaptive profile'],
+            bootDelayMs: 0,
+            networkQuietMs: 0,
+            mutationQuietMs: 0,
+            runtimeQuietMs: 0,
+            socketQuietMs: 0,
+            workerGraceMs: 0,
+            maxCaptureMs: 0,
         };
     }
-
     var SIGNALS = {
         startedAt: Date.now(),
         activeRequests: 0,

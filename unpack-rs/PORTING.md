@@ -334,13 +334,17 @@ self-source list mentions it any more.
    an empty profile before the panel answers, and that placeholder no longer
    has a `VERSION` to read. The engine stamps `1.0.0` on the first analysis, so
    the placeholder is visible only for the first poll.
-3. **The default strategy is mirrored, not shared.** The page world needs
-   timings before the engine can answer, so `defaultStrategy()` in
-   `injected.js` keeps its own copy of the engine's defaults. Those values
-   drive the capture gates, so the pair is guarded rather than trusted:
-   `the_page_world_default_strategy_matches_the_engine` reads the JavaScript
-   literal out of `injected.js` and holds it to the engine's default field for
-   field (drifting `bootDelayMs` by 100 ms fails it by name).
+3. **The default strategy is shared, not mirrored.** The page world needs
+   timings before the engine can answer, and it used to keep its own copy of
+   them - thirteen keys transcribed from `stackprofile::default_strategy`, held
+   together by a field-for-field test. The copy is gone: the strategy now rides
+   in the injected capture policy beside the budgets, so `defaultStrategy()` in
+   `injected.js` reads `POLICY.defaultStrategy` and the panel injects the
+   engine's own map. What the page world keeps is a fallback carrying zeros
+   only, so a missing policy means "capture nothing, immediately" rather than a
+   capture that never becomes ready - and a fallback of zeros cannot drift the
+   way a transcription can. `the_page_world_reads_the_default_strategy_instead_of_declaring_one`
+   guards both halves.
 4. **`generatedAt` comes from the host clock.** The same seam as
    `util::iso8601_now`: `xu_host_now_ms` on wasm, `SystemTime` elsewhere. The
    parity test normalizes the field on both sides, since it is the profile's
