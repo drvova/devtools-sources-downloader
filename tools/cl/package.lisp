@@ -98,12 +98,14 @@
    ;; selftest
    #:smoke-test
    ;; panel verification
-   #:panel-check))
+   #:panel-check
+   ;; the product path: a real page, the real panel, a real archive
+   #:download-check))
 
 (defpackage :vovas.tools
   (:nicknames :vt)
   (:use :cl)
   (:import-from :vovas.tools.util
    #:repo-root #:unpack-rs-dir #:dist-dir #:cache-dir #:log-line #:json-decode #:npm-argv)
-  (:import-from :vovas.cdp #:smoke-test #:panel-check)
+  (:import-from :vovas.cdp #:smoke-test #:panel-check #:download-check)
   (:export #:main #:build #:check #:pack))

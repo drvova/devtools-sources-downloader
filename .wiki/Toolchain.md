@@ -120,6 +120,36 @@ DevTools window. Three things make that harder than it sounds:
 So the check asks the app for its own model instead of scraping pixels. A registry is immune
 to layout, overflow and shadow DOM; pixels are not.
 
+## What `download` checks that nothing else did
+
+`vovas download` runs the product: it opens a real page, presses **Download All** in the
+real panel, and inspects the archive that comes back. Until it existed, every browser check
+stopped short — `panel` proved the panel registers, and the extension e2e opened
+`html/page.html` as a plain tab to prove it refuses to run without the DevTools API. Nothing
+had ever collected from a real inspected page.
+
+Two things had to be solved to drive it:
+
+- **The panel iframe is lazy.** DevTools creates it only when its tab is selected, and on
+  Chrome for Testing 157 `UI.InspectorView` is undefined — the frontend exposes `UI.panels`,
+  which is a registry, not a selector. There is no API to select a panel. The way in is the
+  panel-cycle keybind (**Ctrl+]**), dispatched as `Input.dispatchKeyEvent` to the DevTools
+  window; the extension panel came up on the ninth press.
+- **The archive has to come back without touching Downloads.** `saveBytes` hands the bytes to
+  `URL.createObjectURL`, so the check hooks that in the panel, reads the blob as a data URL,
+  and decodes it in Lisp. The anchor click is intercepted so the check does not write into the
+  user's Downloads folder on every run — the real download was confirmed by hand, four times,
+  before the interception went in.
+
+The DevTools frontend is itself a `page` target, so the inspected tab has to be selected by
+excluding `devtools://` and `chrome-extension://` URLs; without that the startup tab is
+mistaken for the DevTools window and the navigation lands in the wrong place.
+
+What the run proves, in order: the extension loads, a real page loads, the panel iframe comes
+up, the panel hooks the archive, the click lands, the archive is built, it is named
+`sources.zip`, it decodes, it is a zip, and it carries `_recon/`, `_unpack/` and `_analysis/`
+entries. Against `https://example.com` that is 43 entries.
+
 ## Why this exists at all
 
 `npm run verify` gives one exit code for seven steps. The Lisp driver gives a verdict and a

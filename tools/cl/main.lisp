@@ -9,6 +9,7 @@
   pack            zip dist/ into dist-<version>.zip~@
   smoke           end-to-end selftest of the CDP client~@
   panel           verify the extension's DevTools panel registers~@
+  download [url]  press Download All in the real panel and verify the archive~@
   version         print versions~%~
 ~%~
 REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
@@ -33,6 +34,8 @@ REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
            (if (smoke-test) 0 1))
           ((string= cmd "panel")
            (panel-check))
+          ((string= cmd "download")
+           (download-check :url (or (second args) "https://example.com")))
           ((string= cmd "version")
            (format t "vovas-tools on ~a ~a (~a)~%"
                    (lisp-implementation-type)

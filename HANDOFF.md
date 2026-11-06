@@ -11,6 +11,7 @@ recalled. Where something is *unverified*, it says so.
 | Working tree | clean |
 | `cargo test` | green — 68 unit + 89 integration |
 | `vovas check` | PASS — all 7 steps, run on every pass |
+| `vovas download` | PASS — 10 checks against a real page, the real panel, a real archive |
 | Wiki | `.wiki/`, 1987 lines, seven pages, all internal links resolving |
 
 The tree was green when this was written, and the gate was run end to end on every pass:
@@ -59,7 +60,14 @@ Read `.wiki/Home.md` first. It is current and it is the map.
 5. **Measured the bridge surface instead of splitting it** — the last finding claimed the
    extension's interface was shaped by its test file. Measured: 50 exports, zero unreferenced,
    ten imported by the panel and 42 by the node baseline. `tests/bridge_surface.rs` guards it.
-6. **Corrected three documentation claims the passes had invalidated** — the wiki described
+6. **Closed the last open item: nobody had run the product.** `vovas download` opens a real
+   page, presses Download All in the real DevTools panel, and inspects the archive. Two
+   obstacles: DevTools loads a panel iframe only when its tab is selected and
+   `UI.InspectorView` is undefined on this frontend, so the check presses the Ctrl+] cycle
+   keybind a user would; and the archive is read back through a `URL.createObjectURL` hook so
+   the check does not write into Downloads. Against `https://example.com` it produces 43
+   entries and all ten checks pass.
+7. **Corrected three documentation claims the passes had invalidated** — the wiki described
    `runtime-manifest.json` as stripping fields that pass 19 now writes, a channel diagram listed
    six of ten members, and `PORTING.md` counted the panel's bridge surface as five when it is ten.
 
@@ -108,13 +116,11 @@ Nothing is half-finished. The wiki is current, the tree is clean, the cell works
 
 Worth doing next, in rough order of value:
 
-1. **`npm run build` then load `unpack-rs/dist/` in Chrome** and click Download All on a
-   real page. Everything is verified by tests; nothing here was verified by hand in a
-   browser.
-2. **`PORTING.md` is 37 KB and predates the panel port.** It is accurate where it was
-   updated (pass 10 rewrote its strategy section) but it is now a second, older description
-   of the same system as the wiki. Consider folding anything still unique into `.wiki/` and
-   retiring it, rather than maintaining two.
+1. **`PORTING.md` is 37 KB and predates the panel port.** It is accurate where it was
+   updated but it is now a second, older description of the same system as the wiki.
+   Consider folding anything still unique into `.wiki/` and retiring it, rather than
+   maintaining two.
+
 
 ## Conventions this repo actually uses
 

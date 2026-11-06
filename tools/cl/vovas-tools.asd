@@ -13,5 +13,6 @@
                (:file "chrome")
                (:file "cdp")
                (:file "panel")
+               (:file "download")
                (:file "tasks")
                (:file "main")))
