@@ -505,30 +505,34 @@ reason, which is the failure mode that survives a green run."
 ;;; All gates
 ;;; ---------------------------------------------------------------------------
 
+(defun gate-list ()
+  "Every gate, as (name . function). Extracted from `run-all-gates` so a checker
+can verify the symbols resolve WITHOUT executing them: a name in a list proves
+nothing until it is fbound, and a typo otherwise surfaces only as a generic
+ERROR verdict when that gate finally runs."
+  (list (cons "harness self-test" #'gate-can-fail-p)
+        (cons "mutation probes" #'run-mutation-gate)
+        (cons "scanner + decoders (wasm oracle)" #'run-scanner-gate)
+        (cons "digest (wasm oracle)" #'run-digest-gate)
+        (cons "bundler (wasm oracle)" #'run-bundler-gate)
+        (cons "text helpers (text-helpers.json)" #'run-text-gate)
+        (cons "number semantics (number-oracle.json)" #'run-number-gate)
+        ;; slices ported by parallel agents; each proves itself before listing
+        (cons "beautify (wasm oracle + goldens)" #'run-beautify-gate)
+        (cons "detectors (wasm oracle)" #'run-detectors-gate)
+        (cons "sourcemaps (wasm oracle)" #'run-sourcemaps-gate)
+        (cons "packers (wasm oracle)" #'run-packers-gate)
+        ;; binary tier
+        (cons "wasm parser (binary fixtures)" #'run-wasm-gate)
+        (cons "jsc bytecode (binary fixtures)" #'run-jscbytecode-gate)
+        (cons "v8 code cache (binary fixtures)" #'run-v8codecache-gate)
+        (cons "zip writer (round trip)" #'run-zip-gate)))
+
 (defun run-all-gates ()
-  "Every gate that exists. Grows as slices land. A gate that throws is a FAIL,
-not a crash, so one broken slice cannot hide the verdicts of the slices that
-still work."
-  (let ((gates (list (cons "harness self-test" #'gate-can-fail-p)
-                     (cons "mutation probes" #'run-mutation-gate)
-                     (cons "scanner + decoders (wasm oracle)" #'run-scanner-gate)
-                     (cons "digest (wasm oracle)" #'run-digest-gate)
-                     (cons "bundler (wasm oracle)" #'run-bundler-gate)
-                     (cons "text helpers (text-helpers.json)" #'run-text-gate)
-                     (cons "number semantics (number-oracle.json)" #'run-number-gate)
-                     ;; slices ported by parallel agents; each proves itself
-                     ;; before it is listed here
-                     (cons "beautify (wasm oracle + goldens)" #'run-beautify-gate)
-                     (cons "detectors (wasm oracle)" #'run-detectors-gate)
-                     (cons "sourcemaps (wasm oracle)" #'run-sourcemaps-gate)
-                     (cons "packers (wasm oracle)" #'run-packers-gate)
-                     ;; binary tier
-                     (cons "wasm parser (binary fixtures)" #'run-wasm-gate)
-                     (cons "jsc bytecode (binary fixtures)" #'run-jscbytecode-gate)
-                     (cons "v8 code cache (binary fixtures)" #'run-v8codecache-gate)
-                     (cons "zip writer (round trip)" #'run-zip-gate)))
-        (all-ok t))
-    (dolist (gate gates)
+  "Every gate that exists. A gate that throws is a FAIL, not a crash, so one
+broken slice cannot hide the verdicts of the slices that still work."
+  (let ((all-ok t))
+    (dolist (gate (gate-list))
       (format t "~&~%== ~a~%" (car gate))
       (let ((ok (handler-case (funcall (cdr gate))
                   (error (e)
