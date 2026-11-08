@@ -65,9 +65,20 @@
 ;;;; field not halved, a zlib-wrapped stream posing as raw deflate, a writer
 ;;;; that always deflates (or always stores), a name length counted in
 ;;;; characters, and an EOCD search that runs forwards into a decoy signature
-;;;; inside a stored entry. `mutation-zip.lisp` in `wip/` proves the whole gate
-;;;; is non-vacuous by breaking the port thirteen ways and requiring a failure
-;;;; for each.
+;;;; inside a stored entry. `wip/mutation-zip.lisp` proves the whole gate is
+;;;; non-vacuous by breaking the port thirteen ways and requiring a failure for
+;;;; each; all thirteen are caught. The sweep earned its keep by finding SIX
+;;;; gaps in an earlier draft of this file, each now closed by the assertion
+;;;; that names it:
+;;;;
+;;;;   transposed DOS words        -> the header's time/date words, read from
+;;;;                                 the bytes (sections 5), not just `dos-stamp`
+;;;;   local compressed size       -> the local header's own size fields
+;;;;   name counted in characters  -> the local name length, on the non-ASCII entry
+;;;;   ceiling off by one          -> the 65535-then-refuse case (section 9)
+;;;;   no length check             -> a directory that lies about the size
+;;;;   forwards EOCD search        -> the decoy entry, now asserted STORED, since
+;;;;                                 a deflated decoy has no signature to trip
 
 (in-package :vovas.engine.gate)
 
@@ -221,14 +232,20 @@ disagreement here is about CONTENT, not about a styling difference.")
 (defun zip-decoy-body ()
   "Stored content containing the EOCD signature, to trip a forwards search.
 
-The bytes are the EOCD signature followed by a plausible-looking record body, so
-a forwards scan reads a count and a directory offset out of them and then walks
-into nonsense. A backwards scan from the end never looks at them."
+The bytes are the EOCD signature followed by a plausible-looking record body -
+count 153, directory offset 32 - followed by incompressible noise so the entry
+is STORED rather than deflated. A forwards scan reads those numbers and then
+walks into nonsense; a backwards scan from the end never looks at them."
   (concatenate '(vector (unsigned-byte 8))
                (zip-octets #x50 #x4B #x05 #x06 #x00 #x00 #x00 #x00
-                       #x99 #x00 #x99 #x00 #x10 #x00 #x00 #x00
-                       #x20 #x00 #x00 #x00 #x00 #x00)
-               (zip-utf8 "tail")))
+                           #x99 #x00 #x99 #x00 #x10 #x00 #x00 #x00
+                           #x20 #x00 #x00 #x00 #x00 #x00)
+               ;; THE NOISE IS THE POINT. With only structured bytes here, salza2
+               ;; deflates the decoy and the signature never reaches the archive,
+               ;; so a forwards EOCD search finds nothing to stop at and the test
+               ;; passed against the wrong implementation. 512 incompressible
+               ;; bytes force `compress-entry` to store the entry verbatim.
+               *zip-noise*))
 
 (defun run-zip-gate (&key (verbose t))
   "Check the archive port against its own round trip, a foreign archive, and
@@ -559,6 +576,55 @@ the Rust crate's own `zip.rs` tests. Returns T when every case holds."
              (vovas.engine.zip:read-u16 archive 4) 20)
       (check result "the local header's extra field length is zero" "extra"
              (vovas.engine.zip:read-u16 archive 28) 0)
+      ;; The DOS words AS WRITTEN. Section 2 checks `dos-stamp` in isolation, and
+      ;; a transposed (date, time) pair passes every one of those cases while
+      ;; still reaching the header in the wrong order - which is exactly what the
+      ;; mutation sweep found. These read the file instead of the function.
+      (check result "the local header's time word is the DOS time" "time word"
+             (vovas.engine.zip:read-u16 archive 10) 0)
+      (check result "the local header's date word is the DOS date" "date word"
+             (vovas.engine.zip:read-u16 archive 12) (logior (ash 1 5) 1))
+      ;; ... and the same pair in the first central record, because the two
+      ;; copies are written by different code paths.
+      (check result "the central record's time word is the DOS time" "time word"
+             (vovas.engine.zip:read-u16
+              archive (+ (vovas.engine.zip:zip-end-record-directory-offset end) 12))
+             0)
+      (check result "the central record's date word is the DOS date" "date word"
+             (vovas.engine.zip:read-u16
+              archive (+ (vovas.engine.zip:zip-end-record-directory-offset end) 14))
+             (logior (ash 1 5) 1))
+
+      ;; The LOCAL sizes are a second copy of the central ones and nothing in the
+      ;; reader compares them, so a writer that put the content size in the
+      ;; compressed field survived every assertion above. Read them out.
+      (let* ((bundle-entry (zip-entry-by-name entries "demo.test/app/bundle.js"))
+             (at (vovas.engine.zip:zip-read-entry-offset bundle-entry))
+             (local-compressed (vovas.engine.zip:read-u32 archive (+ at 18)))
+             (local-uncompressed (vovas.engine.zip:read-u32 archive (+ at 22))))
+        (check result "the local compressed size is the deflated body's"
+               "bundle.js" local-compressed
+               (vovas.engine.zip:zip-read-entry-compressed bundle-entry))
+        (check result "the local uncompressed size is the content's" "bundle.js"
+               local-uncompressed 960)
+        (zip-probe result "the local compressed size is smaller than the content"
+                   (< local-compressed local-uncompressed)
+                   (list local-compressed local-uncompressed)))
+      ;; The local NAME LENGTH in bytes, for the entry whose name is not ASCII.
+      ;; The reader locates the body with it, but an empty body starts and ends
+      ;; at the same place whatever the length says - so only reading the field
+      ;; catches a character count here.
+      (let* ((unicode-entry (zip-entry-by-name entries *zip-unicode-name*))
+             (at (vovas.engine.zip:zip-read-entry-offset unicode-entry)))
+        (check result "the local name length is the UTF-8 byte count"
+               *zip-unicode-name*
+               (vovas.engine.zip:read-u16 archive (+ at 26))
+               (length (zip-utf8 *zip-unicode-name*)))
+        (check result "... which is longer than the character count"
+               *zip-unicode-name*
+               (list (length (zip-utf8 *zip-unicode-name*))
+                     (length *zip-unicode-name*))
+               (list 24 16)))
       (check result "the first entry starts at offset 0" "offset"
              (vovas.engine.zip:zip-read-entry-offset
               (zip-entry-by-name entries "_unpack/index.json"))
@@ -781,6 +847,22 @@ the Rust crate's own `zip.rs` tests. Returns T when every case holds."
                (zip-signals-containing-p (lambda () (vovas.engine.zip:read-archive broken))
                                      "UTF-8")
                t))
+      ;; (e2) a directory that LIES about the uncompressed size, with every other
+      ;; field correct. The body decodes to the right bytes and the CRC matches,
+      ;; so ONLY the length check can catch this - which is why the mutation
+      ;; sweep found that check unguarded. The field is the central record's
+      ;; uncompressed size at +24.
+      (let* ((broken (copy-seq archive))
+             (central (+ (vovas.engine.zip:zip-end-record-directory-offset
+                          (vovas.engine.zip:find-end-record broken))
+                         24)))
+        (setf (aref broken central) #x2A)   ; low byte -> 42, not 5
+        (check result "a directory that misstates the uncompressed size is refused"
+               "lying size"
+               (zip-signals-containing-p
+                (lambda () (vovas.engine.zip:read-archive broken))
+                "directory says")
+               t))
       ;; (f) garbage is not an archive at all
       (check result "a non-archive is refused" "garbage"
              (zip-signals-containing-p
@@ -877,7 +959,15 @@ the Rust crate's own `zip.rs` tests. Returns T when every case holds."
              (vovas.engine.zip:zip-end-record-at end) (- (length archive) 22))
       (check result "the decoy archive still reads both entries" "decoy archive"
              (zip-entry-names (vovas.engine.zip:read-archive archive))
-             (list "decoy.bin" "real.txt")))
+             (list "decoy.bin" "real.txt"))
+      ;; The decoy only trips a forwards search if its bytes are in the archive
+      ;; verbatim; if the writer deflated it, the signature is gone and the case
+      ;; above passes vacuously.
+      (check result "the decoy entry is stored, so its signature is in the file"
+             "decoy.bin"
+             (vovas.engine.zip:zip-read-entry-method
+              (zip-entry-by-name (vovas.engine.zip:read-archive archive) "decoy.bin"))
+             vovas.engine.zip:+method-store+))
 
     ;; -- 13. The gate is non-vacuous ---------------------------------------
     (zip-probe result "the gate ran a non-empty set of cases"

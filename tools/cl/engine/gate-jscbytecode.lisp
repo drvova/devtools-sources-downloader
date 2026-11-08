@@ -656,6 +656,21 @@ and the case count is positive."
         ;;   the real chunk's stream at 104, walked for ONE instruction, is
         ;;   `("enter")` — a legal exact-length walk that ends on a
         ;;   non-terminal op, which is precisely the shape the check refuses.
+        ;;
+        ;; FIXTURE THAT WOULD CLOSE THIS GAP. `jsc-chunk-terminal-truncated.jsc`:
+        ;; `jsc-chunk.jsc` with the `.instr` COUNT varint of record 368's 0x38
+        ;; tail patched from 55 down to any length that lands exactly on a
+        ;; non-terminal op. Those lengths are measured, not guessed — walking
+        ;; the real stream at 104 for each of 1..60 and keeping the ones that
+        ;; both succeed and end non-terminal gives:
+        ;;
+        ;;     1 enter   4 mov   7 mov   16 get_from_scope
+        ;;     31 put_to_scope   35 new_func_exp   38 mov   53 put_to_scope
+        ;;
+        ;; Patch to any of those and `bind-jsc-block` must answer ZERO
+        ;; candidates for record 368; a port that dropped the terminal check
+        ;; answers one, and every other assertion in this gate stays green.
+        ;; That is the case which would turn this construction into an oracle.
         (multiple-value-bind (ops count)
             (vovas.engine.jscbytecode:walk-jsc-ops chunk 104 1
                                                    (vovas.engine.jscbytecode:jsc-opcode-table))
@@ -680,11 +695,37 @@ and the case count is positive."
                  (car (last (first ops))) "ret"))
 
       ;; ---- decode-jsc-slot: two of its four tags have no fixture ------
-      ;; The two trees exercise tags 1 (inlined characters) and 2 (ordinal).
-      ;; Tags 0 (field-relative pointer) and 3 (unrecognised) are reached only
-      ;; by payloads this crate does not ship, so they are pinned by
-      ;; CONSTRUCTION here — and stated as such rather than pretended into the
-      ;; oracle. Every case below is a slot value with a known reading.
+      ;; MEASURED, not assumed. Classifying every decoded name in both real
+      ;; trees gives: jsc-chunk.jsc -> 6 tag-2 ordinals + 1 NIL; jsc-cjs-chunk.bin
+      ;; -> 15 tag-2 ordinals + 2 NIL. Tags 0 and 3 never occur, and tag 1 never
+      ;; occurs either — the two recovered STRINGS ("moduleLoader",
+      ;; "starNamespace") are records matched by hash in `recover-jsc-strings`,
+      ;; not name slots. So three of the four tags are construction-pinned here
+      ;; and stated as such rather than pretended into the oracle.
+      ;;
+      ;; (Getting this measurement wrong is easy and instructive: a hand-rolled
+      ;; cursor walk over the present-flag fields reported tags 0 and 3 as
+      ;; present. The decoded STRINGS are the reliable test, because a tag-0 slot
+      ;; renders `<offset N>` and a tag-3 slot renders `<slot hex>` — if either
+      ;; had occurred it would be visible in the output, and it is not. Trust the
+      ;; rendering, not the reimplementation of the cursor arithmetic.)
+      ;;
+      ;; FIXTURES THAT WOULD CLOSE THIS GAP, one per tag:
+      ;;
+      ;;   tag 0  a chunk whose name field is a field-relative pointer to a
+      ;;          string record — the layout `read-jsc-inline-string` exists for.
+      ;;          Assertion that would then become oracle: the decoded name is
+      ;;          the inline string, and a slot pointing at another SLOT resolves
+      ;;          through it to a depth of 3.
+      ;;   tag 3  any payload carrying an unrecognised tag. Assertion: the name
+      ;;          renders `<slot hex>` rather than collapsing to the empty name,
+      ;;          which is the whole reason tag 3 is rendered instead of dropped.
+      ;;   tag 1  a chunk with an inlined-character name (`a`, `abc`). Assertion:
+      ;;          the characters come out low byte first from bit 8, in the
+      ;;          reverse order a naive high-byte-first port would produce.
+      ;;
+      ;; A single fixture cannot cover all three; they are three different slot
+      ;; encodings. Until any of them exists these stay construction-pinned.
       (let ((empty (make-array 0 :element-type '(unsigned-byte 8))))
         (flet ((slot (value) (vovas.engine.jscbytecode:decode-jsc-slot empty 0 value nil 0)))
           ;; the two no-name sentinels
