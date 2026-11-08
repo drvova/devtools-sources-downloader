@@ -294,14 +294,22 @@ archive and left out of the index pointing at it. One rule, here, is the fix."
 ;;; ---------------------------------------------------------------------------
 
 (defun field (entry key)
-  "`entry[key]`, or NIL when ENTRY is not an object or the key is absent.
+  "`entry[key]`, or NIL when the key is absent OR its value is JS-FALSY.
 
-NIL and JSON null are both "absent" here, which matches the Rust: it matches on
-`Some(value)` only, so an explicit null falls to the same branch as a missing key."
+The Rust is `entry.get(key).filter(|v| js_truthy(v))` - a PRESENCE test that is
+really a TRUTHINESS test. So a stored `0`, `\"\"`, `false`, or `null` all read as
+absent. This matters wherever a field's presence drives a bonus or a branch: a
+runtime with `timestamp: 0` must NOT earn the timestamp bonus, and a `transferSize`
+of 0 must fall through to `encodedBodySize`.
+
+Getting this wrong is invisible in the common case, because `field-str` answers
+\"\" for both absent and falsy and `field-number` answers 0 for both. It only shows
+up where someone writes `(when (field entry key) ...)` - which is precisely the
+Rust's `if let Some(...)` pattern."
   (when (hash-table-p entry)
     (multiple-value-bind (value present) (gethash key entry)
-      (when present
-        (if (vovas.engine.panel.model:json-null-p value) nil value)))))
+      (when (and present (vovas.engine.panel.model:js-truthy value))
+        value))))
 
 (defun field-str (entry key)
   "`fieldStr`: a STRING for a string or number field, empty otherwise.

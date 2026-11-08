@@ -244,7 +244,17 @@
   ;; asked for.
   (:import-from :vovas.engine.panel.assets
                 #:field #:field-str #:field-number #:unique-strings
-                #:get-bare-file-name)
+                #:get-bare-file-name
+                #:script-asset-id #:script-asset-url #:script-asset-file
+                #:script-asset-classification #:script-asset-framework-hints
+                #:script-asset-route-hints #:script-asset-startup-signals
+                #:script-asset-imports #:script-asset-content #:script-asset-score
+                #:script-asset-boundary-details #:script-asset-boundary-labels
+                #:script-asset-primary-boundary #:script-asset-boundary-reasons
+                #:make-boundary-detail #:boundary-detail-score
+                #:count-boundary-labels #:count-tagged-entries)
+  (:import-from :vovas.engine.panel.model
+                #:make-counts #:counts-add #:counts-alist)
   (:import-from :vovas.engine.panel.model #:js-truthy)
   ;; `js-number-value` is what turns a score into the integer the JSON shows.
   ;; It lives in `model`, beside the other JS number coercions - `artifacts`
@@ -260,7 +270,10 @@
    #:string-list #:build-boundary-sample
    #:push-boundary-label #:infer-boundary-labels
    #:boundary-outcome #:apply-boundary-labels
-   #:strip-boundary-entry))
+   #:strip-boundary-entry
+   #:script-asset->json #:write-boundary-labels-into-asset
+   #:count-boundary-labels-values #:count-tagged-entries-values
+   #:build-boundary-labels))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
   (:export

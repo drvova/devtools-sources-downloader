@@ -11,8 +11,6 @@
 (in-package :vovas.engine.gate)
 
 (defun probe ()
-  "Ad-hoc probes live here so the port itself stays free of debug output. Run
-with `run-engine.lisp probe` and read it as evidence, not as a test."
   (format t "~&-- number/to-string --~%")
   (dolist (v (list 0d0 1d0 1.5d0 0.1d0 1d-7 1d-6 123.45d0 1d20 1d21 1d22
                    least-positive-double-float 1.7976931348623157d308))
@@ -678,6 +676,7 @@ ERROR verdict when that gate finally runs."
         (cons "artifact helpers (panel oracle)" #'run-artifacts-gate)
         (cons "boundary predicates (panel oracle)" #'run-boundary-gate)
         (cons "boundary labels (panel oracle)" #'run-boundary-label-gate)
+        (cons "boundary report (panel oracle)" #'run-boundary-report-gate)
         (cons "workspace profiles (panel oracle)" #'run-workspace-gate)))
 
 (defun run-all-gates ()

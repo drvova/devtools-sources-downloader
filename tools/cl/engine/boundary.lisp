@@ -397,3 +397,184 @@ is why a chunk shows \"main.js\" while a runtime shows its id."
           (js-number-value
            (or (field entry "score") 0d0)))
     out))
+
+;;; ---------------------------------------------------------------------------
+;;; script-asset->json
+;;; ---------------------------------------------------------------------------
+
+(defun script-asset->json (asset)
+  "A `script-asset` as the JSON-shaped hash table the boundary code reads.
+
+The Rust serialises the struct with serde and feeds the result to the inference
+function, so the inference reads WIRE field names. Reproducing that here is what
+keeps one inference function serving both assets and runtime origins - the
+alternative, a second asset-specific inference path, would let the two drift.
+
+The four boundary fields are included because the SAME function also serves
+`strip-boundary-entry`, which reports them. Omitting them made every chunk report
+an empty `primaryBoundary` and `boundaryLabels` while the struct held the right
+values - the report was reading a view that predated the labeling."
+  (let ((out (make-hash-table :test #'equal)))
+    (setf (gethash "id" out) (script-asset-id asset)
+          (gethash "url" out) (script-asset-url asset)
+          (gethash "file" out) (script-asset-file asset)
+          (gethash "kind" out) "chunk"
+          (gethash "classification" out) (script-asset-classification asset)
+          (gethash "frameworkHints" out) (coerce (script-asset-framework-hints asset) 'vector)
+          (gethash "routeHints" out) (coerce (script-asset-route-hints asset) 'vector)
+          (gethash "startupSignals" out) (coerce (script-asset-startup-signals asset) 'vector)
+          (gethash "imports" out) (coerce (script-asset-imports asset) 'vector)
+          (gethash "content" out) (script-asset-content asset)
+          (gethash "score" out) (script-asset-score asset)
+          (gethash "primaryBoundary" out) (script-asset-primary-boundary asset)
+          (gethash "boundaryLabels" out) (coerce (script-asset-boundary-labels asset) 'vector)
+          (gethash "boundaryReasons" out) (coerce (script-asset-boundary-reasons asset) 'vector)
+          (gethash "boundaryDetails" out)
+          (map 'vector
+               (lambda (detail)
+                 (let ((h (make-hash-table :test #'equal)))
+                   (setf (gethash "label" h)
+                         (vovas.engine.panel.assets:boundary-detail-label detail)
+                         (gethash "score" h)
+                         (js-number-value
+                          (vovas.engine.panel.assets:boundary-detail-score detail))
+                         (gethash "reasons" h)
+                         (coerce (vovas.engine.panel.assets:boundary-detail-reasons detail)
+                                 'vector))
+                   h))
+               (coerce (script-asset-boundary-details asset) 'vector)))
+    out))
+
+(defun write-boundary-labels-into-asset (asset outcome)
+  "Write a `boundary-outcome` back onto a `script-asset`.
+
+`boundary-details` becomes a vector of `boundary-detail` structs, which is the
+type the asset accessor promises; the labels, primary and reasons are plain
+sequences.
+
+The asset's SCORE becomes its best boundary score. This is set exactly once, from
+the details, with the classifier's score kept only when there are no details -
+assigning it twice would read back the value the first assignment wrote."
+  (let ((details
+          (map 'vector
+               (lambda (item)
+                 ;; positional, and SCORE is a DOUBLE-FLOAT slot: the match
+                 ;; score arrives as an integer from `js-number-value`, so it
+                 ;; has to be coerced or the struct constructor signals.
+                 (vovas.engine.panel.assets:make-boundary-detail
+                  (field-str item "label")
+                  (coerce (or (field item "score") 0d0) 'double-float)
+                  (let ((r (field item "reasons")))
+                    (if (or (vectorp r) (listp r))
+                        (coerce r 'list)
+                        '()))))
+               (coerce (getf outcome :details) 'vector))))
+    ;; The SLOTS are LISTS, not vectors: `script-asset` defaults them to `'()`
+    ;; and `count-boundary-labels` walks them with `dolist`. Writing a vector here
+    ;; compiles fine and then fails at the first `dolist` with "not of type LIST".
+    ;; JSON vectors are built at the serialization boundary, not in the struct.
+    ;;
+    ;; `score` is NOT assigned. The asset keeps the score its classifier gave it
+    ;; (the fixture's router chunk is 39 and its best boundary match is 24) - the
+    ;; four boundary fields are the only things labeling writes back.
+    (setf (script-asset-boundary-details asset) (coerce details 'list)
+          (script-asset-boundary-labels asset) (coerce (getf outcome :labels) 'list)
+          (script-asset-primary-boundary asset) (or (getf outcome :primary) "")
+          (script-asset-boundary-reasons asset) (coerce (getf outcome :reasons) 'list))
+    asset))
+
+;;; ---------------------------------------------------------------------------
+;;; countBoundaryLabels over JSON entries
+;;; ---------------------------------------------------------------------------
+
+(defun count-boundary-labels-values (items)
+  "`countBoundaryLabelsValues`: label counts across JSON entries."
+  (let ((c (vovas.engine.panel.model:make-counts)))
+    (dolist (item items)
+      (let ((labels (field item "boundaryLabels")))
+        (when (or (vectorp labels) (listp labels))
+          (dolist (label (coerce labels 'list))
+            (when (stringp label)
+              (vovas.engine.panel.model:counts-add c label))))))
+    c))
+
+(defun count-tagged-entries-values (items)
+  "`countTaggedEntriesValues`: JSON entries carrying at least one label."
+  (count-if (lambda (item)
+              (let ((labels (field item "boundaryLabels")))
+                (and (or (vectorp labels) (listp labels))
+                     (plusp (length labels)))))
+            items))
+
+;;; ---------------------------------------------------------------------------
+;;; buildBoundaryLabels
+;;; ---------------------------------------------------------------------------
+
+(defun build-boundary-labels (assets origins)
+  "`buildBoundaryLabels`: label every asset and runtime origin, then summarise.
+
+ASSETS is a list of `script-asset` structs and ORIGINS a list of JSON hash
+tables. Both are LABELED IN PLACE (the structs and the hash tables are mutated,
+not copied) and the report is assembled from the labeled results.
+
+The classifications map is built from the assets BEFORE any labeling, so a
+runtime's vendor-parentage test sees the classifier's verdict rather than a
+label this function is in the middle of writing. That ordering is why it is a
+separate pass instead of being folded into the asset loop.
+
+Chunks and runtimes sort by score DESCENDING, stably - the fixture has ties and
+the oracle pins their order."
+  (let ((classifications (make-hash-table :test #'equal)))
+    (dolist (asset assets)
+      (setf (gethash (script-asset-id asset) classifications)
+            (script-asset-classification asset)))
+    ;; label the assets
+    (dolist (asset assets)
+      (write-boundary-labels-into-asset
+       asset
+       (boundary-outcome
+        (infer-boundary-labels (script-asset->json asset)
+                               :is-runtime nil
+                               :classifications classifications))))
+    ;; label the runtime origins
+    (dolist (origin origins)
+      (apply-boundary-labels
+       origin
+       (infer-boundary-labels origin :is-runtime t
+                                     :classifications classifications)))
+    ;; the report
+    (let* ((tagged-chunks
+             (stable-sort
+              (remove-if (lambda (a) (zerop (length (script-asset-boundary-labels a))))
+                         (copy-list assets))
+              #'>
+              :key #'script-asset-score))
+           (tagged-runtime
+             (stable-sort
+              (remove-if (lambda (o) (zerop (length (or (field o "boundaryLabels") #()))))
+                         (copy-list origins))
+              #'>
+              :key (lambda (o) (or (field o "score") 0d0))))
+           (out (make-hash-table :test #'equal)))
+      (setf (gethash "generatedAt" out) (vovas.engine.pipeline:iso8601-now)
+            (gethash "categories" out) (coerce *boundary-labels* 'vector)
+            (gethash "summary" out)
+            (let ((sm (make-hash-table :test #'equal)))
+              (setf (gethash "chunkLabels" sm)
+                    (vovas.engine.panel.model:counts-alist
+                     (vovas.engine.panel.assets:count-boundary-labels assets))
+                    (gethash "runtimeLabels" sm)
+                    (vovas.engine.panel.model:counts-alist
+                     (count-boundary-labels-values origins))
+                    (gethash "taggedChunks" sm)
+                    (vovas.engine.panel.assets:count-tagged-entries assets)
+                    (gethash "taggedRuntime" sm)
+                    (count-tagged-entries-values origins))
+              sm)
+            (gethash "chunks" out)
+            (map 'vector (lambda (a) (strip-boundary-entry (script-asset->json a) "chunk"))
+                 tagged-chunks)
+            (gethash "runtime" out)
+            (map 'vector (lambda (o) (strip-boundary-entry o "runtime"))
+                 tagged-runtime))
+      out)))

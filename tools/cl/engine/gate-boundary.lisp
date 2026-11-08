@@ -297,3 +297,100 @@ integer and is produced as an integer, but a fixture may carry 24.0."
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildBoundaryLabels - the whole tier, end to end
+;;;
+;;; This one runs the FIXTURE'S OWN INPUTS through the real pipeline:
+;;; prepare-script-assets, then build-runtime-origins, then the labeling. So it
+;;; exercises classification, the runtime origin types and the label rules
+;;; together, and compares against a report the shipped engine produced from the
+;;; same inputs.
+;;;
+;;; The oracle omits `generatedAt` (it is a clock), so that key is dropped from
+;;; the comparison on both sides rather than being faked.
+;;; ---------------------------------------------------------------------------
+
+(defun run-boundary-report-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/boundary-oracle.json")))
+         (input (gethash "input" fx))
+         (want (gethash "buildBoundaryLabels" (gethash "expected" fx)))
+         (scripts (coerce (gethash "scriptFixture" input) 'list))
+         (recon-fixture (gethash "reconFixture" input))
+         (entries (coerce (gethash "runtimeEntries" input) 'list))
+         (manifest (coerce (gethash "runtimeManifest" input) 'list))
+         (assets (vovas.engine.panel.assets:prepare-script-assets scripts recon-fixture))
+         (origins (vovas.engine.panel.assets:build-runtime-origins
+                   entries manifest assets))
+         (got (vovas.engine.panel.boundary:build-boundary-labels assets origins)))
+
+    ;; ---- categories ------------------------------------------------------
+    (incf count)
+    (check result "buildBoundaryLabels/categories" "labels"
+           (and (gate-json= (gethash "categories" got) (gethash "categories" want)) t)
+           t)
+
+    ;; ---- summary ---------------------------------------------------------
+    ;;
+    ;; Four numbers and two count maps. The maps are compared as ALISTS so the
+    ;; comparison does not depend on hash iteration order - the wire order comes
+    ;; from insertion, which `counts-alist` provides.
+    (let ((gs (gethash "summary" got))
+          (ws (gethash "summary" want)))
+      (dolist (key '("taggedChunks" "taggedRuntime"))
+        (incf count)
+        (check result (format nil "buildBoundaryLabels/summary/~a" key) "count"
+               (gethash key gs) (gethash key ws)))
+      (dolist (key '("chunkLabels" "runtimeLabels"))
+        (incf count)
+        (check result (format nil "buildBoundaryLabels/summary/~a" key) "counts"
+               (and (gate-json=
+                     ;; the port keeps counts as an insertion-ordered ALIST; the
+                     ;; oracle has a JSON object. Convert rather than compare
+                     ;; across shapes, so a missing or extra label is a diff.
+                     (let ((h (make-hash-table :test #'equal)))
+                       (dolist (pair (gethash key gs))
+                         (setf (gethash (car pair) h) (cdr pair)))
+                       h)
+                     (gethash key ws))
+                    t)
+               t)))
+
+    ;; ---- chunks ----------------------------------------------------------
+    ;;
+    ;; Sorted by score descending, and the fixture has TIES - so this also pins
+    ;; that the sort is stable, the same property the apply case pins.
+    (let ((gc (gethash "chunks" got))
+          (wc (gethash "chunks" want)))
+      (incf count)
+      (check result "buildBoundaryLabels/chunks/count" "count"
+             (length gc) (length wc))
+      (loop for index below (min (length gc) (length wc))
+            do (incf count)
+               (check result (format nil "buildBoundaryLabels/chunks/~a" index)
+                      "chunk"
+                      (and (gate-json= (aref gc index) (aref wc index)) t)
+                      t)))
+
+    ;; ---- runtime ---------------------------------------------------------
+    (let ((gr (gethash "runtime" got))
+          (wr (gethash "runtime" want)))
+      (incf count)
+      (check result "buildBoundaryLabels/runtime/count" "count"
+             (length gr) (length wr))
+      (loop for index below (min (length gr) (length wr))
+            do (incf count)
+               (check result (format nil "buildBoundaryLabels/runtime/~a" index)
+                      "runtime"
+                      (and (gate-json= (aref gr index) (aref wr index)) t)
+                      t)))
+
+    (when verbose
+      (format t "~&boundary report gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
