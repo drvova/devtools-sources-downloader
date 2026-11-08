@@ -21,5 +21,6 @@
                              (:file "decoders")
                              (:file "scanner")
                              (:file "digest")
+                             (:file "bundler")
                              (:file "text")
                              (:file "gate")))))

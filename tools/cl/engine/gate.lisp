@@ -322,6 +322,57 @@ instead of being quietly accommodated."
          (plusp count))))
 
 ;;; ---------------------------------------------------------------------------
+;;; The bundler gate: extractBundleModules
+;;; ---------------------------------------------------------------------------
+
+(defun run-bundler-gate (&key (verbose t))
+  (let* ((oracle (read-json-file (fixture-path "text-tier-oracle.json")))
+         (inputs (read-json-file (fixture-path "text-tier-inputs.json")))
+         (sources (gethash "sources" inputs))
+         (cases (gethash "extractBundleModules" oracle))
+         (result (make-gate-result))
+         (count 0))
+    (loop for name being the hash-keys of cases using (hash-value want)
+          do (let ((text (gethash name sources)))
+               (let* ((modules (vovas.engine.bundler:extract-bundle-modules text))
+                      (got (loop for m in modules
+                                 collect (list :id (vovas.engine.bundler:bundle-module-id m)
+                                               :params (vovas.engine.bundler:bundle-module-params m)
+                                               :code (vovas.engine.bundler:bundle-module-code m))))
+                      (want-list (loop for item across want
+                                       collect (list :id (gethash "id" item)
+                                                     :params (gethash "params" item)
+                                                     :code (gethash "code" item)))))
+                 (incf count)
+                 (check result "extractBundleModules" name got want-list))))
+    ;; the non-vacuity assertion: the `bundle` case must actually yield modules.
+    ;; Without this a port returning NIL for everything would match the 16 cases
+    ;; whose oracle answer is the empty array.
+    (incf count)
+    (let* ((text (gethash "bundle" sources))
+           (modules (vovas.engine.bundler:extract-bundle-modules text)))
+      (check result "extractBundleModules-fires" "bundle"
+             (and (= 2 (length modules))
+                  (equal "42" (vovas.engine.bundler:bundle-module-id (first modules))))
+             t))
+    ;; module-file-name and safe-path have no oracle key; pin the documented
+    ;; behaviours that matter for archive paths.
+    (incf count)
+    (check result "safe-path-dot-segments" "../x"
+           (vovas.engine.bundler:safe-path "../x")
+           "_/x")
+    (incf count)
+    (check result "safe-path-hostile-chars" "a:b/c?d"
+           (vovas.engine.bundler:safe-path "a:b/c?d")
+           "a_b/c_d")
+    (when verbose
+      (format t "~&bundler gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
+
+;;; ---------------------------------------------------------------------------
 ;;; Non-vacuity: the gate must be able to fail
 ;;; ---------------------------------------------------------------------------
 
@@ -431,6 +482,7 @@ still work."
                      (cons "mutation probes" #'run-mutation-gate)
                      (cons "scanner + decoders (wasm oracle)" #'run-scanner-gate)
                      (cons "digest (wasm oracle)" #'run-digest-gate)
+                     (cons "bundler (wasm oracle)" #'run-bundler-gate)
                      (cons "text helpers (text-helpers.json)" #'run-text-gate)
                      (cons "number semantics (number-oracle.json)" #'run-number-gate)))
         (all-ok t))

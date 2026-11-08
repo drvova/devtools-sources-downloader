@@ -12,6 +12,21 @@
 (in-package :vovas.engine.util)
 
 ;;; ---------------------------------------------------------------------------
+;;; Limits
+;;;
+;;; lib.rs's `LIMITS` struct, as parameters. One definition each, because the
+;;; pipeline and the panel both consult them and a second copy would drift.
+;;; ---------------------------------------------------------------------------
+
+(defparameter *limits-max-depth* 8)
+(defparameter *limits-max-asset-bytes* (* 8 1024 1024))
+(defparameter *limits-max-beautify-bytes* (* 2 1024 1024))
+(defparameter *limits-max-modules* 400)
+(defparameter *limits-max-sources* 400)
+(defparameter *limits-max-map-bytes* (* 32 1024 1024))
+(defparameter *limits-min-payload-length* 24)
+
+;;; ---------------------------------------------------------------------------
 ;;; Whitespace
 ;;; ---------------------------------------------------------------------------
 

@@ -26,7 +26,15 @@
    ;; path-hostile characters, one definition (the panel writes names)
    #:bad-path-chars-p
    #:bad-path-chars-with-slash-p
-   #:regex-escape))
+   #:regex-escape
+   ;; lib.rs LIMITS, as parameters
+   #:*limits-max-depth*
+   #:*limits-max-asset-bytes*
+   #:*limits-max-beautify-bytes*
+   #:*limits-max-modules*
+   #:*limits-max-sources*
+   #:*limits-max-map-bytes*
+   #:*limits-min-payload-length*))
 
 (defpackage :vovas.engine.number
   (:use :cl)
@@ -84,6 +92,19 @@
   (:export
    #:sha256-hex
    #:sha256-hex-bytes))
+
+(defpackage :vovas.engine.bundler
+  (:use :cl)
+  (:import-from :vovas.engine.util #:*limits-max-modules*)
+  (:import-from :vovas.engine.scanner #:find-balanced)
+  (:export
+   #:extract-bundle-modules
+   #:module-file-name
+   #:safe-path
+   #:bundle-module
+   #:bundle-module-id
+   #:bundle-module-params
+   #:bundle-module-code))
 
 (defpackage :vovas.engine.gate
   (:use :cl)
