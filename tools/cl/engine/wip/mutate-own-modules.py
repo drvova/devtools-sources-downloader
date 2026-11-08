@@ -97,7 +97,28 @@ MUTATIONS = [
 ]
 
 
+CACHE = (pathlib.Path.home() / "AppData/Local/cache/common-lisp"
+         / "sbcl-2.6.9-win-x64"
+         / pathlib.Path(str(ROOT).replace(":", "")).as_posix())
+
+
+def purge_cache():
+    """Delete ASDF's compiled output for this checkout.
+
+    MANDATORY between mutations. Restoring the SOURCE does not restore the FASL:
+    ASDF keys its cache on path and mtime, and a mutant compiled moments earlier
+    can still be loaded in preference to the restored source. That happened on the
+    first run - utf16-length kept answering 1 after util.lisp was verified
+    byte-identical to git, and the failure only cleared on a manual purge. A
+    harness that leaves a compiled mutant behind reports failures that belong to
+    its own previous step.
+    """
+    if CACHE.is_dir():
+        shutil.rmtree(CACHE, ignore_errors=True)
+
+
 def run_suite():
+    purge_cache()
     r = subprocess.run(["sbcl", "--script", GATE], cwd=ROOT,
                        capture_output=True, text=True, timeout=400)
     passes = r.stdout.count("=> PASS")
