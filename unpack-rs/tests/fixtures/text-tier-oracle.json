@@ -96,32 +96,46 @@
   "bundle": [],
   "stringArray": [
    {
-    "start": 13,
-    "end": 20,
+    "start": 15,
+    "end": 26,
     "quote": "\"",
-    "raw": "hello",
-    "value": "hello"
+    "raw": "4|1|0|2|3",
+    "value": "4|1|0|2|3"
    },
    {
-    "start": 21,
-    "end": 28,
+    "start": 35,
+    "end": 42,
+    "quote": "\"",
+    "raw": "Hello",
+    "value": "Hello"
+   },
+   {
+    "start": 44,
+    "end": 51,
     "quote": "\"",
     "raw": "world",
     "value": "world"
    },
    {
     "start": 53,
-    "end": 59,
+    "end": 62,
     "quote": "\"",
-    "raw": "quux",
-    "value": "quux"
+    "raw": "console",
+    "value": "console"
    },
    {
-    "start": 60,
-    "end": 67,
+    "start": 219,
+    "end": 225,
     "quote": "\"",
-    "raw": "corge",
-    "value": "corge"
+    "raw": "push",
+    "value": "push"
+   },
+   {
+    "start": 235,
+    "end": 242,
+    "quote": "\"",
+    "raw": "shift",
+    "value": "shift"
    }
   ],
   "empty": [],
@@ -165,7 +179,13 @@
   "sourceMapRef": [],
   "inlineMap": [],
   "bundle": [],
-  "stringArray": [],
+  "stringArray": [
+   {
+    "tool": "string-array",
+    "score": 0.8,
+    "detail": "string array _0x5e6f, 5 literals"
+   }
+  ],
   "empty": [],
   "whitespace": []
  },
@@ -273,13 +293,24 @@
   "bundle": {
    "stages": [],
    "outputs": [],
-   "final": "__webpack_require__.d(exports, { add: () => add });\nfunction add() {}\n//# sourceURL=webpack://app/./src/add.js",
+   "final": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n  7: (a, b) => {\n    return a + b;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js",
    "refusals": []
   },
   "stringArray": {
-   "stages": [],
-   "outputs": [],
-   "final": "var _0x1a2b=[\"hello\",\"world\",\"foo\",\"bar\",\"baz\",\"qux\",\"quux\",\"corge\"];for(var i=0;i<_0x1a2b.length;i++){console.log(_0x1a2b[i]);}",
+   "stages": [
+    {
+     "depth": 1,
+     "tool": "string-array",
+     "inputBytes": 426,
+     "outputBytes": 193,
+     "digest": "8c18d7145f3e04cfa6b40976b48fb27812250bb4e5fc1edce8bcc95196b5621c",
+     "sourceUrl": null
+    }
+   ],
+   "outputs": [
+    "var _0x5e6f = ['4|1|0|2|3', 'log', 'Hello', 'world', 'console'];\n\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));"
+   ],
+   "final": "var _0x5e6f = ['4|1|0|2|3', 'log', 'Hello', 'world', 'console'];\n\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));",
    "refusals": []
   },
   "empty": {
@@ -363,13 +394,13 @@
   },
   "bundle": {
    "detected": false,
-   "purity": 0.0594059405940594,
-   "reason": "purity 5.9% (6 charset bytes)"
+   "purity": 0.03067484662576687,
+   "reason": "purity 3.1% (5 charset bytes)"
   },
   "stringArray": {
    "detected": false,
-   "purity": 0.07936507936507936,
-   "reason": "purity 7.9% (10 charset bytes)"
+   "purity": 0.12396694214876033,
+   "reason": "purity 12.4% (45 charset bytes)"
   },
   "empty": {
    "detected": false,
@@ -515,7 +546,11 @@
   "sourceMapRef": null,
   "inlineMap": null,
   "bundle": null,
-  "stringArray": null,
+  "stringArray": {
+   "arrayId": "_0x5e6f",
+   "literals": 5,
+   "pivot": 4
+  },
   "empty": null,
   "whitespace": null
  },
@@ -534,7 +569,7 @@
   "sourceMapRef": null,
   "inlineMap": null,
   "bundle": null,
-  "stringArray": null,
+  "stringArray": "var _0x5e6f = ['4|1|0|2|3', 'log', 'Hello', 'world', 'console'];\n\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));",
   "empty": null,
   "whitespace": null
  },
@@ -552,7 +587,18 @@
   "jsfuck": [],
   "sourceMapRef": [],
   "inlineMap": [],
-  "bundle": [],
+  "bundle": [
+   {
+    "id": "42",
+    "params": "module, exports, __webpack_require__",
+    "code": "42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  }"
+   },
+   {
+    "id": "7",
+    "params": "a, b",
+    "code": "7: (a, b) => {\n    return a + b;\n  }"
+   }
+  ],
   "stringArray": [],
   "empty": [],
   "whitespace": []
@@ -596,8 +642,8 @@
   "jsfuck": false,
   "sourceMapRef": true,
   "inlineMap": true,
-  "bundle": true,
-  "stringArray": true,
+  "bundle": false,
+  "stringArray": false,
   "empty": false,
   "whitespace": false
  },

@@ -13,8 +13,8 @@
   "jsfuck": "[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]]+[])[!+[]+!+[]+!+[]]+(![]+[])[+!+[]]+(![]+[])[!+[]+!+[]]]()",
   "sourceMapRef": "var a=1;\n//# sourceMappingURL=app.js.map\n",
   "inlineMap": "var a=1;\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImEudHMiXSwic291cmNlc0NvbnRlbnQiOlsiY29uc3QgYTogbnVtYmVyID0gMTsiXX0=",
-  "bundle": "__webpack_require__.d(exports, { add: () => add });\nfunction add() {}\n//# sourceURL=webpack://app/./src/add.js",
-  "stringArray": "var _0x1a2b=[\"hello\",\"world\",\"foo\",\"bar\",\"baz\",\"qux\",\"quux\",\"corge\"];for(var i=0;i<_0x1a2b.length;i++){console.log(_0x1a2b[i]);}",
+  "bundle": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n  7: (a, b) => {\n    return a + b;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js",
+  "stringArray": "var _0x5e6f = [\"4|1|0|2|3\", \"log\", \"Hello\", \"world\", \"console\"];\n(function(_0x2d3e, _0x4c5d) {\n  var _0x1f8a = function(_0x5a1b) {\n    while (true) {\n      if (parseInt(_0x2d3e[0], 16) === _0x4c5d) break;\n      _0x2d3e[\"push\"](_0x2d3e[\"shift\"]());\n    }\n  };\n  _0x1f8a(++_0x4c5d);\n}(_0x5e6f, 0x4));\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));",
   "empty": "",
   "whitespace": "   \n\t  \n"
  },
