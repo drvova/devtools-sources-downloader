@@ -322,19 +322,10 @@ the output wrong, which then shifts every index a caller computes from it."
 ;;; ---------------------------------------------------------------------------
 ;;; Exports
 ;;;
-;;; `defpackage :vovas.engine.decoders` lives in package.lisp, which this module
-;;; must not edit (it is the integrator's file). Exporting at load time is the
-;;; equivalent that stays inside this file: it runs after the package exists and
-;;; is idempotent, so a later move of these names into the defpackage is a
-;;; no-op here rather than a conflict.
+;;; DECLARED IN package.lisp, not exported at load time. A runtime `export` from
+;;; here makes the package's export list disagree with its defpackage form, and
+;;; SBCL answers with a DEFPACKAGE variance warning: harmless in itself, but its
+;;; text interleaves with a runner's stdout and made this gate look
+;;; nondeterministic (three different verdicts across five identical runs).
+;;; One declaration, in the file that owns the package.
 ;;; ---------------------------------------------------------------------------
-
-;; NOT `#:` - an uninterned-symbol reader prefix. `(export '(#:foo))` exports
-;; nothing, because #:foo is a FRESH symbol that is not the interned FOO the
-;; functions were defined under; the call signals "these symbols are not
-;; accessible" instead. Quote the interned names, or use strings.
-(eval-when (:load-toplevel :execute)
-  (export (list (find-symbol "DECODE-BASE64-TO-BYTES" :vovas.engine.decoders)
-                (find-symbol "BYTES-TO-TEXT" :vovas.engine.decoders)
-                (find-symbol "ASCII-JS-SPACE-P" :vovas.engine.decoders))
-          :vovas.engine.decoders))

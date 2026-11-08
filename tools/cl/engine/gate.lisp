@@ -503,7 +503,13 @@ still work."
                      (cons "digest (wasm oracle)" #'run-digest-gate)
                      (cons "bundler (wasm oracle)" #'run-bundler-gate)
                      (cons "text helpers (text-helpers.json)" #'run-text-gate)
-                     (cons "number semantics (number-oracle.json)" #'run-number-gate)))
+                     (cons "number semantics (number-oracle.json)" #'run-number-gate)
+                     ;; slices ported by parallel agents; each proves itself
+                     ;; before it is listed here
+                     (cons "beautify (wasm oracle + goldens)" #'run-beautify-gate)
+                     (cons "detectors (wasm oracle)" #'run-detectors-gate)
+                     (cons "sourcemaps (wasm oracle)" #'run-sourcemaps-gate)
+                     (cons "packers (wasm oracle)" #'run-packers-gate)))
         (all-ok t))
     (dolist (gate gates)
       (format t "~&~%== ~a~%" (car gate))

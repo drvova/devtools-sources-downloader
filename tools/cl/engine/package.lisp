@@ -78,8 +78,15 @@
 (defpackage :vovas.engine.decoders
   (:use :cl)
   (:export
-   ;; only the escape decoder; the base64/inflate halves land with the binary tier
-   #:decode-escapes))
+   #:decode-escapes
+   ;; added by the sourcemaps slice; declared HERE, not exported at load time.
+   ;; A runtime `export` from the module file makes the package's own export list
+   ;; disagree with the defpackage form, and SBCL reports that as a
+   ;; DEFPACKAGE variance warning whose text can interleave with a runner's
+   ;; output - which reads as a nondeterministic gate failure.
+   #:decode-base64-to-bytes
+   #:bytes-to-text
+   #:ascii-js-space-p))
 
 (defpackage :vovas.engine.scanner
   (:use :cl)

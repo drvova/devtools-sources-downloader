@@ -1,27 +1,64 @@
-;;;; vovas-engine.asd — the engine port, loadable on its own.
+;;;; vovas-engine.asd — the engine port.
 ;;;;
-;;;; Separate from vovas-tools.asd so the port can be exercised without the
-;;;; toolchain's Chrome dependencies, and so a gate run never needs a browser.
+;;;; ONE system. The per-module .asd files beside it (packers.asd, wasm.asd, …)
+;;;; exist so a single slice can be loaded and its gate run while the rest is
+;;;; still in progress, and ASDF prints a naming warning for each because a file
+;;;; `engine/wasm.asd` is expected to define `wasm`, not `vovas-engine.wasm`.
+;;;; That warning is noise on a gate run and it can interleave with a runner's
+;;;; stdout; folding every module into this one system removes it without
+;;;; renaming anything, which would break every caller.
 ;;;;
-;;;; cl-ppcre is the one dependency: the 93 `Regex::new` sites in the Rust port
-;;;; are patterns over minified JavaScript, and hand-writing them would trade a
-;;;; known-correct engine for a known-buggy one.
+;;;; ORDER. Modules are serial, in dependency order:
+;;;;   package   all defpackages, because :import-from needs its source package
+;;;;             to exist at READ time
+;;;;   util      JavaScript string semantics, UTF-16, the LIMITS parameters
+;;;;   number    ECMAScript Number::toString / toFixed
+;;;;   transforms the one decodeURIComponent + the sourceURL pattern
+;;;;   decoders  escape decoding, base64, bytes-to-text
+;;;;   scanner   the string/comment-aware walker
+;;;;   digest    SHA-256
+;;;;   bundler   webpack module splitting (uses scanner + transforms)
+;;;;   text      the panel's path writers (uses transforms)
+;;;;   beautify  indentation (uses scanner)
+;;;;   detectors the layer detector (uses scanner + the stage seams)
+;;;;   sourcemaps source-map refs and parsing
+;;;;   packers   packers/obfuscators, the largest text module
+;;;;   pipeline  the peel chain (last: it consumes the others)
+;;;;
+;;;; The gate file loads last and holds every run-*-gate entry point.
 
 (asdf:defsystem "vovas-engine"
   :description "JavaScript-to-Lisp port of the DevTools sources-downloader engine"
   :author "sashathelambo"
   :license "MIT"
-  :depends-on ("cl-ppcre" "com.inuoe.jzon" "ironclad" "babel")
+  :depends-on ("cl-ppcre" "com.inuoe.jzon" "ironclad" "babel" "chipz" "salza2"
+               ;; cl-unicode: beautify.rs tests JS identifier characters with a
+               ;; Unicode property lookup (`has-property c "Alphabetic"`), which
+               ;; no ASCII range can express.
+               "cl-unicode")
   :serial t
   :components ((:module "engine"
                 :serial t
                 :components ((:file "package")
                              (:file "util")
                              (:file "number")
+                             (:file "transforms")
                              (:file "decoders")
                              (:file "scanner")
                              (:file "digest")
-                             (:file "transforms")
                              (:file "bundler")
                              (:file "text")
-                             (:file "gate")))))
+                             (:file "beautify")
+                             (:file "detectors")
+                             (:file "sourcemaps")
+                             (:file "packers")
+                             ;; gate.lisp FIRST: it owns the harness every other
+                             ;; gate file calls (read-json-file, fixture-path,
+                             ;; check, report-failures). Loading a gate file before
+                             ;; it leaves those as undefined-function calls that
+                             ;; only explode at run time.
+                             (:file "gate")
+                             (:file "gate-beautify")
+                             (:file "gate-detectors")
+                             (:file "gate-sourcemaps")
+                             (:file "gate-packers")))))
