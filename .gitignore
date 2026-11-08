@@ -24,3 +24,10 @@ tools/cl/vovas.exe
 tools/cl/**/*.fasl
 tools/cl/**/*.fas
 unpack-rs/dist-*.zip
+
+# scratch: per-module dev runners, probes and captured gate output.
+# The runners in wip/ are how each slice was debugged; they are not part of the
+# gate (run-engine.lisp is) and several are one-off probes tied to a single
+# investigation. out/ holds captured stdout used to diff runs.
+tools/cl/engine/wip/out/
+tools/cl/engine/wip/*.txt

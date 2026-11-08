@@ -52,13 +52,23 @@
                              (:file "detectors")
                              (:file "sourcemaps")
                              (:file "packers")
+                             ;; binary tier
+                             (:file "wasm")
+                             (:file "jscbytecode")
+                             (:file "v8codecache")
+                             (:file "zip")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
-                             ;; check, report-failures). Loading a gate file before
-                             ;; it leaves those as undefined-function calls that
-                             ;; only explode at run time.
+                             ;; binary-fixture-path, check, report-failures).
+                             ;; Loading a gate file before it leaves those as
+                             ;; undefined-function calls that only explode at run
+                             ;; time.
                              (:file "gate")
                              (:file "gate-beautify")
                              (:file "gate-detectors")
                              (:file "gate-sourcemaps")
-                             (:file "gate-packers")))))
+                             (:file "gate-packers")
+                             (:file "gate-wasm")
+                             (:file "gate-jscbytecode")
+                             (:file "gate-v8codecache")
+                             (:file "gate-zip")))))

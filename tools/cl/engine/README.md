@@ -26,30 +26,77 @@ Three properties, and nothing else:
 | | |
 | --- | --- |
 | Rust engine + panel | 17,959 LOC |
-| **Ported** | **1,013 LOC** (`package` 66, `util` 143, `number` 321, `text` 483) |
-| Gate | 330 LOC (`gate.lisp`) + 49 (`run-engine.lisp`) |
-| Verdict | 4 gates, **209/209 cases** |
+| **Ported** | **15,131 LOC** across 24 files |
+| Gate | 15 gates, **1,149 cases**, `sbcl --script tools/cl/run-engine.lisp` → exit 0 |
 
-That is ~6% of the Rust by line count, and it covers the layer every other module
-depends on: UTF-16 semantics, JS number formatting, and the archive-path writers.
-It is the smallest slice that can be proven, not the smallest useful one.
-
-**The line-count result is worth stating plainly**, because the usual objection to
-a Lisp port is verbosity: for the identical surface (Rust `util.rs` 242 +
-`jsnumber.rs` 228 + `panel/text.rs` 582 = **1,052**) the Lisp is **1,013**,
-comments included. It is not a blowup, and it is not a win — it is parity, with
-the JS semantics written out instead of delegated to crates. The one place Lisp
-cost *more* is the URL parser (~150 lines) that Rust got from the `url` crate.
-
-Ported so far:
-
-| module | source | status |
+| gate | cases | oracle |
 | --- | --- | --- |
-| `util.lisp` | `util.rs` (JS string semantics) | done |
-| `number.lisp` | `jsnumber.rs` (Number::toString/toFixed) | done |
-| `text.lisp` | `panel/text.rs` (path + title helpers) | done |
-| `scanner.rs` | string/comment-aware walker | **next** |
-| `detectors.rs`, `decoders.rs`, `beautify.rs` | text tier | queued |
+| harness self-test | — | proves the comparison can fail |
+| mutation probes | 10 | plausible wrong implementations |
+| scanner + decoders | 27 | wasm |
+| digest | 6 | wasm + structural |
+| bundler | 20 | wasm |
+| text helpers | 59 | `text-helpers.json` |
+| number semantics | 140 | node, IEEE-754 bit patterns |
+| beautify | 187 | wasm goldens + 20 adversarial |
+| detectors | 89 | wasm |
+| sourcemaps | 24 + 34 | wasm + structural |
+| packers | 84 | wasm + 16 probes |
+| wasm parser | 107 | binary fixtures |
+| jsc bytecode | 108 | binary fixtures + sidecars |
+| v8 code cache | 135 | binary fixtures |
+| zip writer | 129 | round trip |
+
+**The line-count result** for the first slice, because the usual objection to a
+Lisp port is verbosity: for the identical surface (Rust `util.rs` 242 +
+`jsnumber.rs` 228 + `panel/text.rs` 582 = **1,052**) the Lisp was **1,013**,
+comments included. Parity, not a blowup and not a win. The one place Lisp cost
+*more* is the URL parser (~150 lines) that Rust got from the `url` crate.
+
+### Source defects the port found
+
+These are bugs in the Rust/original, not in the port. Each is pinned to the
+shipped behaviour and reported rather than silently followed.
+
+- **`JS_W` contradicts its own docstring.** `util.rs:170` says "JS `\w`: ASCII
+  word characters only" and defines `A-Za-z0-9_`; `beautify.rs:15` uses the regex
+  crate's **Unicode** `\w` instead. Measured in the binary: `prototypeé` → false,
+  `évar a` → false, but `exports.é` → **true**. One of the two is unintentional.
+- **Comments and strings are treated differently.** The docstring says strings,
+  templates, comments and regexes "pass through untouched", which reads as
+  uniform. The literal and regex arms set `line_has_code = true`, the two comment
+  arms do not. Observable: `a();/*c*/{b();}` keeps `{` on the comment's line,
+  while `a();"s"{b();}` emits `"s" {`.
+- **Pinned-and-surprising, worth knowing before changing anything:** the beautify
+  budget is a *refusal* not a truncation; `paren_depth` is signed, so one
+  unmatched `)` drops a whole file into inline mode; `looks_minified` measures
+  the longest line in **bytes** and the average in **UTF-16 units**.
+
+Ported so far — every module below has a gate that passes:
+
+| module | source | gate |
+| --- | --- | --- |
+| `util` | `util.rs` | via the others |
+| `number` | `jsnumber.rs` | 140/140 |
+| `text` | `panel/text.rs` | 59/59 |
+| `transforms` | `transforms.rs` (URI codec) | via scanner/text |
+| `decoders` | `decoders.rs` | via scanner/sourcemaps |
+| `scanner` | `scanner.rs` | 27/27 |
+| `digest` | `digest.rs` | 6/6 |
+| `bundler` | `bundler.rs` | 20/20 |
+| `beautify` | `beautify.rs` | 187/187 |
+| `detectors` | `detectors.rs` | 89/89 |
+| `sourcemaps` | `sourcemaps.rs` | 24 + 34 |
+| `packers` | `packers.rs` | 84/84 |
+| `wasm` | `wasm.rs` | 107/107 |
+| `jscbytecode` | `jscbytecode.rs` | 108/108 |
+| `v8codecache` | `v8codecache.rs` | 135/135 |
+| `zip` | `zip.rs` | 129/129 |
+
+**Still queued:** `jsfuck.rs` (920) and `pipeline.rs` (713) — the two that
+consume everything above, plus `wasm_api.rs` (806), which is the browser seam and
+has no native counterpart to port. The 10,102-line `panel/*` tree is out of scope
+for now: it is the extension's own UI logic, not the unpack engine.
 | `packers.rs`, `jsfuck.rs`, `transforms.rs`, `pipeline.rs` | the peel engine | queued |
 | `jscbytecode.rs`, `v8codecache.rs`, `wasm.rs`, `zip.rs` | binary tier | queued |
 | `panel/*` | the panel | out of scope for now |

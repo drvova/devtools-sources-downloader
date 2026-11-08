@@ -59,8 +59,20 @@ which reads like a missing fixture instead of a wrong root."
           do (setf dir parent))))
 
 (defun fixture-path (name)
-  "Absolute path to a fixture under the Rust crate's tests directory."
+  "Absolute path to a fixture under the Rust crate's tests/fixtures directory
+(the JSON oracles)."
   (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name) (repo-root)))
+
+(defun binary-fixture-path (name)
+  "Absolute path to a BINARY fixture under unpack-rs/test/fixtures.
+
+The crate keeps two fixture directories and they are not interchangeable:
+`tests/fixtures/` holds the JSON oracles this harness reads, while
+`test/fixtures/` holds the binary blobs (.jsc, .wasm, .bin) that
+unpack_test.rs reads. Three binary-tier gates each grew their own resolver for
+the second directory; this is the one definition they should share, so a future
+move of that directory breaks in one place instead of three."
+  (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name) (repo-root)))
 
 (defun read-json-file (path)
   "Read PATH as JSON.
@@ -509,7 +521,12 @@ still work."
                      (cons "beautify (wasm oracle + goldens)" #'run-beautify-gate)
                      (cons "detectors (wasm oracle)" #'run-detectors-gate)
                      (cons "sourcemaps (wasm oracle)" #'run-sourcemaps-gate)
-                     (cons "packers (wasm oracle)" #'run-packers-gate)))
+                     (cons "packers (wasm oracle)" #'run-packers-gate)
+                     ;; binary tier
+                     (cons "wasm parser (binary fixtures)" #'run-wasm-gate)
+                     (cons "jsc bytecode (binary fixtures)" #'run-jscbytecode-gate)
+                     (cons "v8 code cache (binary fixtures)" #'run-v8codecache-gate)
+                     (cons "zip writer (round trip)" #'run-zip-gate)))
         (all-ok t))
     (dolist (gate gates)
       (format t "~&~%== ~a~%" (car gate))
