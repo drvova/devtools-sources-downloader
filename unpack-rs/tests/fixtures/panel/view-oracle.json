@@ -1,0 +1,513 @@
+{
+ "note": "Captured from the shipped wasm engine (.cache/engine.wasm) via src/js/unpack-bridge.js panelTrackerView",
+ "capturedAt": "fixed input set; regenerate with node unpack-rs/scripts/view-oracle.mjs",
+ "cases": {
+  "mixed": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {},
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 5,
+    "total": 5,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/c.js\">https://x/c.js</td><td data-label=\"Size\">100 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/a.js?a=1&amp;b=2\">https://x/a.js?a=1&amp;b=2</td><td data-label=\"Size\">2.0 KB</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">css</td><td data-label=\"Source\">disk</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/d.css?&#39;quote&#39;\">https://x/d.css?&#39;quote&#39;</td><td data-label=\"Size\">512 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">image</td><td data-label=\"Source\">memory</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"&lt;img&gt;.png\">&lt;img&gt;.png</td><td data-label=\"Size\">0 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">?</td><td data-label=\"Source\">?</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"?\">?</td><td data-label=\"Size\">0 B</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "sortedLargest": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "sort": "largest"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 5,
+    "total": 5,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/a.js?a=1&amp;b=2\">https://x/a.js?a=1&amp;b=2</td><td data-label=\"Size\">2.0 KB</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">css</td><td data-label=\"Source\">disk</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/d.css?&#39;quote&#39;\">https://x/d.css?&#39;quote&#39;</td><td data-label=\"Size\">512 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/c.js\">https://x/c.js</td><td data-label=\"Size\">100 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">image</td><td data-label=\"Source\">memory</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"&lt;img&gt;.png\">&lt;img&gt;.png</td><td data-label=\"Size\">0 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">?</td><td data-label=\"Source\">?</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"?\">?</td><td data-label=\"Size\">0 B</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "sortedUrl": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "sort": "url"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 5,
+    "total": 5,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">image</td><td data-label=\"Source\">memory</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"&lt;img&gt;.png\">&lt;img&gt;.png</td><td data-label=\"Size\">0 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">?</td><td data-label=\"Source\">?</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"?\">?</td><td data-label=\"Size\">0 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/a.js?a=1&amp;b=2\">https://x/a.js?a=1&amp;b=2</td><td data-label=\"Size\">2.0 KB</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/c.js\">https://x/c.js</td><td data-label=\"Size\">100 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">css</td><td data-label=\"Source\">disk</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/d.css?&#39;quote&#39;\">https://x/d.css?&#39;quote&#39;</td><td data-label=\"Size\">512 B</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "filteredToNothing": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "search": "zzz-no-such-thing"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 0,
+    "total": 5,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": false,
+    "showEmpty": true,
+    "rowsHtml": "",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "filteredByKind": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "kind": "script"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 2,
+    "total": 5,
+    "typeSelection": "script",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/c.js\">https://x/c.js</td><td data-label=\"Size\">100 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/a.js?a=1&amp;b=2\">https://x/a.js?a=1&amp;b=2</td><td data-label=\"Size\">2.0 KB</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "filteredByStatus": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "status": "unloaded"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 2,
+    "total": 5,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">css</td><td data-label=\"Source\">disk</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/d.css?&#39;quote&#39;\">https://x/d.css?&#39;quote&#39;</td><td data-label=\"Size\">512 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#f14668\"></span>unloaded</td><td data-label=\"Type\">?</td><td data-label=\"Source\">?</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"?\">?</td><td data-label=\"Size\">0 B</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "emptyTracker": {
+   "tracker": {
+    "loaded": [],
+    "unloaded": []
+   },
+   "filters": {},
+   "view": {
+    "loaded": 0,
+    "unloaded": 0,
+    "visible": 0,
+    "total": 0,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": false,
+    "showEmpty": false,
+    "rowsHtml": "",
+    "typesHtml": "<option value=\"all\">All types</option>"
+   }
+  },
+  "onlyLoaded": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     }
+    ]
+   },
+   "filters": {},
+   "view": {
+    "loaded": 1,
+    "unloaded": 0,
+    "visible": 1,
+    "total": 1,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/a.js?a=1&amp;b=2\">https://x/a.js?a=1&amp;b=2</td><td data-label=\"Size\">2.0 KB</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"script\">script</option>"
+   }
+  },
+  "selectionPreserved": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "kind": "script"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 2,
+    "total": 5,
+    "typeSelection": "script",
+    "showStatusBar": true,
+    "showList": true,
+    "showEmpty": false,
+    "rowsHtml": "<tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/c.js\">https://x/c.js</td><td data-label=\"Size\">100 B</td></tr><tr><td data-label=\"Status\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background-color:#48c774\"></span>loaded</td><td data-label=\"Type\">script</td><td data-label=\"Source\">network</td><td data-label=\"URL\" class=\"url-cell mono\" title=\"https://x/a.js?a=1&amp;b=2\">https://x/a.js?a=1&amp;b=2</td><td data-label=\"Size\">2.0 KB</td></tr>",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  },
+  "selectionDropped": {
+   "tracker": {
+    "loaded": [
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/a.js?a=1&b=2",
+      "size": 2048,
+      "time": 5
+     },
+     {
+      "type": "image",
+      "source": "memory",
+      "url": "<img>.png",
+      "size": 0,
+      "time": 1
+     },
+     {
+      "type": "script",
+      "source": "network",
+      "url": "https://x/c.js",
+      "size": 100,
+      "time": 9
+     }
+    ],
+    "unloaded": [
+     {
+      "type": "",
+      "source": "",
+      "url": "",
+      "size": 0,
+      "time": 0
+     },
+     {
+      "type": "css",
+      "source": "disk",
+      "url": "https://x/d.css?'quote'",
+      "size": 512,
+      "time": 3
+     }
+    ]
+   },
+   "filters": {
+    "kind": "gone-kind"
+   },
+   "view": {
+    "loaded": 3,
+    "unloaded": 2,
+    "visible": 0,
+    "total": 5,
+    "typeSelection": "all",
+    "showStatusBar": true,
+    "showList": false,
+    "showEmpty": true,
+    "rowsHtml": "",
+    "typesHtml": "<option value=\"all\">All types</option><option value=\"?\">?</option><option value=\"css\">css</option><option value=\"image\">image</option><option value=\"script\">script</option>"
+   }
+  }
+ }
+}

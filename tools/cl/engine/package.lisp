@@ -231,6 +231,16 @@
            #:parse-graphql-operation #:collect-graphql-operations
            #:collect-network-operations #:graphql-value-text #:text-or))
 
+(defpackage :vovas.engine.panel.view
+  (:use :cl)
+  (:import-from :vovas.engine.panel.model #:resource-status #:resource-kind
+                #:resource-source #:resource-url #:resource-size
+                #:normalize-resource #:collect-types #:resolve-type-selection
+                #:matches-resource-filters #:compare-resources
+                #:resource-filters-kind #:resource-filters-sort)
+  (:import-from :vovas.engine.text #:format-size)
+  (:export #:escape-html #:resource-rows-html #:type-options-html #:tracker-view))
+
 (defpackage :vovas.engine.gate
   (:use :cl)
   (:export
