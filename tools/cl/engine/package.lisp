@@ -105,6 +105,8 @@
   (:export
    #:hash-string
    #:safe-decode-uri-component
+   #:parse-url-for-panel
+   #:parsed-url-path
    #:sanitize-path-part
    #:append-path-suffix
    #:normalize-url-candidate
@@ -189,6 +191,18 @@
    #:resource-filters-search #:resource-filters-sort
    #:matches-resource-filters #:compare-resources
    #:collect-types #:resolve-type-selection #:utf16-less-p))
+
+(defpackage :vovas.engine.panel.assets
+  (:use :cl)
+  (:import-from :vovas.engine.util #:js-trim #:utf16-length)
+  (:import-from :vovas.engine.text #:parse-url-for-panel #:parsed-url-path
+                #:safe-decode-uri-component)
+  (:export
+   #:normalize-url-key #:strip-url-variant #:get-bare-file-name
+   #:clean-stack-reference #:extract-stack-refs #:unique-strings
+   #:asset-sample #:detect-bundler-name #:detect-framework-hints
+   #:detect-startup-signals #:extract-route-hints-from-url
+   #:extract-import-specifiers #:split-on-slash))
 
 (defpackage :vovas.engine.gate
   (:use :cl)

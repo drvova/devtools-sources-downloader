@@ -1,0 +1,818 @@
+{
+ "note": "inputs transcribed from src/panel/assets.rs test block; expected values from assets-oracle.json",
+ "sections": {
+  "normalizeUrlKey": [
+   {
+    "input": "https://x/y?a=1#f",
+    "expected": "https://x/y?a=1"
+   },
+   {
+    "input": "https://x/y#f",
+    "expected": "https://x/y"
+   },
+   {
+    "input": "",
+    "expected": ""
+   },
+   {
+    "input": "",
+    "expected": ""
+   }
+  ],
+  "stripUrlVariant": [
+   {
+    "input": "https://x/y?a=1#f",
+    "expected": "https://x/y"
+   },
+   {
+    "input": "https://x/y",
+    "expected": "https://x/y"
+   },
+   {
+    "input": "",
+    "expected": ""
+   }
+  ],
+  "getBareFileName": [
+   {
+    "input": "/a/b/c.js",
+    "expected": "c.js"
+   },
+   {
+    "input": "https://x/y/z.js?v=1",
+    "expected": "z.js"
+   },
+   {
+    "input": "plain.js",
+    "expected": "plain.js"
+   },
+   {
+    "input": "",
+    "expected": ""
+   },
+   {
+    "input": "a\\b\\c.js",
+    "expected": "c.js"
+   }
+  ],
+  "cleanStackReference": [
+   {
+    "input": "https://x/a.js:10:5",
+    "expected": "https://x/a.js"
+   },
+   {
+    "input": "https://x/a.js:10",
+    "expected": "https://x/a.js"
+   },
+   {
+    "input": "https://x/a.js),",
+    "expected": "https://x/a.js"
+   },
+   {
+    "input": " https://x/a.js ",
+    "expected": "https://x/a.js"
+   },
+   {
+    "input": "",
+    "expected": ""
+   }
+  ],
+  "extractStackRefs": [
+   {
+    "input": "at https://x/a.js:1:2\nat blob:https://x/b:3:4\n",
+    "expected": [
+     "https://x/a.js",
+     "blob:https://x/b"
+    ]
+   },
+   {
+    "input": "no refs",
+    "expected": []
+   }
+  ],
+  "detectBundlerName": [
+   {
+    "input": [
+     "https://x/app.js",
+     "var x = __webpack_require__(1);"
+    ],
+    "expected": "webpack"
+   },
+   {
+    "input": [
+     "https://x/_next/static/chunks/main.js",
+     ""
+    ],
+    "expected": "webpack"
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "parcelRequire(\"a\")"
+    ],
+    "expected": "parcel"
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "if (import.meta.hot) {}"
+    ],
+    "expected": "vite"
+   },
+   {
+    "input": [
+     "https://x/@vite/client",
+     ""
+    ],
+    "expected": "vite"
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "console.log(1)"
+    ],
+    "expected": "unknown"
+   }
+  ],
+  "detectFrameworkHints": [
+   {
+    "input": [
+     "https://x/app.js",
+     "ReactDOM.hydrate(x)"
+    ],
+    "expected": [
+     "React"
+    ]
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "__NEXT_DATA__"
+    ],
+    "expected": [
+     "Next.js"
+    ]
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "createApp({})"
+    ],
+    "expected": [
+     "Vue"
+    ]
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "ng-version"
+    ],
+    "expected": [
+     "Angular"
+    ]
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "SvelteKit"
+    ],
+    "expected": [
+     "SvelteKit"
+    ]
+   },
+   {
+    "input": [
+     "https://x/app.js",
+     "plain"
+    ],
+    "expected": []
+   }
+  ],
+  "detectStartupSignals": [
+   {
+    "input": "ReactDOM.hydrate()",
+    "expected": [
+     "hydration"
+    ]
+   },
+   {
+    "input": "navigator.serviceWorker.register(\"/sw.js\")",
+    "expected": [
+     "service-worker-register"
+    ]
+   },
+   {
+    "input": "new Worker(\"w.js\")",
+    "expected": [
+     "worker-bootstrap"
+    ]
+   },
+   {
+    "input": "WebAssembly.instantiate(b)",
+    "expected": [
+     "wasm-bootstrap"
+    ]
+   },
+   {
+    "input": "apolloClient",
+    "expected": [
+     "graphql-client"
+    ]
+   },
+   {
+    "input": "import(\"./x\")",
+    "expected": [
+     "dynamic-import"
+    ]
+   },
+   {
+    "input": "//# sourceMappingURL=data:application/json;base64,AA",
+    "expected": [
+     "inline-source-map"
+    ]
+   },
+   {
+    "input": "__webpack_require__.e(1)",
+    "expected": [
+     "chunk-loader"
+    ]
+   },
+   {
+    "input": "history.pushState({}, \"\", \"/a\")",
+    "expected": [
+     "router"
+    ]
+   },
+   {
+    "input": "nothing here",
+    "expected": []
+   }
+  ],
+  "extractRouteHintsFromUrl": [
+   {
+    "input": "https://x/static/js/app.js",
+    "expected": [
+     "app"
+    ]
+   },
+   {
+    "input": "https://x/account/settings/profile.js",
+    "expected": [
+     "account",
+     "settings",
+     "profile"
+    ]
+   },
+   {
+    "input": "https://x/chunks/abcdef1234.js",
+    "expected": []
+   },
+   {
+    "input": "https://x/a/b/c.js",
+    "expected": []
+   },
+   {
+    "input": "https://x/",
+    "expected": []
+   },
+   {
+    "input": "not a url",
+    "expected": []
+   }
+  ],
+  "extractImportSpecifiers": [
+   {
+    "input": "import a from \"react\";import(\"./dyn.js\");const b = require(\"lodash\");",
+    "expected": [
+     "react",
+     "./dyn.js",
+     "lodash"
+    ]
+   },
+   {
+    "input": "import { x } from \"./x.js\"; import \"./side.css\";",
+    "expected": [
+     "./x.js",
+     "./side.css"
+    ]
+   },
+   {
+    "input": "require(\"a\");require(\"a\");",
+    "expected": [
+     "a"
+    ]
+   }
+  ],
+  "prepareScriptAssets": [
+   {
+    "input": "scriptFixture",
+    "expected": [
+     {
+      "id": "chunk-main.js-1e7d8eef",
+      "url": "https://demo.test/app/main.js",
+      "file": "demo.test/app/main.js",
+      "size": 45,
+      "transferSize": 60000,
+      "startTime": 12.5,
+      "duration": 8,
+      "imports": [
+       "react"
+      ],
+      "moduleSignals": {
+       "importCount": 1,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "webpack",
+      "frameworkHints": [
+       "React",
+       "Next.js"
+      ],
+      "routeHints": [
+       "app",
+       "main"
+      ],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "import a from \"react\";__webpack_require__(1);",
+      "classification": "framework",
+      "score": 34
+     },
+     {
+      "id": "chunk-vendor.js-12d54eae",
+      "url": "https://demo.test/vendor.js",
+      "file": "demo.test/vendor.js",
+      "size": 12,
+      "transferSize": 1000,
+      "startTime": 1,
+      "duration": 2,
+      "imports": [],
+      "moduleSignals": {
+       "importCount": 0,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "unknown",
+      "frameworkHints": [
+       "Next.js"
+      ],
+      "routeHints": [],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "plain vendor",
+      "classification": "vendor",
+      "score": 18
+     },
+     {
+      "id": "chunk-script-3.js-37d31dd0",
+      "url": "inline/script-3.js",
+      "file": "inline/script-3.js",
+      "size": 10,
+      "transferSize": 0,
+      "startTime": 0,
+      "duration": 0,
+      "imports": [],
+      "moduleSignals": {
+       "importCount": 0,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "unknown",
+      "frameworkHints": [
+       "Next.js"
+      ],
+      "routeHints": [],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "xxxxxxxxxx",
+      "classification": "framework",
+      "score": 24
+     },
+     {
+      "id": "chunk-script-4.js-37d2a971",
+      "url": "inline/script-4.js",
+      "file": "inline/script-4.js",
+      "size": 0,
+      "transferSize": 0,
+      "startTime": 0,
+      "duration": 0,
+      "imports": [],
+      "moduleSignals": {
+       "importCount": 0,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "unknown",
+      "frameworkHints": [
+       "Next.js"
+      ],
+      "routeHints": [],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "",
+      "classification": "framework",
+      "score": 24
+     }
+    ]
+   }
+  ],
+  "prepareScriptAssetsNoRecon": [
+   {
+    "input": "scriptFixture",
+    "expected": [
+     {
+      "id": "chunk-main.js-1e7d8eef",
+      "url": "https://demo.test/app/main.js",
+      "file": "demo.test/app/main.js",
+      "size": 45,
+      "transferSize": 0,
+      "startTime": 0,
+      "duration": 0,
+      "imports": [
+       "react"
+      ],
+      "moduleSignals": {
+       "importCount": 1,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "webpack",
+      "frameworkHints": [
+       "React"
+      ],
+      "routeHints": [
+       "app",
+       "main"
+      ],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "import a from \"react\";__webpack_require__(1);",
+      "classification": "framework",
+      "score": 33
+     },
+     {
+      "id": "chunk-vendor.js-12d54eae",
+      "url": "https://demo.test/vendor.js",
+      "file": "demo.test/vendor.js",
+      "size": 12,
+      "transferSize": 0,
+      "startTime": 0,
+      "duration": 0,
+      "imports": [],
+      "moduleSignals": {
+       "importCount": 0,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "unknown",
+      "frameworkHints": [],
+      "routeHints": [],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "plain vendor",
+      "classification": "vendor",
+      "score": 18
+     },
+     {
+      "id": "chunk-script-3.js-37d31dd0",
+      "url": "inline/script-3.js",
+      "file": "inline/script-3.js",
+      "size": 10,
+      "transferSize": 0,
+      "startTime": 0,
+      "duration": 0,
+      "imports": [],
+      "moduleSignals": {
+       "importCount": 0,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "unknown",
+      "frameworkHints": [],
+      "routeHints": [],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "xxxxxxxxxx",
+      "classification": "app",
+      "score": 48
+     },
+     {
+      "id": "chunk-script-4.js-37d2a971",
+      "url": "inline/script-4.js",
+      "file": "inline/script-4.js",
+      "size": 0,
+      "transferSize": 0,
+      "startTime": 0,
+      "duration": 0,
+      "imports": [],
+      "moduleSignals": {
+       "importCount": 0,
+       "dynamicImports": 0,
+       "requires": 0,
+       "exports": 0
+      },
+      "bundler": "unknown",
+      "frameworkHints": [],
+      "routeHints": [],
+      "startupSignals": [],
+      "sourceMapEmbedded": false,
+      "content": "",
+      "classification": "app",
+      "score": 48
+     }
+    ]
+   }
+  ],
+  "classifyScriptAsset": [
+   {
+    "input": "see assets.rs test block",
+    "expected": [
+     "runtime",
+     "runtime",
+     "vendor",
+     "framework",
+     "app",
+     "app",
+     "app",
+     "app"
+    ]
+   }
+  ],
+  "scoreScriptAsset": [
+   {
+    "input": "see assets.rs test block",
+    "expected": [
+     48,
+     34,
+     24,
+     18,
+     68,
+     60,
+     55
+    ]
+   }
+  ],
+  "findAssetByReference": [
+   {
+    "input": "see assets.rs test block",
+    "expected": [
+     "a1",
+     "a1",
+     "a1",
+     null,
+     null
+    ]
+   }
+  ],
+  "buildChunkSummary": [
+   {
+    "input": "see assets.rs test block",
+    "expected": {
+     "totalScripts": 4,
+     "bundlersObserved": [
+      "webpack"
+     ],
+     "classifications": {
+      "framework": 3,
+      "vendor": 1
+     },
+     "boundaryLabels": {},
+     "sourceMapEmbedded": 0,
+     "dynamicImporters": 0,
+     "labeledScripts": 0
+    }
+   }
+  ],
+  "stripChunkAsset": [
+   {
+    "input": "see assets.rs test block",
+    "expected": {
+     "id": "chunk-main.js-1e7d8eef",
+     "url": "https://demo.test/app/main.js",
+     "file": "demo.test/app/main.js",
+     "size": 45,
+     "transferSize": 60000,
+     "startTime": 12.5,
+     "duration": 8,
+     "classification": "framework",
+     "bundler": "webpack",
+     "frameworkHints": [
+      "React",
+      "Next.js"
+     ],
+     "routeHints": [
+      "app",
+      "main"
+     ],
+     "startupSignals": [],
+     "boundaryLabels": [],
+     "primaryBoundary": "",
+     "boundaryReasons": [],
+     "imports": [
+      "react"
+     ],
+     "moduleSignals": {
+      "importCount": 1,
+      "dynamicImports": 0,
+      "requires": 0,
+      "exports": 0
+     },
+     "sourceMapEmbedded": false,
+     "score": 34
+    }
+   }
+  ],
+  "buildRuntimeOrigins": [
+   {
+    "input": "see assets.rs test block",
+    "expected": [
+     {
+      "id": "r1",
+      "file": "runtime/eval-1.js",
+      "mimeType": "application/javascript",
+      "size": 42,
+      "kind": "eval",
+      "url": "https://demo.test/app/main.js",
+      "stack": "at f (https://demo.test/vendor.js:1:2)",
+      "stackRefs": [
+       "https://demo.test/vendor.js"
+      ],
+      "relatedChunks": [
+       "chunk-main.js-1e7d8eef",
+       "chunk-vendor.js-12d54eae"
+      ],
+      "originType": "bundle-linked",
+      "score": 62
+     },
+     {
+      "id": "r2",
+      "file": "runtime/wasm-1.wasm",
+      "kind": "wasm",
+      "blobId": "blob-1",
+      "text": "x",
+      "timestamp": 3,
+      "stackRefs": [],
+      "relatedChunks": [],
+      "originType": "blob-derived",
+      "score": 62
+     }
+    ]
+   }
+  ],
+  "buildRuntimeSummary": [
+   {
+    "input": "see assets.rs test block",
+    "expected": {
+     "totalRuntimeEntries": 2,
+     "kinds": {
+      "eval": 1,
+      "wasm": 1
+     },
+     "originTypes": {
+      "bundle-linked": 1,
+      "blob-derived": 1
+     },
+     "boundaryLabels": {},
+     "linkedToChunks": 1,
+     "labeledEntries": 0
+    }
+   }
+  ],
+  "stripRuntimeEntry": [
+   {
+    "input": "see assets.rs test block",
+    "expected": {
+     "id": "r1",
+     "kind": "eval",
+     "file": "runtime/eval-1.js",
+     "source": "",
+     "url": "https://demo.test/app/main.js",
+     "objectUrl": "",
+     "blobId": null,
+     "originType": "bundle-linked",
+     "relatedChunks": [
+      "chunk-main.js-1e7d8eef",
+      "chunk-vendor.js-12d54eae"
+     ],
+     "stackRefs": [
+      "https://demo.test/vendor.js"
+     ],
+     "timestamp": 0,
+     "mimeType": "application/javascript",
+     "size": 42,
+     "truncated": false,
+     "note": "",
+     "score": 62
+    }
+   }
+  ],
+  "determineRuntimeOriginType": [
+   {
+    "input": "see assets.rs test block",
+    "expected": [
+     "blob-derived",
+     "inline-script",
+     "worker-bootstrap",
+     "wasm-module",
+     "bundle-linked",
+     "object-url",
+     "data-url",
+     "runtime-generated"
+    ]
+   }
+  ],
+  "scoreRuntimeEntry": [
+   {
+    "input": "see assets.rs test block",
+    "expected": [
+     46,
+     42,
+     38,
+     28,
+     82
+    ]
+   }
+  ]
+ },
+ "fixtures": {
+  "scriptFixture": [
+   {
+    "url": "https://demo.test/app/main.js",
+    "content": "import a from \"react\";__webpack_require__(1);"
+   },
+   {
+    "url": "https://demo.test/vendor.js",
+    "content": "plain vendor"
+   },
+   {
+    "url": "inline/script-3.js",
+    "content": "xxxxxxxxxx"
+   },
+   {
+    "url": "",
+    "content": ""
+   }
+  ],
+  "reconFixture": {
+   "timings": [
+    {
+     "name": "https://demo.test/app/main.js?v=1",
+     "transferSize": 60000,
+     "startTime": 12.5,
+     "duration": 8
+    },
+    {
+     "name": "https://demo.test/vendor.js",
+     "transferSize": 1000,
+     "startTime": 1,
+     "duration": 2
+    },
+    {
+     "name": "",
+     "transferSize": 9
+    }
+   ],
+   "stackProfile": {
+    "technologies": [
+     {
+      "name": "Next.js"
+     }
+    ]
+   }
+  },
+  "runtimeEntries": [
+   {
+    "id": "r1",
+    "kind": "eval",
+    "url": "https://demo.test/app/main.js",
+    "stack": "at f (https://demo.test/vendor.js:1:2)"
+   },
+   {
+    "id": "r2",
+    "kind": "wasm",
+    "blobId": "blob-1",
+    "text": "x",
+    "timestamp": 3
+   }
+  ],
+  "runtimeManifest": [
+   {
+    "id": "r1",
+    "file": "runtime/eval-1.js",
+    "mimeType": "application/javascript",
+    "size": 42
+   },
+   {
+    "id": "r2",
+    "file": "runtime/wasm-1.wasm"
+   }
+  ]
+ }
+}
