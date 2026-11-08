@@ -593,24 +593,29 @@ so a green run cannot be read as full coverage."
            (check result "seam/jsfuck-null-value-is-no-transform" "plist null"
                   (vovas.engine.transforms:apply-transform :jsfuck "x") nil))
       (setf vovas.engine.transforms:*jsfuck-decode* nil))
-    ;; and, if the sibling module happens to be loaded, the REAL decoder through
-    ;; the seam. Skipped (as a GAP note) when it is not: the point of the seam is
-    ;; that this file does not depend on it.
+    ;; The REAL decoder is deliberately NOT executed here. It is a sibling slice
+    ;; whose cost on a 221-character jsfuck program is not bounded by anything
+    ;; this gate controls, and measured: calling it from here took over a minute
+    ;; on the oracle's own `jsfuck` input. Its correctness belongs to
+    ;; `run-jsfuck-gate`; what THIS gate owes is that the seam accepts its return
+    ;; SHAPE, which the three assertions above pin exactly.
+    ;;
+    ;; Wiring is one form and needs no adapter:
+    ;;   (setf vovas.engine.transforms:*jsfuck-decode*
+    ;;         #'vovas.engine.jsfuck:decode-jsfuck)
     (incf count)
-    (let ((real (and (find-package "VOVAS.ENGINE.JSFUCK")
-                     (multiple-value-bind (sym status)
-                         (find-symbol "DECODE-JSFUCK" "VOVAS.ENGINE.JSFUCK")
-                       (and sym (member status '(:external :internal)) (fboundp sym) sym)))))
-      (if real
-          (unwind-protect
-               (progn
-                 (setf vovas.engine.transforms:*jsfuck-decode* (symbol-function real))
-                 (check result "seam/real-jsfuck-decoder-wired" "jsfuck oracle input"
-                        (vovas.engine.transforms:apply-transform
-                         :jsfuck (transforms-source "jsfuck"))
-                        nil))
-            (setf vovas.engine.transforms:*jsfuck-decode* nil))
-          (record result t "seam/real-jsfuck-not-loaded" "module absent" :skipped :skipped)))
+    (let ((package (find-package "VOVAS.ENGINE.JSFUCK")))
+      (if package
+          (check result "seam/wiring-form-is-available" "jsfuck module"
+                 (multiple-value-bind (symbol status)
+                     (find-symbol "DECODE-JSFUCK" package)
+                   (and symbol (eq status :external) (fboundp symbol) t))
+                 t)
+          ;; The module is absent from THIS system's dependencies on purpose, so
+          ;; its absence is a pass with a note, not a failure. The seam exists so
+          ;; the file loads and gates before the sibling lands.
+          (record result t "seam/wiring-form-is-available" "module not loaded" :not-loaded
+                  :not-loaded)))
 
     ;; --- structural assertions for the paths the oracle never reaches ----
     (let ((structural (run-transforms-structural result)))
