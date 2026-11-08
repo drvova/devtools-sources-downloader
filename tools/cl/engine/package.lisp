@@ -452,6 +452,16 @@
    #:generate-investigation-index-html
    #:export-readable-artifacts #:export-semantic-analysis
    #:*styles* #:*script* #:*investigation-doc* #:*investigation-doctype*))
+(defpackage :vovas.engine.panel.export
+  (:use :cl)
+  (:import-from :vovas.engine.panel.assets
+                #:field #:field-str #:field-number #:keys-len
+                #:assets-from-inputs)
+  (:import-from :vovas.engine.panel.model #:js-truthy)
+  (:import-from :vovas.engine.panel.paths #:*analysis-artifacts*)
+  (:import-from :vovas.engine.panel.boundary #:field)
+  (:export #:write-recon-artifacts #:finalize-zip-with-recon
+           #:export-summary #:*recon-slice-artifacts*))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)

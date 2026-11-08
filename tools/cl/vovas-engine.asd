@@ -84,6 +84,7 @@
                              (:file "wf-consts")
                              (:file "inv-consts")
                              (:file "report")
+                             (:file "export")
                              (:file "paths")
                              (:file "graph")
                              ;; view BEFORE artifacts: artifacts escapes XML and
