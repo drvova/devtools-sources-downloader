@@ -3,6 +3,58 @@
 Each worker owns exactly one module and its gate. Nothing is shared, so nothing
 conflicts.
 
+## Fasls: the rule that covers peers, not just yourself
+
+A `.fasl` beside a source loads in preference to it and reports "these symbols
+are not accessible", which reads as a source bug. **An untracked fasl whose
+timestamp you cannot explain is a false signal, not a build artefact.**
+
+Three clauses, because a peer's mistake can reach your files:
+
+1. **Never let `compile-file` default its output.** Always pass `:output-file` to
+   a temp path.
+2. **Never compile a DIRECTORY.** Compile exactly the files you own. A blanket
+   directory compile writes fasls for *every* source in it, including modules
+   another worker is actively editing — that is how a `beautify.fasl` appeared
+   beside an agent's sources at the same minute as a peer's `packers.fasl`.
+3. **To build someone else's source, use ASDF.** `asdf:load-system` and
+   `asdf:compile-system` write to the ASDF cache, which is outside the tree and
+   correct. That is the only sanctioned way.
+
+Prove a runner clean by **deleting the artefact and re-running**, not by reading
+its source: `rm <file>.fasl` → run → confirm it did not reappear.
+
+`tools/cl/**/*.fasl` and `*.fas` are gitignored, so a stray one cannot be staged —
+but gitignored is not harmless, because it still shadows the source at load time.
+
+## The shared ASDF cache: the hazard nobody watches
+
+**Two agents compiling `:vovas-engine` at the same time corrupt each other's
+fasls.** This produced three different failures across four runs of unchanged
+`zip.lisp` — a 65535-entry archive unreadable, then a corrupted-byte CRC check
+failing, then a clean 140/140.
+
+The evidence that settled it:
+
+| test | result |
+| --- | --- |
+| gate run 4× on the SHARED cache | PASS, PASS, PASS, PASS **after** a purge — but FAIL with shifting assertions before it |
+| same gate 3× in ONE image, private fasl dir | PASS, PASS, PASS |
+| `deflate-raw` on identical input 5× in one image | byte-identical every time |
+| inflate round trip 5× | 5/5 identical |
+
+So `salza2` is deterministic, the port is deterministic, and the variance came
+from the cache. **Purging before a verdict is not optional when a live agent may
+be building.** The purge that works on this box:
+
+    rm -rf "C:/Users/bigmo/AppData/Local/cache/common-lisp/sbcl-2.6.9-win-x64/C/<repo-path>"
+
+Note the cache root: `AppData/Local/cache/common-lisp`. `~/.cache/common-lisp`
+does not exist here, and a stale path in an instruction costs a round.
+
+**Before believing any red verdict:** purge, then re-run. If the failure changes
+its name between runs, it was the cache. If it persists identically, it is code.
+
 ## What a worker produces
 
 | file | contents |
