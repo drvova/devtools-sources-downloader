@@ -880,3 +880,188 @@ never mistaken for a NaN in the arithmetic downstream."
           (gethash "source" out) source
           (gethash "boundaryReasons" out) (vector-of (field entry "boundaryReasons")))
     out))
+
+;;; ---------------------------------------------------------------------------
+;;; stripFlowEvent
+;;; ---------------------------------------------------------------------------
+
+(defparameter *flow-event-copied-keys*
+  '("id" "recordId" "kind" "label" "primaryBoundary")
+  "The five keys `stripFlowEvent` copies ONLY WHEN PRESENT.
+
+The rest of the stripped event is always written. So an event lacking an `id` has
+no `id` key at all, while one lacking a `url` has `\"url\": \"\"` - a distinction
+the oracle pins and a uniform \"write every key\" implementation would lose.")
+
+(defun strip-flow-event (event)
+  "`stripFlowEvent`: the trimmed event a flow row embeds.
+
+`approxTime` is ROUNDED here but not in `build-flow-event`, so the embedded copy
+and the event table can differ by a sub-millisecond remainder. That is the
+original's behaviour, not an oversight."
+  (let ((out (make-hash-table :test #'equal)))
+    (dolist (key *flow-event-copied-keys*)
+      (when (hash-table-p event)
+        (multiple-value-bind (value present) (gethash key event)
+          (when present (setf (gethash key out) value)))))
+    (setf (gethash "boundaryLabels" out) (vector-of (field event "boundaryLabels"))
+          (gethash "approxTime" out)
+          (js-number-value (vovas.engine.number:js-round
+                            (field-number event "approxTime")))
+          (gethash "timestamp" out) (js-number-value (field-number event "timestamp"))
+          (gethash "url" out) (field-str event "url")
+          (gethash "file" out) (field-str event "file")
+          (gethash "method" out) (field-str event "method")
+          (gethash "status" out) (js-number-value (field-number event "status"))
+          (gethash "classification" out) (field-str event "classification")
+          (gethash "originType" out) (field-str event "originType"))
+    out))
+
+;;; ---------------------------------------------------------------------------
+;;; inferFlowRelation
+;;; ---------------------------------------------------------------------------
+
+(defun infer-flow-relation (from-event to-event)
+  "`inferFlowRelation`: the relation name for a KIND pair.
+
+The pairs are checked in this order and the fallthrough is \"sequence\", so a
+network-to-network pair is `triggers-request` rather than the more specific
+`follows-response` - the first matching arm wins."
+  (let ((from (field-str from-event "kind"))
+        (to (field-str to-event "kind")))
+    (cond
+      ((and (string= from "chunk") (string= to "chunk")) "imports-boundary")
+      ((and (string= from "chunk") (string= to "runtime")) "materializes-runtime")
+      ((and (string= from "runtime") (string= to "runtime")) "spawns-runtime")
+      ((string= to "network") "triggers-request")
+      ((string= from "network") "follows-response")
+      (t "sequence"))))
+
+;;; ---------------------------------------------------------------------------
+;;; scoreFlowTransition
+;;; ---------------------------------------------------------------------------
+
+(defparameter *flow-boundary-bonus*
+  '(("bootstrap" ("router" "state" "data" "auth") . 18d0)
+    ("auth" ("data" "router" "analytics") . 22d0)
+    ("data" ("router" "analytics" "state" "editor") . 20d0)
+    ("router" ("data" "analytics") . 16d0)
+    ("state" ("data" "router") . 14d0)
+    ("editor" ("data" "state" "analytics") . 14d0)
+    ("vendor" ("analytics" "auth" "data") . 8d0))
+  "The (from-boundary allowed-to-boundaries . bonus) table.
+
+A table rather than seven `if` arms so the pairs and their weights cannot drift
+apart, and so a new row is one line instead of one more branch in the middle of
+the arithmetic.")
+
+(defun score-flow-transition (from-event to-event delta-ms)
+  "`scoreFlowTransition`: how interesting a transition is.
+
+A transition with an empty boundary on either side, or an id equal to its own
+target, scores 0 - those are not transitions at all. Otherwise a transition must be
+either CROSS-BOUNDARY or STRUCTURAL (chunk->runtime, runtime->runtime) to score at
+all; within one boundary, only the structural pairs are interesting.
+
+`delta-ms` adds a recency bonus that decays by one point per 350ms, floored at
+zero, and ONLY when the delta is non-negative - a negative delta (the target
+appears earlier) earns nothing rather than a penalty."
+  (let ((from-boundary (field-str from-event "primaryBoundary"))
+        (to-boundary (field-str to-event "primaryBoundary"))
+        (from-id (field-str from-event "id"))
+        (to-id (field-str to-event "id")))
+    (when (or (zerop (length from-boundary))
+              (zerop (length to-boundary))
+              (and (plusp (length from-id)) (string= from-id to-id)))
+      (return-from score-flow-transition 0d0))
+    (let* ((from-kind (field-str from-event "kind"))
+           (to-kind (field-str to-event "kind"))
+           (cross (not (string= from-boundary to-boundary)))
+           (structural (or (and (string= from-kind "chunk") (string= to-kind "runtime"))
+                           (and (string= from-kind "runtime") (string= to-kind "runtime")))))
+      (when (and (not cross) (not structural))
+        (return-from score-flow-transition 0d0))
+      (let ((score 0d0))
+        (when (and (string= from-kind "chunk") (string= to-kind "chunk"))
+          (incf score 12d0))
+        (when (and (string= from-kind "runtime") (string= to-kind "network"))
+          (incf score 18d0))
+        (when (and (string= from-kind "network") (string= to-kind "runtime"))
+          (incf score 18d0))
+        (when (and (string= from-kind "network") (string= to-kind "network"))
+          (incf score 8d0))
+        (let ((row (assoc from-boundary *flow-boundary-bonus* :test #'string=)))
+          (when (and row (member to-boundary (second row) :test #'string=))
+            (incf score (cddr row))))
+        (incf score (min 10d0
+                         (* 3d0 (count-shared-values (event-labels from-event)
+                                                     (event-labels to-event)))))
+        (when (and delta-ms (>= delta-ms 0d0))
+          (incf score (max 0d0 (- 12d0 (floor (/ delta-ms 350d0))))))
+        score))))
+
+;;; ---------------------------------------------------------------------------
+;;; addBoundaryFlow
+;;; ---------------------------------------------------------------------------
+
+(defun add-boundary-flow (flows flow-map from-event to-event
+                          relation confidence evidence delta-ms)
+  "`addBoundaryFlow`: append one flow if it is a real transition.
+
+SIX early returns, in the original's order, and they are not redundant:
+  - a missing id on either side, or identical ids, is not a transition;
+  - a missing boundary on either side means the event was never labeled;
+  - a SAME-BOUNDARY transition is dropped UNLESS the relation is
+    `materializes-runtime` or `spawns-runtime` - those two stay because a chunk
+    and the runtime it spawns are structurally interesting even when both landed
+    in the same subsystem;
+  - a repeated (from|to|relation|from-boundary|to-boundary) key is dropped, so
+    the same pair reached by two routes appears once.
+
+The flow ID is positional (`flow-%04d` by the list's length at insert time), so
+it changes if an earlier flow is filtered out - the oracle pins the numbering.
+
+TIMESTAMP is the first TRUTHY of to.timestamp, to.approxTime, from.timestamp,
+from.approxTime, else 0. Using `truthy-number` rather than `field-number` is what
+makes a stored 0 fall through to the next candidate."
+  (let ((from-id (field-str from-event "id"))
+        (to-id (field-str to-event "id")))
+    (when (or (zerop (length from-id)) (zerop (length to-id))
+              (string= from-id to-id))
+      (return-from add-boundary-flow flows))
+    (let ((from-boundary (field-str from-event "primaryBoundary"))
+          (to-boundary (field-str to-event "primaryBoundary")))
+      (when (or (zerop (length from-boundary)) (zerop (length to-boundary)))
+        (return-from add-boundary-flow flows))
+      (let ((cross (not (string= from-boundary to-boundary))))
+        (when (and (not cross)
+                   (not (member relation '("materializes-runtime" "spawns-runtime")
+                                :test #'string=)))
+          (return-from add-boundary-flow flows))
+        (let ((key (format nil "~a|~a|~a|~a|~a"
+                           from-id to-id relation from-boundary to-boundary)))
+          (when (gethash key flow-map)
+            (return-from add-boundary-flow flows))
+          (setf (gethash key flow-map) t)
+          (let ((timestamp (or (truthy-number to-event "timestamp")
+                               (truthy-number to-event "approxTime")
+                               (truthy-number from-event "timestamp")
+                               (truthy-number from-event "approxTime")
+                               0d0))
+                (row (make-hash-table :test #'equal)))
+            (setf (gethash "id" row) (format nil "flow-~4,'0d" (1+ (length flows)))
+                  (gethash "relation" row) relation
+                  (gethash "crossBoundary" row) (and cross t)
+                  (gethash "fromBoundary" row) from-boundary
+                  (gethash "toBoundary" row) to-boundary
+                  (gethash "confidence" row) (js-number-value confidence)
+                  (gethash "deltaMs" row)
+                  (if delta-ms
+                      (js-number-value (vovas.engine.number:js-round delta-ms))
+                      (json-null-symbol))
+                  (gethash "timestamp" row) (js-number-value timestamp)
+                  (gethash "evidence" row) evidence
+                  (gethash "from" row) (strip-flow-event from-event)
+                  (gethash "to" row) (strip-flow-event to-event))
+            (nconc flows (list row))
+            flows))))))
