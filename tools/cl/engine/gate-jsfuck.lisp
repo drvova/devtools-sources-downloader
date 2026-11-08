@@ -5,14 +5,16 @@
 ;;;; decode answers is {"value":null,"captured":false}. A port returning that
 ;;;; constant would pass. So this gate reads a DIFFERENT oracle,
 ;;;; tests/fixtures/jsfuck-oracle.json, whose sources were produced by the
-;;;; shipped JSFuck 0.5.0 encoder (test/fixtures/jsfuck-encoder.js) with
-;;;; `wrapWithEval`, which emits `[]["at"]["constructor"](body)()` — the
-;;;; Function seam `captured` reports on. Eleven of its cases answer
-;;;; captured:true with a non-null value; twenty-eight answer a non-null string
-;;;; without capturing; the rest refuse.
-;;;
-;;;; THREE FAMILIES, checked independently:
-;;;;   programs     encoder output for complete programs -> the capture seam
+;;;; shipped JSFuck 0.5.0 encoder (test/fixtures/jsfuck-encoder.js) in its
+;;;; `wrapWithEval` mode — `[]["at"]["constructor"](body)()` — plus a
+;;;; run-in-parent-scope family that reaches the eval seam. Measured on the
+;;;; current fixture: 60 cases, of which 16 answer captured:true with a
+;;;; non-null payload (two of them the EMPTY payload), 28 answer a non-null
+;;;; string without capturing, and 16 refuse.
+;;;;
+;;;; FOUR FAMILIES, checked independently:
+;;;;   programs     encoder output for complete programs -> the Function seam
+;;;;   scoped       run-in-parent-scope output -> the eval seam, by CALL
 ;;;;   expressions  hand-shaped JSFuck -> the value model's branches
 ;;;;   detection    short/purity/chain boundary inputs -> detect's four tests
 ;;;;
@@ -236,21 +238,38 @@ never retyped) and the wrong implementation's stand-in."
                (jsfuck-want-decode (assoc "retQuoted" (jsfuck-family "programs")
                                           :test #'string=))
                (list :value "return \"hi\"" :captured t)))
-      ;; 6. REMOVED: "an empty payload is still a capture" could not be proved.
+      ;; 6. A capture with an EMPTY payload is still a capture, and this probe is
+      ;;    possible only because the fixture grew two cases for it.
       ;;
-      ;;    The probe compared the port against the `scoped/evalEmpty` oracle case,
-      ;;    but that case has src_len 0 - the shipped encoder produced NOTHING for
-      ;;    an empty input, so its captured answer is `{value: null, captured:
-      ;;    false}`. With correct and wrong both being that same value, the probe
-      ;;    asserted nothing, and this gate's own vacuity check said so out loud:
-      ;;      PROBE ERRORED ... correct and wrong are both (:VALUE NIL :CAPTURED NIL)
+      ;;    `Function("")()` and `Function("return eval")()("")` both reach a
+      ;;    seam carrying an empty body, so decode-jsfuck answers
+      ;;    `(:value "" :captured T)`. That is the ONE place "captured nothing"
+      ;;    and "did not capture" differ, and a port holding the capture in a
+      ;;    plain NIL (rather than a value plus a flag) cannot represent it —
+      ;;    it answers `(:value NIL :captured NIL)`.
       ;;
-      ;;    Keeping a probe that cannot fail is worse than dropping it, because it
-      ;;    inflates the probe count with a tautology. The property it wanted to
-      ;;    test - an empty payload being a distinct state from "not captured" -
-      ;;    needs an encoder that emits something for empty input; until a fixture
-      ;;    exists, the `evalOne` and `evalAlert` cases prove the capture path
-      ;;    itself, both at captured = true.
+      ;;    An earlier draft tried to prove this from a `scoped/evalEmpty` case
+      ;;    whose source was the empty STRING: the shipped encoder emits nothing
+      ;;    at all for empty input, so that case's answer was `(null,false)` and
+      ;;    the probe compared a value to itself. The gate's own vacuity check
+      ;;    caught it (both correct and wrong were `(:VALUE NIL :CAPTURED NIL)`),
+      ;;    which is exactly what that check is for. The fix was to build the
+      ;;    empty payload OUT of encoder fragments instead of asking the encoder
+      ;;    for an empty program.
+      (let ((got (jsfuck-decode-of "emptyFunctionBody")))
+        (probe "an empty Function body is still a capture"
+               got
+               (jsfuck-want-decode (assoc "emptyFunctionBody"
+                                          (jsfuck-family "expressions")
+                                          :test #'string=))
+               (list :value nil :captured nil)))
+      (let ((got (jsfuck-decode-of "emptyEvalArg")))
+        (probe "an empty eval argument is still a capture"
+               got
+               (jsfuck-want-decode (assoc "emptyEvalArg"
+                                          (jsfuck-family "expressions")
+                                          :test #'string=))
+               (list :value nil :captured nil)))
       ;; 7. The array branch of `join`/`at` is dead in the engine because the
       ;;    receiver unwraps to a string first. A port that "fixed" it would
       ;;    answer a joined string where the engine refuses.
@@ -296,11 +315,13 @@ no capture. All three are required.")
   "Boundary cases. The fixture has 10, and the two chain cases are load-bearing
 enough that the floor must not allow them both to vanish.")
 
-(defparameter *jsfuck-min-captured* 12
+(defparameter *jsfuck-min-captured* 14
   "Cases that must answer captured:true with a non-null value.
 
 THE CENTRAL ASSERTION OF THIS FILE. The oracle it replaces had ZERO such cases,
-which is why a constant-null port could pass. Measured: the fixture has 13.")
+which is why a constant-null port could pass. Measured: the fixture has 16, of
+which two carry an EMPTY payload — the pair that separates \"captured nothing\"
+from \"did not capture\".")
 
 ;;; ---------------------------------------------------------------------------
 ;;; The gate

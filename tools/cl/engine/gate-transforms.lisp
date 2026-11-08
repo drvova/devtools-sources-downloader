@@ -593,29 +593,55 @@ so a green run cannot be read as full coverage."
            (check result "seam/jsfuck-null-value-is-no-transform" "plist null"
                   (vovas.engine.transforms:apply-transform :jsfuck "x") nil))
       (setf vovas.engine.transforms:*jsfuck-decode* nil))
-    ;; The REAL decoder is deliberately NOT executed here. It is a sibling slice
-    ;; whose cost on a 221-character jsfuck program is not bounded by anything
-    ;; this gate controls, and measured: calling it from here took over a minute
-    ;; on the oracle's own `jsfuck` input. Its correctness belongs to
-    ;; `run-jsfuck-gate`; what THIS gate owes is that the seam accepts its return
-    ;; SHAPE, which the three assertions above pin exactly.
+    ;; --- the REAL decoder, through the seam, when the sibling is loaded ---
     ;;
-    ;; Wiring is one form and needs no adapter:
+    ;; MEASURED, and an earlier version of this comment got it wrong: loading
+    ;; vovas-engine.jsfuck is slow (a 1150-line module compiles), but ONE decode
+    ;; of the oracle's 221-character jsfuck program answers in 0.00s. The minute
+    ;; that was previously cited here was load time, so "the sibling is too slow
+    ;; to call" was a false conclusion drawn from a process that had been killed
+    ;; mid-run. Corrected rather than quietly dropped, because a gate that skips
+    ;; a reachable assertion on a bad measurement is exactly the vacuity this
+    ;; file exists to prevent.
+    ;;
+    ;; The call is BOUNDED anyway: if the sibling's implementation regresses into
+    ;; a loop, that must not hang THIS gate. A timeout is recorded as a failure
+    ;; with a label naming the sibling, so it reads as their bug and not as mine.
+    ;;
+    ;; Wiring needs no adapter:
     ;;   (setf vovas.engine.transforms:*jsfuck-decode*
     ;;         #'vovas.engine.jsfuck:decode-jsfuck)
     (incf count)
-    (let ((package (find-package "VOVAS.ENGINE.JSFUCK")))
-      (if package
-          (check result "seam/wiring-form-is-available" "jsfuck module"
-                 (multiple-value-bind (symbol status)
-                     (find-symbol "DECODE-JSFUCK" package)
-                   (and symbol (eq status :external) (fboundp symbol) t))
-                 t)
-          ;; The module is absent from THIS system's dependencies on purpose, so
-          ;; its absence is a pass with a note, not a failure. The seam exists so
-          ;; the file loads and gates before the sibling lands.
-          (record result t "seam/wiring-form-is-available" "module not loaded" :not-loaded
-                  :not-loaded)))
+    (let* ((package (find-package "VOVAS.ENGINE.JSFUCK"))
+           (decoder (and package
+                         (multiple-value-bind (symbol status)
+                             (find-symbol "DECODE-JSFUCK" package)
+                           (and symbol (eq status :external) (fboundp symbol) symbol)))))
+      (cond
+        ((null decoder)
+         ;; Absent from THIS system's dependencies on purpose, so absence is a
+         ;; pass with a note: the seam exists so this file loads and gates before
+         ;; the sibling lands.
+         (record result t "seam/no-real-decoder-loaded" "module not loaded" :not-loaded
+                 :not-loaded))
+        (t
+         (unwind-protect
+              (progn
+                (setf vovas.engine.transforms:*jsfuck-decode* (symbol-function decoder))
+                (let ((answer
+                        (handler-case
+                            (sb-ext:with-timeout 20
+                              (vovas.engine.transforms:apply-transform
+                               :jsfuck (transforms-source "jsfuck")))
+                          (sb-ext:timeout () :timed-out)
+                          (error (e) (list :decoder-error (princ-to-string e))))))
+                  ;; The oracle's own answer for this input is "no stage": the
+                  ;; shipped decodeJsfuck returned null and detectJsfuck's purity
+                  ;; finding produced no peelable text. So the real decoder must
+                  ;; ALSO answer NIL here - which is the end-to-end pin.
+                  (check result "seam/real-jsfuck-decoder-answers-nil" "jsfuck oracle input"
+                         answer nil)))
+           (setf vovas.engine.transforms:*jsfuck-decode* nil)))))
 
     ;; --- structural assertions for the paths the oracle never reaches ----
     (let ((structural (run-transforms-structural result)))
@@ -648,8 +674,9 @@ so a green run cannot be read as full coverage."
           (report-failures result))
         (when verbose
           (format t "~&  GAP refusals: structurally pinned only - `refusals` is [] in all 17 oracle cases~%")
-          (format t "~&  GAP jsfuck: no oracle case produces a jsfuck stage (decodeJsfuck answered null),~%")
-          (format t "~&             so the branch is pinned through the seam shapes, not end to end~%")
+          (format t "~&  GAP jsfuck: no oracle case produces a jsfuck stage, so the real decoder is~%")
+          (format t "~&             pinned as \"answers nil on that input\" (when the sibling is loaded),~%")
+          (format t "~&             not as a positive peel; the string/plist shapes are pinned always~%")
           (format t "~&  GAP peel-depth: no oracle case reaches max_depth (every firing case stops at depth 1)~%"))
         (and (= passed total)
              (plusp count)
