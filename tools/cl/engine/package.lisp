@@ -364,18 +364,27 @@
   ;; for the profile tier. The builders that land next will add `artifacts` for
   ;; `js-number-value` and `assets` for the tag counters.
   (:import-from :vovas.engine.panel.assets #:field #:field-str #:field-number)
-  (:import-from :vovas.engine.panel.model #:js-truthy)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number-value
+                #:json-null-symbol)
   (:import-from :vovas.engine.panel.boundary
                 #:array-contains-any #:matches-boundary-entry
                 #:chain-touches-boundary
                 #:flow-touches-any-boundary #:flow-touches-boundary
-                #:matches-any-boundary)
+                #:matches-any-boundary #:vector-of)
   (:export
    #:*boundary-profiles* #:*journey-questions*
    #:*default-boundary-questions* #:*default-journey-questions*
    #:boundary-profile
    #:get-boundary-title #:get-boundary-description #:get-boundary-questions
-   #:get-journey-questions))
+   #:get-journey-questions
+   #:array-touches-any #:string-path
+   #:chain-path-touches-any #:chain-touches-any-boundary
+   #:items-of #:flows-of #:take-n
+   #:build-boundary-workspace
+   #:push-framework-collection-events #:build-framework-state-events
+   #:build-framework-state-workspace
+   #:build-journey-view #:build-journey-views
+   #:build-investigation-workspace))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)

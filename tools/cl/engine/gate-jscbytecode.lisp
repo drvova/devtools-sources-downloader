@@ -141,7 +141,14 @@ a nested diff."
             (parse-integer (subseq hex (* i 2) (+ (* i 2) 2)) :radix 16)))
     out))
 
-(defun put-u32-le (bytes at value)
+(defun put-u32-le-into (bytes at value)
+  "Store VALUE as four little-endian bytes at AT in BYTES.
+
+Named -INTO rather than PUT-U32-LE because `gate-v8codecache` defines a
+PUT-U32-LE too and loads EARLIER in the .asd. Both write the same four bytes,
+so nothing was wrong - but with one shared name the v8 body silently won for
+every call site here, and a future divergence would have changed this file's
+fixtures without touching its code."
   (dotimes (i 4)
     (setf (aref bytes (+ at i)) (logand (ash value (* -8 i)) #xFF))))
 
@@ -192,7 +199,7 @@ stored hash no longer matches its characters."
                            :key (lambda (b) (round-up-4 (length b)))
                            :initial-value 0)))
          (out (make-array total :element-type '(unsigned-byte 8) :initial-element 0)))
-    (put-u32-le out 0 count)
+    (put-u32-le-into out 0 count)
     (let ((cursor (+ offsets-len 8))
           (pos (make-hash-table)))
       (loop for ordinal in ordinals
@@ -205,7 +212,7 @@ stored hash no longer matches its characters."
                  (setf (gethash ordinal pos) cursor)
                  (incf cursor (round-up-4 (length copy)))))
       (dotimes (o count)
-        (put-u32-le out (+ 4 (* o 4)) (gethash o pos offsets-len))))
+        (put-u32-le-into out (+ 4 (* o 4)) (gethash o pos offsets-len))))
     out))
 
 ;;; ---------------------------------------------------------------------------
@@ -282,11 +289,11 @@ a positive in-bounds slot — and the tree must still refuse to bind, because no
 tail at any of the four gaps parses into a walk ending on a transfer of control.
 A port that trusted the cache entry would report a one-node valid tree here."
   (let ((noise (make-array 4528 :element-type '(unsigned-byte 8) :initial-element 0)))
-    (put-u32-le noise 0 #x64ed8b42)   ; stamp
-    (put-u32-le noise 4 0)            ; tag 0 (Program)
-    (put-u32-le noise 8 4)            ; reserved callee locals
-    (put-u32-le noise 12 4528)        ; payload size == blob length
-    (put-u32-le noise #x2c #x100)     ; in-bounds code block slot
+    (put-u32-le-into noise 0 #x64ed8b42)   ; stamp
+    (put-u32-le-into noise 4 0)            ; tag 0 (Program)
+    (put-u32-le-into noise 8 4)            ; reserved callee locals
+    (put-u32-le-into noise 12 4528)        ; payload size == blob length
+    (put-u32-le-into noise #x2c #x100)     ; in-bounds code block slot
     noise))
 
 ;;; ---------------------------------------------------------------------------

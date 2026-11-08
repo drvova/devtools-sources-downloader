@@ -681,7 +681,8 @@ ERROR verdict when that gate finally runs."
         (cons "framework state (panel oracle)" #'run-framework-state-gate)
         (cons "cross-boundary flows (panel oracle)" #'run-boundary-flows-gate)
                 (cons "framework runtime (panel oracle)" #'run-framework-runtime-gate)
-        (cons "workspace profiles (panel oracle)" #'run-workspace-gate)))
+        (cons "workspace profiles (panel oracle)" #'run-workspace-gate)
+        (cons "workspace builders (panel oracle)" #'run-workspace-builders-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

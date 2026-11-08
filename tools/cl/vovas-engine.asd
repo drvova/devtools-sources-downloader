@@ -107,6 +107,7 @@
                              (:file "gate-assets")
                              (:file "gate-boundary")
                              (:file "gate-workspace")
+                             (:file "gate-workspace-builders")
                              (:file "gate-paths")
                              (:file "gate-graph")
                              (:file "gate-stackprofile")
