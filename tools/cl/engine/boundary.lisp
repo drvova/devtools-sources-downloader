@@ -1065,3 +1065,194 @@ makes a stored 0 fall through to the next candidate."
                   (gethash "to" row) (strip-flow-event to-event))
             (nconc flows (list row))
             flows))))))
+
+;;; ---------------------------------------------------------------------------
+;;; The network-boundary patterns
+;;;
+;;; These are NOT the asset patterns with different weights. The AUTH set uses
+;;; bare `token` where the asset set uses `tokenrefresh`, and DATA includes
+;;; `rpc`/`query=`/`mutation=` - a request URL carries different vocabulary from
+;;; a script body, so the two sets were tuned separately and must stay separate.
+;;; ---------------------------------------------------------------------------
+
+(defparameter *re-net-auth*
+  (cl-ppcre:create-scanner
+   "auth0|next-auth|firebase/auth|supabase\\.auth|oauth|bearer|jwt|csrf|signin|signout|login|logout|session|token|refresh|clerk|okta|passport"))
+
+(defparameter *re-net-analytics*
+  (cl-ppcre:create-scanner
+   "google-analytics|googletagmanager|gtag|segment|mixpanel|amplitude|posthog|hotjar|fullstory|datadog|sentry|analytics|/collect\\b|/track\\b|/capture\\b"))
+
+(defparameter *re-net-data*
+  (cl-ppcre:create-scanner
+   "graphql|apollo|relay|axios|tanstack|react-query|swr|trpc|/api/|jsonrpc|rpc|query=|mutation=|xmlhttprequest|fetch"))
+
+(defparameter *re-net-router*
+  (cl-ppcre:create-scanner
+   "_next/data/|prefetch|router|route|navigate|navigation|redirect=|callbackurl="))
+
+(defparameter *re-net-editor*
+  (cl-ppcre:create-scanner
+   "draft|editor|document|content|prosemirror|tiptap|quill|slate|monaco|codemirror"))
+
+(defparameter *re-net-state*
+  (cl-ppcre:create-scanner "persist|rehydrate|redux|zustand|state"))
+
+(defun build-network-boundary-sample (entry)
+  "`buildNetworkBoundarySample`: the lowercased text the network patterns scan.
+
+Seven parts joined with newlines and lowercased: type, url, method, then the
+LOOSE STRINGIFICATIONS of requestBody, requestHeaders, responseHeaders and
+responsePreview. The stringification is what lets a JSON body match - a hash
+printed as #<HASH-TABLE> would match nothing."
+  (string-downcase
+   (format nil "~{~a~^~%~}"
+           (list (field-str entry "type")
+                 (field-str entry "url")
+                 (field-str entry "method")
+                 (stringify-loose-value (field entry "requestBody"))
+                 (stringify-loose-value (field entry "requestHeaders"))
+                 (stringify-loose-value (field entry "responseHeaders"))
+                 (stringify-loose-value (field entry "responsePreview"))))))
+
+(defun infer-network-boundary-labels (entry)
+  "`inferNetworkBoundaryLabels`: the boundary matches for one network operation.
+
+Six independent tests, in the original's order (auth, analytics, data, router,
+editor, state) with their own weights. DATA also fires on a GraphQL request body,
+which is why the body is part of the sample AND checked structurally."
+  (let ((sample (build-network-boundary-sample entry))
+        (matches '()))
+    (when (cl-ppcre:scan *re-net-auth* sample)
+      (setf matches (push-boundary-label matches "auth" 28d0
+                                         "network activity contains authentication or session signals")))
+    (when (cl-ppcre:scan *re-net-analytics* sample)
+      (setf matches (push-boundary-label matches "analytics" 26d0
+                                         "network activity contains analytics or telemetry signals")))
+    (when (or (cl-ppcre:scan *re-net-data* sample)
+              ;; SYMBOLIC: `graph` loads after this file, so a qualified
+              ;; reference would be resolved at READ time against a package
+              ;; that does not exist yet.
+              (funcall (find-symbol "LOOKS-LIKE-GRAPHQL-BODY-P"
+                                    :vovas.engine.panel.graph)
+                       (field entry "requestBody")))
+      (setf matches (push-boundary-label matches "data" 24d0
+                                         "network activity contains data-fetching or API signals")))
+    (when (cl-ppcre:scan *re-net-router* sample)
+      (setf matches (push-boundary-label matches "router" 18d0
+                                         "network activity contains routing or navigation signals")))
+    (when (cl-ppcre:scan *re-net-editor* sample)
+      (setf matches (push-boundary-label matches "editor" 18d0
+                                         "network activity contains editor or content workflow signals")))
+    (when (cl-ppcre:scan *re-net-state* sample)
+      (setf matches (push-boundary-label matches "state" 14d0
+                                         "network activity contains state synchronization signals")))
+    (nreverse matches)))
+
+;;; ---------------------------------------------------------------------------
+;;; buildNetworkFlowEvents
+;;; ---------------------------------------------------------------------------
+
+(defun build-network-flow-events (recon)
+  "`buildNetworkFlowEvents`: recon's network operations as labeled events.
+
+Each operation gets a positional id (`<type>-%04d`) and a label of
+\"METHOD filename\", falling back to the TYPE and then to the id when the URL has
+no bare file name. Then it is boundary-labeled, so the caller does not have to.
+
+The id is assigned BEFORE labeling, because the label's last-resort branch is the
+id itself."
+  (let ((operations (funcall (find-symbol "COLLECT-NETWORK-OPERATIONS"
+                                          :vovas.engine.panel.graph)
+                     recon)))
+    (loop for index from 0
+          for operation in operations
+          do (let* ((kind (field-str operation "type"))
+                    (id (format nil "~a-~4,'0d" kind (1+ index)))
+                    (method (let ((m (field-str operation "method")))
+                              (if (plusp (length m)) m "GET")))
+                    (file (vovas.engine.panel.assets:get-bare-file-name
+                           (field-str operation "url")))
+                    (kind2 (field-str operation "type"))
+                    (label
+                      (cond
+                        ((plusp (length file)) (format nil "~a ~a" method file))
+                        ((plusp (length kind2)) (format nil "~a ~a" method kind2))
+                        (t (format nil "~a ~a" method id)))))
+               (setf (gethash "id" operation) id
+                     (gethash "label" operation) label)
+               (apply-boundary-labels operation
+                                      (infer-network-boundary-labels operation))))
+    operations))
+
+;;; ---------------------------------------------------------------------------
+;;; collectFlowEvents
+;;; ---------------------------------------------------------------------------
+
+(defun collect-flow-events (recon assets origins)
+  "`collectFlowEvents`: every event on ONE synthetic timeline, plus a lookup.
+
+Three groups are laid out on a common clock, because they come from three
+different sources and none of them shares a time base:
+
+  - CHUNKS use their own `startTime` (or `index * 25` when there is none), and
+    their horizon is the furthest `startTime + duration`;
+  - RUNTIME origins and NETWORK operations are placed AFTER that horizon plus 50,
+    offset by their timestamp relative to the earliest absolute timestamp in
+    either group - or, when no timestamps exist at all, by position * 25.
+
+The earliest-timestamp baseline is what keeps two groups that both carry real
+timestamps in their true RELATIVE order instead of interleaving arbitrarily.
+
+Answers (:events sorted by approxTime :map id->event)."
+  (let* ((network (build-network-flow-events (field recon "recon")))
+         (absolute '())
+         (events '())
+         (map (make-hash-table :test #'equal)))
+    (dolist (origin origins)
+      (let ((ts (field-number origin "timestamp")))
+        (when (> ts 0d0) (push ts absolute))))
+    (dolist (operation network)
+      (let ((ts (field-number operation "timestamp")))
+        (when (> ts 0d0) (push ts absolute))))
+    (let ((base (if absolute (reduce #'min absolute) 0d0)))
+      (when (floatp base)
+        (when (or (sb-ext:float-nan-p base) (sb-ext:float-infinity-p base))
+          (setf base 0d0)))
+      (let ((horizon 0d0))
+        (loop for asset in assets
+              for index from 0
+              do (let ((start (or (truthy-number (script-asset->json asset) "startTime")
+                                  (* index 25d0))))
+                   (let ((event (build-flow-event "chunk" (script-asset-id asset)
+                                                  (script-asset->json asset) start)))
+                     (push event events)
+                     (setf (gethash (field-str event "id") map) event)
+                     (setf horizon (max horizon
+                                        (+ start (script-asset-duration asset)))))))
+        (let ((offset (+ horizon 50d0)))
+          (loop for origin in origins
+                for index from 0
+                do (let* ((ts (field-number origin "timestamp"))
+                          (time (if (and (> ts 0d0) (/= base 0d0))
+                                    (+ offset (- ts base))
+                                    (+ offset (* index 25d0))))
+                          (event (build-flow-event "runtime" (field-str origin "id")
+                                                   origin time)))
+                     (push event events)
+                     (setf (gethash (field-str event "id") map) event)))
+          (loop for operation in network
+                for index from 0
+                do (let* ((ts (field-number operation "timestamp"))
+                          (time (if (and (> ts 0d0) (/= base 0d0))
+                                    (+ offset (- ts base))
+                                    (+ offset (* (+ (length origins) index) 25d0))))
+                          (event (build-flow-event "network" (field-str operation "id")
+                                                   operation time)))
+                     (push event events)
+                     (setf (gethash (field-str event "id") map) event)))
+          (list :events
+                (coerce (stable-sort (nreverse events) #'<
+                                     :key (lambda (e) (field-number e "approxTime")))
+                        'vector)
+                :map map))))))

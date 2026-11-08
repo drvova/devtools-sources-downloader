@@ -282,6 +282,8 @@
    #:vector-of #:stringify-loose-value #:build-flow-event
    #:*flow-event-copied-keys* #:strip-flow-event
    #:infer-flow-relation #:score-flow-transition #:add-boundary-flow
+   #:build-network-boundary-sample #:infer-network-boundary-labels
+   #:build-network-flow-events #:collect-flow-events
    #:build-framework-state-summary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
