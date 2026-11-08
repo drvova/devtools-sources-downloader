@@ -11,7 +11,7 @@
   :description "JavaScript-to-Lisp port of the DevTools sources-downloader engine"
   :author "sashathelambo"
   :license "MIT"
-  :depends-on ("cl-ppcre" "com.inuoe.jzon")
+  :depends-on ("cl-ppcre" "com.inuoe.jzon" "ironclad" "babel")
   :serial t
   :components ((:module "engine"
                 :serial t
@@ -20,5 +20,6 @@
                              (:file "number")
                              (:file "decoders")
                              (:file "scanner")
+                             (:file "digest")
                              (:file "text")
                              (:file "gate")))))

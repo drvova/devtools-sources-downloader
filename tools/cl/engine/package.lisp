@@ -79,6 +79,12 @@
    #:collect-string-literals
    #:find-balanced))
 
+(defpackage :vovas.engine.digest
+  (:use :cl)
+  (:export
+   #:sha256-hex
+   #:sha256-hex-bytes))
+
 (defpackage :vovas.engine.gate
   (:use :cl)
   (:export

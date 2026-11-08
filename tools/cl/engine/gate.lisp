@@ -291,6 +291,37 @@ instead of being quietly accommodated."
                         :value (gethash "value" item)))))
 
 ;;; ---------------------------------------------------------------------------
+;;; The digest gate: sha256Hex, four oracle cases
+;;; ---------------------------------------------------------------------------
+
+(defun run-digest-gate (&key (verbose t))
+  (let* ((oracle (read-json-file (fixture-path "text-tier-oracle.json")))
+         (cases (gethash "sha256Hex" oracle))
+         (result (make-gate-result))
+         (count 0))
+    (loop for text being the hash-keys of cases using (hash-value want)
+          do (incf count)
+             (check result "sha256Hex" text
+                    (vovas.engine.digest:sha256-hex text) want))
+    ;; sha256HexBytes has no oracle key, so pin the two documented behaviours:
+    ;; empty input answers NIL (not the digest of nothing), and a non-empty
+    ;; vector digests its bytes.
+    (incf count)
+    (check result "sha256HexBytes-empty" "" 
+           (vovas.engine.digest:sha256-hex-bytes (make-array 0 :element-type '(unsigned-byte 8)))
+           nil)
+    (incf count)
+    (check result "sha256HexBytes-nonempty" "abc bytes"
+           (vovas.engine.digest:sha256-hex-bytes (sb-ext:string-to-octets "abc"))
+           (gethash "abc" cases))
+    (when verbose
+      (format t "~&digest gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
+
+;;; ---------------------------------------------------------------------------
 ;;; Non-vacuity: the gate must be able to fail
 ;;; ---------------------------------------------------------------------------
 
@@ -399,6 +430,7 @@ still work."
   (let ((gates (list (cons "harness self-test" #'gate-can-fail-p)
                      (cons "mutation probes" #'run-mutation-gate)
                      (cons "scanner + decoders (wasm oracle)" #'run-scanner-gate)
+                     (cons "digest (wasm oracle)" #'run-digest-gate)
                      (cons "text helpers (text-helpers.json)" #'run-text-gate)
                      (cons "number semantics (number-oracle.json)" #'run-number-gate)))
         (all-ok t))
