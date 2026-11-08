@@ -1063,7 +1063,10 @@ makes a stored 0 fall through to the next candidate."
                   (gethash "evidence" row) evidence
                   (gethash "from" row) (strip-flow-event from-event)
                   (gethash "to" row) (strip-flow-event to-event))
-            (nconc flows (list row))
+            ;; `nconc` onto NIL returns the second list WITHOUT splicing, so the
+            ;; result must be assigned - discarding it leaves `flows` empty and
+            ;; hands every caller back the list it passed in.
+            (setf flows (nconc flows (list row)))
             flows))))))
 
 ;;; ---------------------------------------------------------------------------
@@ -1153,6 +1156,27 @@ which is why the body is part of the sample AND checked structurally."
 ;;; buildNetworkFlowEvents
 ;;; ---------------------------------------------------------------------------
 
+(defun plist->json-table (plist)
+  "A keyword-keyed plist as a JSON-shaped hash table with camelCase keys.
+
+`panel.graph` builds its network operations as PLISTS, while everything here -
+`field`, `apply-boundary-labels`, `build-flow-event` - reads WIRE names from hash
+tables. Converting once at this seam keeps the flow code single-shaped.
+
+The mapping is explicit rather than mechanical: a general dash-to-camel rule would
+produce `requestbody` where `requestBody` belongs."
+  (let ((out (make-hash-table :test #'equal))
+        (names '(("type" . "type") ("url" . "url") ("method" . "method")
+                 ("status" . "status") ("timestamp" . "timestamp")
+                 ("request-body" . "requestBody")
+                 ("request-headers" . "requestHeaders")
+                 ("response-headers" . "responseHeaders")
+                 ("response-preview" . "responsePreview"))))
+    (dolist (pair names)
+      (let ((value (getf plist (intern (string-upcase (car pair)) :keyword))))
+        (when value (setf (gethash (cdr pair) out) value))))
+    out))
+
 (defun build-network-flow-events (recon)
   "`buildNetworkFlowEvents`: recon's network operations as labeled events.
 
@@ -1161,29 +1185,34 @@ Each operation gets a positional id (`<type>-%04d`) and a label of
 no bare file name. Then it is boundary-labeled, so the caller does not have to.
 
 The id is assigned BEFORE labeling, because the label's last-resort branch is the
-id itself."
+id itself.
+
+`collect-network-operations` returns PLISTS; they are converted at this seam so
+every consumer downstream sees one representation."
   (let ((operations (funcall (find-symbol "COLLECT-NETWORK-OPERATIONS"
                                           :vovas.engine.panel.graph)
-                     recon)))
+                             recon))
+        (out '()))
     (loop for index from 0
           for operation in operations
-          do (let* ((kind (field-str operation "type"))
+          do (let* ((entry (plist->json-table operation))
+                    (kind (field-str entry "type"))
                     (id (format nil "~a-~4,'0d" kind (1+ index)))
-                    (method (let ((m (field-str operation "method")))
+                    (method (let ((m (field-str entry "method")))
                               (if (plusp (length m)) m "GET")))
                     (file (vovas.engine.panel.assets:get-bare-file-name
-                           (field-str operation "url")))
-                    (kind2 (field-str operation "type"))
+                           (field-str entry "url")))
+                    (kind2 (field-str entry "type"))
                     (label
                       (cond
                         ((plusp (length file)) (format nil "~a ~a" method file))
                         ((plusp (length kind2)) (format nil "~a ~a" method kind2))
                         (t (format nil "~a ~a" method id)))))
-               (setf (gethash "id" operation) id
-                     (gethash "label" operation) label)
-               (apply-boundary-labels operation
-                                      (infer-network-boundary-labels operation))))
-    operations))
+               (setf (gethash "id" entry) id
+                     (gethash "label" entry) label)
+               (apply-boundary-labels entry (infer-network-boundary-labels entry))
+               (push entry out)))
+    (nreverse out)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; collectFlowEvents
@@ -1195,14 +1224,13 @@ id itself."
 Three groups are laid out on a common clock, because they come from three
 different sources and none of them shares a time base:
 
-  - CHUNKS use their own `startTime` (or `index * 25` when there is none), and
-    their horizon is the furthest `startTime + duration`;
-  - RUNTIME origins and NETWORK operations are placed AFTER that horizon plus 50,
-    offset by their timestamp relative to the earliest absolute timestamp in
-    either group - or, when no timestamps exist at all, by position * 25.
-
-The earliest-timestamp baseline is what keeps two groups that both carry real
-timestamps in their true RELATIVE order instead of interleaving arbitrarily.
+  - CHUNKS use their OWN `startTime`, verbatim. The Rust has an `index * 25`
+    fallback, but `startTime` is an f64 serialised with serialize-js-number, so
+    the number is always present and that fallback is unreachable. The oracle
+    confirms it: untimed chunks sit at approxTime 0.
+  - RUNTIME origins and NETWORK operations are placed AFTER the chunk horizon
+    plus 50, offset by their timestamp against the earliest absolute timestamp in
+    either group - or by position * 25 when no timestamps exist at all.
 
 Answers (:events sorted by approxTime :map id->event)."
   (let* ((network (build-network-flow-events (field recon "recon")))
@@ -1216,20 +1244,17 @@ Answers (:events sorted by approxTime :map id->event)."
       (let ((ts (field-number operation "timestamp")))
         (when (> ts 0d0) (push ts absolute))))
     (let ((base (if absolute (reduce #'min absolute) 0d0)))
-      (when (floatp base)
-        (when (or (sb-ext:float-nan-p base) (sb-ext:float-infinity-p base))
-          (setf base 0d0)))
+      (when (and (floatp base)
+                 (or (sb-ext:float-nan-p base) (sb-ext:float-infinity-p base)))
+        (setf base 0d0))
       (let ((horizon 0d0))
-        (loop for asset in assets
-              for index from 0
-              do (let ((start (or (truthy-number (script-asset->json asset) "startTime")
-                                  (* index 25d0))))
-                   (let ((event (build-flow-event "chunk" (script-asset-id asset)
-                                                  (script-asset->json asset) start)))
-                     (push event events)
-                     (setf (gethash (field-str event "id") map) event)
-                     (setf horizon (max horizon
-                                        (+ start (script-asset-duration asset)))))))
+        (dolist (asset assets)
+          (let ((start (script-asset-start-time asset)))
+            (let ((event (build-flow-event "chunk" (script-asset-id asset)
+                                           (script-asset->json asset) start)))
+              (push event events)
+              (setf (gethash (field-str event "id") map) event)
+              (setf horizon (max horizon (+ start (script-asset-duration asset)))))))
         (let ((offset (+ horizon 50d0)))
           (loop for origin in origins
                 for index from 0

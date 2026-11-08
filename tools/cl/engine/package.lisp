@@ -255,7 +255,8 @@
                 #:script-asset-primary-boundary #:script-asset-boundary-reasons
                 #:make-boundary-detail #:boundary-detail-score
                 #:count-boundary-labels #:count-tagged-entries
-                #:script-asset-duration #:find-asset-by-reference #:value-text)
+                #:script-asset-duration #:script-asset-start-time
+                #:find-asset-by-reference #:value-text)
   (:import-from :vovas.engine.panel.model
                 #:make-counts #:counts-add #:counts-alist)
   (:import-from :vovas.engine.panel.model #:js-truthy #:json-null-symbol)

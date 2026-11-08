@@ -581,18 +581,31 @@ the engine saw."
                    assets))
          ;; labeling first, exactly as the Rust test does
          (_labels (vovas.engine.panel.boundary:build-boundary-labels assets origins))
+         ;; The Rust's `prepared()` splices input["recon"] into the fixture and
+         ;; THAT is what the flow builders receive. Passing the bare fixture
+         ;; loses every network operation, which is why totalFlows came out 0.
+         (recon-data (let ((copy (make-hash-table :test #'equal)))
+                       (maphash (lambda (k v) (setf (gethash k copy) v)) recon-fixture)
+                       (setf (gethash "recon" copy) (gethash "recon" input))
+                       copy))
          (got (vovas.engine.panel.boundary:build-cross-boundary-flows
-               recon-fixture assets origins))
+               recon-data assets origins))
          (want (gethash "buildCrossBoundaryFlows" exp)))
 
     (declare (ignore _labels))
 
     ;; ---- the report skeleton --------------------------------------------
-    (dolist (key '("topTransitions" "chains" "events" "transitions"))
-      (incf count)
-      (check result (format nil "flows/~a" key) "section"
-             (and (gate-json= (gethash key got) (gethash key want)) t)
-             t))
+    ;;
+    ;; `generatedAt` is a CLOCK, so it is stripped from BOTH sides. Leaving it in
+    ;; made every section comparison fail on a single extra key while the
+    ;; structures agreed - which reads exactly like a broken port.
+    (let ((gc (gate-without-generated-at got))
+          (wc (gate-without-generated-at want)))
+      (dolist (key '("topTransitions" "chains" "events" "transitions"))
+        (incf count)
+        (check result (format nil "flows/~a" key) "section"
+               (and (gate-json= (gethash key gc) (gethash key wc)) t)
+               t)))
 
     ;; ---- the summary -----------------------------------------------------
     (let ((gs (gethash "summary" got))
