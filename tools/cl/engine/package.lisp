@@ -52,7 +52,45 @@
   (:use :cl)
   (:export
    #:decode-uri-component
-   #:*source-url-comment*))
+   #:*source-url-comment*
+   ;; the peel chain (transforms.rs), appended by the pipeline slice.
+   ;; Structures are plists whose keys are the oracle's JSON names.
+   #:is-literal-only-arg
+   #:collect-eval-payloads
+   #:unwrap-eval
+   #:unwrap-base64
+   #:unwrap-hex-escapes
+   #:unwrap-unescape
+   #:percent-encode-utf8
+   #:unwrap-charcode
+   #:js-parse-int
+   #:to-uint16
+   #:unwrap-reverse
+   #:apply-transform
+   #:collect-refusals
+   #:peel-text
+   ;; stage/payload constructors and readers
+   #:make-text-stage
+   #:make-binary-stage
+   #:make-eval-payload
+   #:make-peel-result
+   #:eval-payload-head
+   #:eval-payload-code
+   #:eval-payload-end
+   #:peel-result-stages
+   #:peel-result-outputs
+   #:peel-result-final
+   #:peel-result-refusals
+   ;; the jsfuck seam: NIL until vovas.engine.jsfuck lands
+   #:*jsfuck-decode*
+   #:*max-peel-depth*
+   ;; helpers the tests pin directly
+   #:printable-ratio
+   #:gzip-format
+   #:inflate-bytes
+   #:json-quote
+   #:code-unit-char
+   #:split-on-char))
 
 (defpackage :vovas.engine.text
   (:use :cl)
