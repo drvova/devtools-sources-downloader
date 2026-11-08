@@ -212,6 +212,7 @@
    #:detect-startup-signals #:extract-route-hints-from-url
    #:extract-import-specifiers #:split-on-slash #:keys-len
    #:field #:field-str #:field-number
+   #:byte-values #:assets-from-inputs
    #:module-signals #:make-module-signals
    #:module-signals-import-count #:module-signals-dynamic-imports
    #:module-signals-requires #:module-signals-exports
@@ -293,7 +294,8 @@
    #:serialize-inline-json #:json-escape-html-chars
    #:escape-xml #:escape-attr #:value-as-text
    #:compute-recon-stats #:truthy-or
-   #:json-serialize-compact #:json-escape-string))
+   #:json-serialize-compact #:json-escape-string
+   #:generate-dom-snapshot-html #:build-readable-artifact-with))
 
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)

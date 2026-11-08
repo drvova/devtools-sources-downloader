@@ -236,9 +236,62 @@ port bug rather than a test-harness one."
              (vovas.engine.panel.artifacts:compute-recon-stats '())
              (coerce (gethash "computeReconStatsEmpty" exp) 'string)))
 
+    ;; --------------------------------------------------------------------
+    ;; generateDOMSnapshotHtml - two cases, both exact text.
+    ;;
+    ;; Case 2 passes `Value::Null` page meta, which exercises every `field`
+    ;; call against a non-object: title and url must both read as empty, so
+    ;; the <h1> falls back to "DOM Snapshot" and the <p> is empty.
+    ;; --------------------------------------------------------------------
+    (let ((want (gethash "generateDOMSnapshotHTML" exp)))
+      (incf count)
+      (check result "generateDOMSnapshotHTML/0" "html"
+             (vovas.engine.panel.artifacts:generate-dom-snapshot-html
+              "<div>&amp;</div>"
+              (ht "title" "<t>" "url" "https://x/?a=1&b=2"))
+             (coerce (aref want 0) 'string))
+      (incf count)
+      (check result "generateDOMSnapshotHTML/1" "html"
+             (vovas.engine.panel.artifacts:generate-dom-snapshot-html
+              "" nil)
+             (coerce (aref want 1) 'string)))
+
+    ;; --------------------------------------------------------------------
+    ;; buildReadableArtifactWith - the SAME stub beautifier the oracle used.
+    ;;
+    ;; The oracle stubs the engine's beautifier at the seam, so the assembly
+    ;; logic is compared with the same stub: `looks` answers true for text
+    ;; starting with "MIN" and `beautify` wraps it. That keeps this gate about
+    ;; header assembly and field selection, not about beautifier output, which
+    ;; carries its own gate.
+    ;; --------------------------------------------------------------------
+    (let ((looks (lambda (text) (and (stringp text)
+                                     (let ((n (length text)))
+                                       (and (>= n 3) (string= "MIN" text :end2 3))))))
+          (beautify (lambda (text) (format nil "BEAUTIFIED(~a)" text)))
+          (want (gethash "buildReadableArtifact" exp))
+          (cases (list
+                   (cons (ht "kind" "chunk" "id" "c1" "label" "L"
+                             "url" "https://x/a.js" "file" "a.js"
+                             "boundaryLabels" (vector "data" "auth")
+                             "why" "why" "score" 30)
+                         (ht "content" "MINvar a=1" "text" "IGNORED"))
+                   (cons (ht "kind" "runtime" "id" "r1")
+                         (ht "content" "IGNORED" "text" "plain text"))
+                   (cons (ht "kind" "runtime" "id" "r2" "score" 0)
+                         (ht "text" "MINx")))))
+      (loop for index from 0
+            for (entry . record) in cases
+            do (incf count)
+               (check result (format nil "buildReadableArtifact/~a" index) "text"
+                      (vovas.engine.panel.artifacts:build-readable-artifact-with
+                       entry record looks beautify)
+                      (coerce (aref want index) 'string))))
+
     (when verbose
       (format t "~&artifacts gate: ~a/~a cases match~%"
               (gate-result-passed result) (gate-result-total result))
       (report-failures result))
+
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))

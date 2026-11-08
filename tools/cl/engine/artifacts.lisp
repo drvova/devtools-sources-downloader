@@ -460,3 +460,96 @@ EVERY value and every string serialized as `null`."
              (loop for i below (length value)
                    collect (json-serialize-compact (aref value i)))))
     (t "null")))
+
+;;; ---------------------------------------------------------------------------
+;;; generateDomSnapshotHtml
+;;; ---------------------------------------------------------------------------
+
+(defparameter *dom-snapshot-style*
+  (concatenate 'string
+    "body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#222}"
+    "h1{margin:0 0 8px}"
+    "p{margin:0 0 16px;color:#555}"
+    "pre{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;"
+    "font-size:12px;line-height:1.5;background:#f7f7f7;border:1px solid #ddd;"
+    "border-radius:6px;padding:16px}")
+  "The snapshot page's inline stylesheet, as ONE source string.
+
+Written as a concatenation rather than a format directive because the stylesheet
+is full of braces, and `~` handling plus brace escaping is exactly the class of
+mistake this project keeps paying for. The page's own `{{`/`}}` are the literal
+CSS braces - the format string in the original is double-braced for that reason.")
+
+(defun generate-dom-snapshot-html (dom-html page-meta)
+  "`generateDomSnapshotHtml`: a self-contained HTML page showing the raw DOM.
+
+The TITLE in `<title>` is the constant \"DOM Snapshot\" and does NOT follow the
+page title - only the `<h1>` does. That asymmetry is in the original and is
+reproduced: a reader who fixes it changes exported bytes."
+  (let* ((raw-title (field-str page-meta "title"))
+         (title (if (zerop (length raw-title)) "DOM Snapshot" raw-title))
+         (url (field-str page-meta "url")))
+    (format nil
+            "<!DOCTYPE html>~%<html>~%<head>~%<meta charset=\"UTF-8\">~%<title>DOM Snapshot</title>~%<style>~a</style>~%</head>~%<body><h1>~a</h1><p>~a</p><pre>~a</pre></body>~%</html>"
+            *dom-snapshot-style*
+            (escape-html title)
+            (escape-html url)
+            (escape-html dom-html))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildReadableArtifactWith
+;;; ---------------------------------------------------------------------------
+
+(defun build-readable-artifact-with (entry record looks-minified-fn beautify-fn)
+  "`buildReadableArtifactWith`: a commented reconstruction of one artifact.
+
+The BODY field is `content` for a chunk entry and `text` for everything else -
+two spellings for the same slot, chosen by `kind`. An empty or absent body leaves
+the readable body empty, and `Beautified:` then reports \"no\" because the two are
+equal, which is the honest answer for nothing to beautify.
+
+`looks-minified-fn` and `beautify-fn` are passed in rather than imported so this
+stays independent of the beautifier's size; the caller decides whether that module
+is loaded at all."
+  (let* ((field-name (if (string= (field-str entry "kind") "chunk") "content" "text"))
+         (raw (field record field-name))
+         (body (if (and (stringp raw) (plusp (length raw))) raw ""))
+         (readable (if (funcall looks-minified-fn body)
+                       (funcall beautify-fn body)
+                       body))
+         (labels-list
+           (let ((value (field entry "boundaryLabels")))
+             (cond
+               ((vectorp value)
+                (format nil "~{~a~^, ~}"
+                        (remove-if-not #'stringp (coerce value 'list))))
+               ((listp value)
+                (format nil "~{~a~^, ~}" (remove-if-not #'stringp value)))
+               (t ""))))
+         (label (let ((l (field-str entry "label")))
+                  (if (zerop (length l)) (field-str entry "id") l)))
+         (score (or (truthy-or entry "score") 0d0))
+         (facts (list
+                  (format nil "Kind: ~a" (field-str entry "kind"))
+                  (format nil "Label: ~a" label)
+                  (format nil "URL: ~a" (field-str entry "url"))
+                  (format nil "File: ~a" (field-str entry "file"))
+                  (format nil "Boundaries: ~a"
+                          (if (zerop (length labels-list)) "none" labels-list))
+                  (format nil "Why: ~a" (field-str entry "why"))
+                  (format nil "Score: ~a"
+                          (vovas.engine.number:to-string score))
+                  (format nil "Beautified: ~a"
+                          (if (string= readable body) "no" "yes")))))
+    (with-output-to-string (out)
+      (write-string "/*" out)
+      (terpri out)
+      (write-string " * Semantic reconstruction" out)
+      (dolist (fact facts)
+        (terpri out)
+        (write-string " * " out)
+        (write-string fact out))
+      (terpri out)
+      (write-string " */" out)
+      (terpri out)
+      (write-string readable out))))

@@ -530,6 +530,72 @@ still needs the bytes."
     (nreverse assets)))
 
 ;;; ---------------------------------------------------------------------------
+;;; assetsFromInputs
+;;; ---------------------------------------------------------------------------
+
+(defun byte-values (value)
+  "`byteValues`: the bytes of a binary script input, or NIL when it is not one.
+
+The panel holds a `Uint8Array`, and `JSON.stringify` turns that into an OBJECT
+keyed by decimal index, while a plain array of numbers arrives as an ARRAY. Both
+shapes mean the same bytes, so both are accepted.
+
+An EMPTY container is `None`, not an empty vector - which is what makes
+`assets-from-inputs` fall through to an empty TEXT asset instead of a zero-length
+bytes asset. The index keys of the object shape are sorted NUMERICALLY: a string
+sort would put \"10\" before \"9\" and silently reorder the bytes."
+  (let ((values
+          (cond
+            ((vectorp value) (coerce value 'list))
+            ((hash-table-p value)
+             (let ((keyed '()))
+               (maphash (lambda (key item)
+                          (let ((index (ignore-errors (parse-integer key))))
+                            (when index (push (cons index item) keyed))))
+                        value)
+               (mapcar #'cdr (sort keyed #'< :key #'car))))
+            (t nil))))
+    (when values
+      (map '(vector (unsigned-byte 8))
+           (lambda (item)
+             (let ((number (vovas.engine.panel.model:js-number item)))
+               (if (and (numberp number) (<= 0 number))
+                   (mod (truncate number) 256)
+                   0)))
+           values))))
+
+(defun assets-from-inputs (inputs)
+  "`assetsFromInputs`: raw script inputs as pipeline assets.
+
+A STRING content is a text asset holding it verbatim. Anything else is offered to
+`byte-values`; when that answers, the asset is bytes, and when it does not the
+asset is text with EMPTY content - a shape the text path can still carry, which is
+why this never drops an input.
+
+`vovas.engine.pipeline` loads AFTER this file, so the Asset constructors are
+resolved SYMBOLICALLY here rather than imported at package level: a package-level
+import would be read before `pipeline.lisp` ever runs its `defpackage`, and the
+reader would fail on a package that does not exist yet. The symbols resolve to
+functions at call time, which is when pipeline is loaded. Only `export.rs` (not
+yet ported) and this function's own tests ever reach this path."
+  (flet ((text-asset (url content)
+           (funcall (find-symbol "MAKE-TEXT-ASSET" :vovas.engine.pipeline)
+                    url content))
+         (bytes-asset (url bytes)
+           (funcall (find-symbol "MAKE-BYTES-ASSET" :vovas.engine.pipeline)
+                    url bytes)))
+    (mapcar (lambda (input)
+              (let ((url (or (field-str input "url") ""))
+                    (content (field input "content")))
+                (if (stringp content)
+                    (text-asset url content)
+                    (let ((bytes (byte-values content)))
+                      (if bytes
+                          (bytes-asset url bytes)
+                          (text-asset url ""))))))
+            inputs)))
+
+;;; ---------------------------------------------------------------------------
 ;;; classifyScriptAsset
 ;;; ---------------------------------------------------------------------------
 
