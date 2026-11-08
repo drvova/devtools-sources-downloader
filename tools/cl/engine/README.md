@@ -26,26 +26,81 @@ Three properties, and nothing else:
 | | |
 | --- | --- |
 | Rust engine + panel | 17,959 LOC |
-| **Ported** | **15,131 LOC** across 24 files |
-| Gate | 15 gates, **1,149 cases**, `sbcl --script tools/cl/run-engine.lisp` → exit 0 |
+| **Ported** | **20,137 LOC** across 26 files (gates add another 12,768) |
+| Gate | 48 gates, **2,729 assertions**, `sbcl --script tools/cl/run-engine.lisp` → exit 0 |
+| Public surface | **49 dispatch arms** (`wasm_api.rs`), key set asserted against the Rust source |
+| Native path | `vovas engine <name> '<json>'` and `vovas unpack <capture.json>` |
+| Product parity | the CLI's export is **byte-identical** to the shipped engine's, all 53 artifacts |
+
+Every gate is an oracle comparison against a fixture captured from the shipped
+engine, not a restatement of what the port does. The two structural gates
+(`archive layout`, `finalize export`) verify a composition no oracle covers, and
+`finalize parity` replays the engine's whole answer file by file.
+
+### The dispatch surface, and why it mattered
+
+`wasm_api.rs`'s 49 arms are the engine's public surface: the only layer that
+turns a NAME plus a positional JSON argument array into an answer. For a while
+this port had every module below that layer gated green and **nothing could call
+any of it** - `vovas-tools.asd` had no dependency on the engine and no CLI
+command reached it. `api.lisp` is that layer; `gate-api.lisp` asserts its key set
+against the Rust source (parsed, never a list kept in the gate) and then drives
+the whole 53-file export through `panelFinalizeZipWithRecon` rather than reaching
+past it into the modules.
+
+Three things that layer owns which no module below it does, each of which cost a
+round when assumed uniform:
+
+- **Refusal is not uniform.** `sha256Hex` refuses a missing argument with
+  `"sha256Hex: text"`; `sanitizeFilename` defaults it via `unwrap_or_default()`
+  and answers `"unknown/resource"`; `findBalanced` reads its index *before* its
+  text, so a missing index answers `null` instead of refusing.
+- **Host shapes translate at the seam only.** `HostAsset` and `HostOptions` live
+  here. `panelFinalizeZipWithRecon` takes `ScriptInput`, not `HostAsset`, and
+  pre-converting dropped fields only `ScriptInput` carries.
+- **The writer decides text-or-base64 per file**, on `str::from_utf8`. That
+  branch had no encoder anywhere in this tree - the parity gate had sidestepped
+  it by decoding the *oracle's* side - so `encode-base64` was added beside its
+  inverse.
 
 | gate | cases | oracle |
 | --- | --- | --- |
 | harness self-test | — | proves the comparison can fail |
 | mutation probes | 10 | plausible wrong implementations |
-| scanner + decoders | 27 | wasm |
+| scanner + decoders | 46 | wasm |
 | digest | 6 | wasm + structural |
 | bundler | 20 | wasm |
 | text helpers | 59 | `text-helpers.json` |
-| number semantics | 140 | node, IEEE-754 bit patterns |
+| number semantics | 175 | node, IEEE-754 bit patterns |
 | beautify | 187 | wasm goldens + 20 adversarial |
 | detectors | 89 | wasm |
 | sourcemaps | 24 + 34 | wasm + structural |
-| packers | 84 | wasm + 16 probes |
+| packers | 84 + 16 | wasm + probes |
+| jsfuck | 137 | encoder-derived + 16 captured |
 | wasm parser | 107 | binary fixtures |
 | jsc bytecode | 108 | binary fixtures + sidecars |
 | v8 code cache | 135 | binary fixtures |
-| zip writer | 129 | round trip |
+| zip writer | 140 | round trip |
+| asset pipeline | 273 | wasm |
+| capture policy | 111 | panel |
+| resource model | 54 | module tests |
+| asset helpers | 57 | paired oracle |
+| asset pipeline tier | 78 | panel |
+| archive layout | 23 | structural |
+| graphql collection | 51 | panel |
+| panel view | 100 | engine |
+| stack profile | 28 | panel, 28 snapshots |
+| artifact helpers | 62 | panel |
+| boundary (6 gates) | 60+24+12+7+22+10+16 | panel |
+| workspace (3 gates) | 25+13+19 | panel |
+| semantic analysis | 14 | panel |
+| transforms | 163 + 6 | engine + probes |
+| locale compare | 18 | spec |
+| report (5 gates) | 5+1+2+34+17 | panel |
+| finalize parity | 4 | **the shipped engine, 53 files byte-identical** |
+| report waterfall | 2 | panel |
+| report investigation | 16 | structural |
+| dispatch surface | 24 | `wasm_api.rs` key set + end-to-end export |
 
 **The line-count result** for the first slice, because the usual objection to a
 Lisp port is verbosity: for the identical surface (Rust `util.rs` 242 +
@@ -169,6 +224,35 @@ Exit code 0 means every gate passed. Four gates run:
    the shipped `page.js`.
 4. **number semantics** — `tests/fixtures/number-oracle.json`, 140 cases
    generated from live node by `unpack-rs/scripts/number-oracle.mjs`.
+
+## Using it from the shell
+
+The engine is reachable through the toolchain, which is what makes the oracles
+useful outside a test run:
+
+```bash
+sbcl --script tools/cl/run.lisp engine                  # list all 49 arms
+sbcl --script tools/cl/run.lisp engine sha256Hex '["abc"]'
+sbcl --script tools/cl/run.lisp engine looksMinified '["var a=1;var b=2;function c(){return a+b}"]'
+
+# the product path: a capture in, the artifact tree out
+sbcl --script tools/cl/run.lisp unpack tools/cl/fixtures/engine/capture.json --out unpacked
+```
+
+`vovas engine` prints the arm's answer as JSON and exits 0; a refusal prints the
+engine's own message to stderr-shaped output and exits 1, so it composes in a
+pipeline. `vovas unpack` writes the artifacts and prints the engine's own summary
+line. The capture it takes is the same object the export arm takes - `jsAssets`,
+`reconData`, `pageSnapshot`, `runtimePayloads`, `options` - because a second
+input format would be a second way to describe one capture.
+
+**The JSON seam is worth knowing about.** `vovas`' own `json-decode` converts
+objects to plists with kebab-case keys, because the rest of the CLI asks "is the
+field there". The engine speaks JZON's dialect instead: equal hash tables,
+camelCase keys, `CL:NULL` for null. `cli.lisp` therefore reads captures with
+`com.inuoe.jzon:parse` directly. Routing them through the toolchain's decoder
+does not fail loudly - it produces a complete, well-formed export of **nothing**,
+because every `jsAssets` lookup misses once the key has become `:js-assets`.
 
 ## Oracles cross as bit patterns, not decimals
 
