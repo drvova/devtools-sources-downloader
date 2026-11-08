@@ -184,6 +184,12 @@ Hash tables have their values converted. NIL is left alone; a caller that needs 
 JSON null uses `json-null-symbol`."
   (cond
     ((null value) nil)
+    ;; A STRING MUST BE TESTED FIRST. A CL string IS a vector, so the
+    ;; vectorp branch below would decompose "bootstrap" into
+    ;; #(\#b \#o \#o ...) - and every downstream `stringp` test then
+    ;; rejects it. That silently emptied the boundary-category list and
+    ;; collapsed nine workspaces into one.
+    ((stringp value) value)
     ((hash-table-p value)
      (let ((out (make-hash-table :test #'equal)))
        (maphash (lambda (k v) (setf (gethash k out) (analysis-wire v))) value)
@@ -202,6 +208,18 @@ JSON null uses `json-null-symbol`."
                             (princ-to-string (car pair)))
                         out)
                (analysis-wire (cdr pair))))
+       out))
+    ;; A DOTTED PAIR is a single key/value entry - `("chunk" . 4)` - and it is
+    ;; not a proper list, so the vector branch below never sees it and the
+    ;; serialiser would receive the cons and signal "4 is not of type LIST".
+    ;; One entry, as an object.
+    ((and (consp value) (not (analysis-proper-list-p value)))
+     (let ((out (make-hash-table :test #'equal)))
+       (setf (gethash (if (keywordp (car value))
+                          (analysis-wire-key (car value))
+                          (princ-to-string (car value)))
+                      out)
+             (analysis-wire (cdr value)))
        out))
     ((or (vectorp value) (analysis-proper-list-p value))
      (coerce (mapcar #'analysis-wire (coerce value 'list)) 'vector))
@@ -298,14 +316,24 @@ framework state still reaches the summary."
           (analysis-wire
            (vovas.engine.panel.graph:build-startup-chain recon-data assets origins))
           (gethash "runtimeOrigins" analysis) runtime-origins
-          (gethash "boundaryLabels" analysis) boundary-labels
-          (gethash "crossBoundaryFlows" analysis) cross-boundary-flows
-          (gethash "frameworkState" analysis) framework-state
+          ;; ALL THREE are wired. `crossBoundaryFlows.summary` counts relations
+          ;; and event kinds as alists, and `boundaryLabels.summary` counts
+          ;; labels the same way - storing either raw leaves a dotted pair for
+          ;; the serializer, which signals at export time naming a cons rather
+          ;; than the section it came from.
+          (gethash "boundaryLabels" analysis) (analysis-wire boundary-labels)
+          (gethash "crossBoundaryFlows" analysis) (analysis-wire cross-boundary-flows)
+          (gethash "frameworkState" analysis) (analysis-wire framework-state)
           (gethash "frameworkRuntime" analysis)
-          (vovas.engine.panel.boundary:build-framework-runtime-summary
-           recon-data assets origins
-           (coerce interesting-entrypoints 'list)
-           boundary-labels cross-boundary-flows)
+          ;; WIRED. This section carries `assetClasses` and `runtimeKinds`, which
+          ;; are counts ALISTS with dotted pairs like ("chunk" . 4). Storing it
+          ;; raw left the serializer holding a cons and it signalled
+          ;; "4 is not of type LIST" at export time, far from the cause.
+          (analysis-wire
+           (vovas.engine.panel.boundary:build-framework-runtime-summary
+            recon-data assets origins
+            (coerce interesting-entrypoints 'list)
+            boundary-labels cross-boundary-flows))
           (gethash "interestingEntrypoints" analysis)
           (coerce interesting-entrypoints 'vector))
     ;; The workspace reads the finished analysis, then its summaries go BACK into

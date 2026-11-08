@@ -432,6 +432,7 @@
   (:import-from :vovas.engine.panel.paths
                 #:*framework-artifacts* #:framework-slice-present-p)
   (:import-from :vovas.engine.decoders #:decode-base64-to-bytes)
+  (:import-from :vovas.engine.panel.analysis #:build-semantic-analysis)
   ;; iso8601-now is NOT imported: pipeline declares its defpackage in
   ;; pipeline.lisp, which loads AFTER this file, so a package-level
   ;; import would fail at READ time. It is called via find-symbol.
@@ -449,6 +450,7 @@
    #:*wf-color-text* #:*wf-color-bg* #:*wf-color-stripe*
    #:*wf-strip-origin*
    #:generate-investigation-index-html
+   #:export-readable-artifacts #:export-semantic-analysis
    #:*styles* #:*script* #:*investigation-doc* #:*investigation-doctype*))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)

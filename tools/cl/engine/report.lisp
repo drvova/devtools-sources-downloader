@@ -527,3 +527,67 @@ string from closing the tag early."
             (escape-html page-url)
             data
             (format nil "~{~a~^~%~}" *script*))))
+
+;;; ---------------------------------------------------------------------------
+;;; exportReadableArtifacts / exportSemanticAnalysis
+;;; ---------------------------------------------------------------------------
+
+(defun export-readable-artifacts (writer analysis)
+  "`exportReadableArtifacts`: the readable-file pass with the engine's own
+beautifier.
+
+`beautify` is reached by `find-symbol` because that module declares its
+`defpackage` in its own file and loads BEFORE this one - a package-level import
+would be read before the package exists."
+  (export-readable-artifacts-with
+   writer analysis
+   (lambda (text)
+     (funcall (find-symbol "LOOKS-MINIFIED-P" :vovas.engine.beautify) text))
+   (lambda (text)
+     (funcall (find-symbol "BEAUTIFY-JS" :vovas.engine.beautify) text))))
+
+(defun export-semantic-analysis (writer js-assets recon-data
+                                 runtime-entries runtime-manifest)
+  "`exportSemanticAnalysis`: build the analysis, then write the whole artifact set.
+
+The ORDER is the contract, because a consumer watches files appear:
+  1. the readable reconstructions (first ten interesting entrypoints);
+  2. the eight analysis artifacts, pretty-printed, in table order;
+  3. the investigation console page;
+  4. one file per workspace, then one per journey.
+
+Step 1 runs BEFORE the analysis files because it is the expensive pass - a
+beautifier over captured source - and an interrupted export should still have the
+human-readable reconstructions on disk.
+
+Artifacts are written only when the key is PRESENT; a missing section produces no
+file rather than a file containing `null`, so the archive index and the archive
+contents cannot disagree about what exists."
+  (let* ((analysis (vovas.engine.panel.analysis:build-semantic-analysis
+                    js-assets recon-data runtime-entries runtime-manifest))
+         (investigation (or (vovas.engine.panel.assets:field analysis "investigation")
+                            (vovas.engine.panel.model:json-null-symbol))))
+    (export-readable-artifacts writer analysis)
+    (dolist (pair vovas.engine.panel.paths:*analysis-artifacts*)
+      (let ((value (vovas.engine.panel.assets:field analysis (cdr pair))))
+        (when value
+          (funcall writer (car pair) (report-pretty-json value)))))
+    (funcall writer vovas.engine.panel.paths:*analysis-index-html*
+             (generate-investigation-index-html investigation))
+    (dolist (workspace (coerce (or (vovas.engine.panel.assets:field
+                                    investigation "workspaces")
+                                  #())
+                               'list))
+      (funcall writer
+               (format nil "_analysis/workspaces/~a.json"
+                       (vovas.engine.panel.assets:field-str workspace "id"))
+               (report-pretty-json workspace)))
+    (dolist (journey (coerce (or (vovas.engine.panel.assets:field
+                                  investigation "journeys")
+                                #())
+                             'list))
+      (funcall writer
+               (format nil "_analysis/journeys/~a.json"
+                       (vovas.engine.panel.assets:field-str journey "id"))
+               (report-pretty-json journey)))
+    analysis))
