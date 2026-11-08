@@ -18,5 +18,7 @@
                 :components ((:file "package")
                              (:file "util")
                              (:file "number")
+                             (:file "decoders")
+                             (:file "scanner")
                              (:file "text")
                              (:file "gate")))))

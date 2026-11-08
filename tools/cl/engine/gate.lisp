@@ -209,6 +209,88 @@ required, not defensive."
          (plusp (gate-result-total result)))))
 
 ;;; ---------------------------------------------------------------------------
+;;; The scanner gate: scanner.lisp + decoders.lisp
+;;;
+;;; Two oracle keys drive it: `collectStringLiterals` and `findBalanced`, both
+;;; captured from the shipped wasm engine. The INPUTS come from
+;;; text-tier-inputs.json rather than being retyped, so the gate cannot drift
+;;; from the oracle it is checking.
+;;; ---------------------------------------------------------------------------
+
+(defun json-null (value)
+  "JZON parses JSON `null` to its own symbol, not to NIL, so every oracle
+comparison that can legitimately be null needs this normalisation first: the
+port naturally answers NIL for \"no answer\", and `(equal nil +null+)` is false,
+which reads as a wrong index rather than a null."
+  (if (and (symbolp value) (string= (symbol-name value) "NULL"))
+      nil
+      value))
+
+(defun run-scanner-gate (&key (verbose t))
+  (let* ((oracle (read-json-file (fixture-path "text-tier-oracle.json")))
+         (inputs (read-json-file (fixture-path "text-tier-inputs.json")))
+         (sources (gethash "sources" inputs))
+         (result (make-gate-result))
+         (count 0))
+
+    ;; --- collectStringLiterals -------------------------------------------
+    (let ((cases (gethash "collectStringLiterals" oracle)))
+      (loop for name being the hash-keys of cases using (hash-value want)
+            do (let* ((text (gethash name sources))
+                      (got (vovas.engine.scanner:collect-string-literals text 4))
+                      (want-normalized (normalize-literals want)))
+                 (incf count)
+                 (check result "collectStringLiterals" name got want-normalized))))
+
+    ;; --- findBalanced ----------------------------------------------------
+    (let ((cases (gethash "findBalanced" oracle)))
+      (loop for name being the hash-keys of cases using (hash-value want)
+            do (let* ((text (find-balanced-input name))
+                      (open (and text
+                                 (position-if (lambda (c) (member c '(#\( #\[ #\{)))
+                                              text)))
+                      (got (if open (vovas.engine.scanner:find-balanced text open) nil)))
+                 (incf count)
+                 (check result "findBalanced" name got (json-null want)))))
+
+    (when verbose
+      (format t "~&scanner gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
+
+(defparameter *balanced-inputs*
+  '(("nested" . "a(b(c)d)e")
+    ("string" . "a(\"(\")b")
+    ("template" . "a(`)`)b")
+    ("comment" . "a(/*)*/)b")
+    ("regex" . "a(/(/))b")
+    ("unclosed" . "a(b(c)")
+    ("array" . "[1,[2,[3]]]")
+    ("brace" . "{a:{b:1}}")
+    ("mismatch" . "a[b)c]"))
+  "The findBalanced inputs. These are simple enough that pinning them here is
+clearer than routing them through the inputs fixture, which exists for the
+17 source texts that are long.")
+
+(defun find-balanced-input (name)
+  (cdr (assoc name *balanced-inputs* :test #'string=)))
+
+(defun normalize-literals (value)
+  "Convert the oracle's JSON array of objects into the plist shape the port
+answers: (:start :end :quote :raw :value). Doing it here rather than in the
+port keeps the comparison honest - a port that returned hash-tables would fail
+instead of being quietly accommodated."
+  (when (vectorp value)
+    (loop for item across value
+          collect (list :start (gethash "start" item)
+                        :end (gethash "end" item)
+                        :quote (character (gethash "quote" item))
+                        :raw (gethash "raw" item)
+                        :value (gethash "value" item)))))
+
+;;; ---------------------------------------------------------------------------
 ;;; Non-vacuity: the gate must be able to fail
 ;;; ---------------------------------------------------------------------------
 
@@ -316,6 +398,7 @@ not a crash, so one broken slice cannot hide the verdicts of the slices that
 still work."
   (let ((gates (list (cons "harness self-test" #'gate-can-fail-p)
                      (cons "mutation probes" #'run-mutation-gate)
+                     (cons "scanner + decoders (wasm oracle)" #'run-scanner-gate)
                      (cons "text helpers (text-helpers.json)" #'run-text-gate)
                      (cons "number semantics (number-oracle.json)" #'run-number-gate)))
         (all-ok t))

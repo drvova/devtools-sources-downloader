@@ -58,13 +58,6 @@
   ],
   "functionLayer": [
    {
-    "start": 21,
-    "end": 24,
-    "quote": "\"",
-    "raw": "a",
-    "value": "a"
-   },
-   {
     "start": 26,
     "end": 40,
     "quote": "\"",
@@ -73,41 +66,6 @@
    }
   ],
   "packed": [
-   {
-    "start": 55,
-    "end": 57,
-    "quote": "'",
-    "raw": "",
-    "value": ""
-   },
-   {
-    "start": 151,
-    "end": 157,
-    "quote": "'",
-    "raw": "\\\\w+",
-    "value": "\\w+"
-   },
-   {
-    "start": 207,
-    "end": 212,
-    "quote": "'",
-    "raw": "\\\\b",
-    "value": "\\b"
-   },
-   {
-    "start": 218,
-    "end": 223,
-    "quote": "'",
-    "raw": "\\\\b",
-    "value": "\\b"
-   },
-   {
-    "start": 224,
-    "end": 227,
-    "quote": "'",
-    "raw": "g",
-    "value": "g"
-   },
    {
     "start": 246,
     "end": 259,
@@ -121,13 +79,6 @@
     "quote": "'",
     "raw": "console|log|packed|ok",
     "value": "console|log|packed|ok"
-   },
-   {
-    "start": 294,
-    "end": 297,
-    "quote": "'",
-    "raw": "|",
-    "value": "|"
    }
   ],
   "base64": [
@@ -157,34 +108,6 @@
     "quote": "\"",
     "raw": "world",
     "value": "world"
-   },
-   {
-    "start": 29,
-    "end": 34,
-    "quote": "\"",
-    "raw": "foo",
-    "value": "foo"
-   },
-   {
-    "start": 35,
-    "end": 40,
-    "quote": "\"",
-    "raw": "bar",
-    "value": "bar"
-   },
-   {
-    "start": 41,
-    "end": 46,
-    "quote": "\"",
-    "raw": "baz",
-    "value": "baz"
-   },
-   {
-    "start": 47,
-    "end": 52,
-    "quote": "\"",
-    "raw": "qux",
-    "value": "qux"
    },
    {
     "start": 53,

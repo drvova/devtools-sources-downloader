@@ -59,6 +59,26 @@
    #:format-ms
    #:locale-compare))
 
+(defpackage :vovas.engine.decoders
+  (:use :cl)
+  (:export
+   ;; only the escape decoder; the base64/inflate halves land with the binary tier
+   #:decode-escapes))
+
+(defpackage :vovas.engine.scanner
+  (:use :cl)
+  (:import-from :vovas.engine.util #:js-whitespace-p #:utf16-length)
+  (:import-from :vovas.engine.decoders #:decode-escapes)
+  (:export
+   #:skip-quoted
+   #:skip-template
+   #:skip-line-comment
+   #:skip-block-comment
+   #:regex-start-p
+   #:skip-regex
+   #:collect-string-literals
+   #:find-balanced))
+
 (defpackage :vovas.engine.gate
   (:use :cl)
   (:export

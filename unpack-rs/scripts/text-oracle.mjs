@@ -106,7 +106,9 @@ const overSources = async (fn, extra) => {
     return out;
 };
 
-oracle.collectStringLiterals = await overSources((t) => bridge.collectStringLiterals(t, 4));
+oracle.collectStringLiterals = await overSources((t) =>
+    bridge.collectStringLiterals(t, { minLength: 4 }),
+);
 oracle.detectLayers = await overSources((t) => bridge.detectLayers(t));
 oracle.peelText = await overSources((t) => bridge.peelText(t));
 oracle.detectJsfuck = await overSources((t) => bridge.detectJsfuck(t));
@@ -205,6 +207,14 @@ oracle.assetSlug = await fromPairs(
 writeFileSync(
     new URL('../tests/fixtures/text-tier-oracle.json', import.meta.url),
     JSON.stringify(oracle, null, 1) + '\n',
+);
+
+// The gate needs the INPUTS too, not just the answers. Emitting them here keeps
+// one copy: a gate that hardcoded its own copies would drift from the oracle
+// silently, and the drift would look like a port bug.
+writeFileSync(
+    new URL('../tests/fixtures/text-tier-inputs.json', import.meta.url),
+    JSON.stringify({ sources: jsSources, filenames }, null, 1) + '\n',
 );
 
 const lines = Object.entries(oracle)
