@@ -616,7 +616,8 @@ ERROR verdict when that gate finally runs."
         ;; the pipeline is LAST because it exercises every module above
         (cons "asset pipeline (wasm oracle)" #'run-pipeline-gate)
         ;; panel tier
-        (cons "capture policy (panel oracle)" #'run-policy-gate)))
+        (cons "capture policy (panel oracle)" #'run-policy-gate)
+        (cons "resource model (panel module tests)" #'run-model-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

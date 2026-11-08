@@ -70,6 +70,7 @@
                              ;; ported as text.lisp), so it goes here rather than
                              ;; with the panel modules that follow later.
                              (:file "policy")
+                             (:file "model")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -87,4 +88,5 @@
                              (:file "gate-v8codecache")
                              (:file "gate-zip")
                              (:file "gate-pipeline")
-                             (:file "gate-policy")))))
+                             (:file "gate-policy")
+                             (:file "gate-model")))))

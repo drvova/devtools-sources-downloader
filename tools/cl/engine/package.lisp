@@ -44,6 +44,7 @@
    #:to-string
    #:to-radix-string
    #:to-number
+   #:nan
    #:js-round
    #:to-fixed
    #:parse-int))
@@ -170,6 +171,24 @@
    #:*graphql-body-pattern*
    #:*graphql-body-keys*
    #:*limits*))
+
+(defpackage :vovas.engine.panel.model
+  (:use :cl)
+  (:import-from :vovas.engine.number #:to-string #:to-number #:nan)
+  (:import-from :vovas.engine.util #:js-trim)
+  (:import-from :vovas.engine.text #:locale-compare)
+  (:export
+   #:counts #:make-counts #:counts-add #:counts-alist
+   #:js-string #:js-number #:js-truthy #:json-null-p
+   #:resource #:make-resource
+   #:resource-status #:resource-kind #:resource-source #:resource-url
+   #:resource-size #:resource-time #:resource-order
+   #:normalize-resource #:get-resource-time
+   #:resource-filters #:make-resource-filters
+   #:resource-filters-status #:resource-filters-kind
+   #:resource-filters-search #:resource-filters-sort
+   #:matches-resource-filters #:compare-resources
+   #:collect-types #:resolve-type-selection #:utf16-less-p))
 
 (defpackage :vovas.engine.gate
   (:use :cl)
