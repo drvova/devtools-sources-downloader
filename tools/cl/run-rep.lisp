@@ -4,6 +4,7 @@
 (asdf:load-system :vovas-engine :force :all)
 (dolist (f '(vovas.engine.gate::run-report-gate
              vovas.engine.gate::run-report-table-gate
-             vovas.engine.gate::run-report-export-gate))
+             vovas.engine.gate::run-report-export-gate
+             vovas.engine.gate::run-report-waterfall-gate))
   (handler-case (format t "~&~a -> ~a~%" f (funcall f))
     (error (e) (format t "~&~a ERROR: ~a~%" f e))))

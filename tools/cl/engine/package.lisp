@@ -425,17 +425,29 @@
   (:import-from :vovas.engine.panel.model #:js-truthy)
   ;; The HTML builders format sizes/times and escape text/attributes, so these
   ;; come from their owners rather than being re-implemented here.
-  (:import-from :vovas.engine.text #:format-size #:format-ms)
+  (:import-from :vovas.engine.text #:format-size #:format-ms
+                #:sanitize-path-part)
   (:import-from :vovas.engine.panel.view #:escape-html)
   (:import-from :vovas.engine.panel.artifacts #:escape-attr)
   (:import-from :vovas.engine.panel.paths
                 #:*framework-artifacts* #:framework-slice-present-p)
-  (:import-from :vovas.engine.decoders #:decode-base64-to-bytes)
+  (:import-from :vovas.engine.decoders #:decode-base64-to-bytes)
+  ;; iso8601-now is NOT imported: pipeline declares its defpackage in
+  ;; pipeline.lisp, which loads AFTER this file, so a package-level
+  ;; import would fail at READ time. It is called via find-symbol.
+
   (:export #:describe-capture-reason #:generate-table #:report-number-or
    #:report-pretty-json #:export-framework-artifacts
    #:export-runtime-artifacts
    #:*runtime-manifest-omitted-keys* #:*readable-artifact-limit*
-   #:export-readable-artifacts-with))
+   #:export-readable-artifacts-with
+   #:generate-waterfall-html #:wf-num #:wf-bar
+   #:*wf-row-h* #:*wf-label-w* #:*wf-total-w*
+   #:*wf-bar-start* #:*wf-bar-w*
+   #:*wf-color-dns* #:*wf-color-tcp* #:*wf-color-ssl*
+   #:*wf-color-ttfb* #:*wf-color-download*
+   #:*wf-color-text* #:*wf-color-bg* #:*wf-color-stripe*
+   #:*wf-strip-origin*))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)

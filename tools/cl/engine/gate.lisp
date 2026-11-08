@@ -691,7 +691,8 @@ ERROR verdict when that gate finally runs."
         (cons "transforms (engine gate)" #'run-transforms-gate)
         (cons "report rendering (panel oracle)" #'run-report-gate)
         (cons "report table (panel oracle)" #'run-report-table-gate)
-        (cons "report exports (panel oracle)" #'run-report-export-gate)))
+        (cons "report exports (panel oracle)" #'run-report-export-gate)
+        (cons "report waterfall (panel oracle)" #'run-report-waterfall-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

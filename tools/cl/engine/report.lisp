@@ -270,3 +270,214 @@ The manifest is written exactly ONCE, after every entry has been processed."
       (funcall writer "_runtime/runtime-manifest.json"
                (report-pretty-json manifest-vector))
       manifest-vector)))
+
+;;; ---------------------------------------------------------------------------
+;;; The waterfall report
+;;;
+;;; Geometry is fixed: rows are 22 units tall, the label column is 360 wide, and
+;;; the bar area starts 8 units past it inside a 1200-wide viewBox. `to_x` maps a
+;;; millisecond timestamp into that bar area, scaled by the LATEST response end.
+;;;
+;;; FIVE bar segments are drawn per row, each conditional on its own pair of
+;;; timings, and each floored at 1 unit of width so a sub-pixel phase is still
+;;; visible. The TCP bar is special: when a secure connection started after the
+;;; TCP connect began, TCP is TRUNCATED at secureStart so the SSL segment can take
+;;; the rest - otherwise the two bars would overlap.
+;;; ---------------------------------------------------------------------------
+
+(defparameter *wf-row-h* 22d0)
+(defparameter *wf-label-w* 360d0)
+(defparameter *wf-total-w* 1200d0)
+(defparameter *wf-bar-start* (+ *wf-label-w* 8d0))
+(defparameter *wf-bar-w* (- *wf-total-w* *wf-bar-start* 10d0))
+
+(defparameter *wf-color-dns* "rgba(3,169,244,0.6)")
+(defparameter *wf-color-tcp* "rgba(255,152,0,0.6)")
+(defparameter *wf-color-ssl* "rgba(156,39,176,0.6)")
+(defparameter *wf-color-ttfb* "rgba(76,175,80,0.6)")
+(defparameter *wf-color-download* "rgba(3,169,244,0.9)")
+(defparameter *wf-color-text* "#ccc")
+(defparameter *wf-color-bg* "#242424")
+(defparameter *wf-color-stripe* "#2a2a2a")
+
+(defparameter *wf-strip-origin* (cl-ppcre:create-scanner "^https?://[^/]+/")
+  "`e.name.replace(/^https?:\\/\\/[^\\/]+\\//, '')` - drops scheme+host and the
+following slash. A name with no origin is left alone.")
+
+(defun wf-num (value)
+  "A coordinate as JS would print it - integral values lose the decimal."
+  (vovas.engine.number:to-string (coerce (or value 0d0) 'double-float)))
+
+(defun wf-bar (x y width fill title)
+  "One bar rect with its tooltip, as the engine emits it."
+  (format nil "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\" fill=\"~a\"><title>~a</title></rect>"
+          (wf-num x) (wf-num y) (wf-num width) (wf-num (- *wf-row-h* 8d0))
+          fill title))
+
+(defun generate-waterfall-html (timings)
+  "`generateWaterfallHtml`: the SVG waterfall plus the resource table and script.
+
+An empty input answers a fixed sentence rather than an empty chart, which is what
+the oracle pins as the empty case."
+  (when (null timings)
+    (return-from generate-waterfall-html
+      "<html><body>No timing data available.</body></html>"))
+  (let* ((sorted (stable-sort (copy-list timings) #'<
+                              :key (lambda (e)
+                                     (vovas.engine.panel.assets:field-number
+                                      e "startTime"))))
+         (max-end 0d0))
+    ;; the time axis runs to the furthest response end, or start+duration when a
+    ;; response end is missing - whichever is greater across all rows
+    (dolist (entry sorted)
+      (let ((end (let ((v (vovas.engine.panel.assets:field-number entry "responseEnd")))
+                   (if (/= v 0d0) v
+                       (+ (vovas.engine.panel.assets:field-number entry "startTime")
+                          (vovas.engine.panel.assets:field-number entry "duration"))))))
+        (when (> end max-end) (setf max-end end))))
+    (let* ((total-time max-end)
+           (chart-height (+ (* (length sorted) *wf-row-h*) 60d0))
+           (svg-height (+ chart-height 120d0))
+           (to-x (lambda (ms) (+ *wf-bar-start*
+                                (if (zerop total-time) 0d0
+                                    (* (/ ms total-time) *wf-bar-w*)))))
+           (rows (make-string-output-stream)))
+      (loop for entry in sorted
+            for r from 0
+            do (let ((y (+ 40d0 (* r *wf-row-h*))))
+                 ;; stripe every OTHER row, starting with the first
+                 (when (evenp r)
+                   (format rows "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\" fill=\"~a\" opacity=\"0.3\"/>"
+                           (wf-num *wf-bar-start*) (wf-num y)
+                           (wf-num *wf-bar-w*) (wf-num *wf-row-h*)
+                           *wf-color-stripe*))
+                 ;; label: origin stripped, then take(55) CHARACTERS
+                 (let* ((name (vovas.engine.panel.assets:field-str entry "name"))
+                        (stripped (cl-ppcre:regex-replace *wf-strip-origin* name ""))
+                        (label (subseq stripped 0 (min 55 (length stripped)))))
+                   (format rows "<text x=\"~a\" y=\"~a\" fill=\"~a\" font-size=\"11\" font-family=\"monospace\" text-anchor=\"end\">~a</text>"
+                           (wf-num (- *wf-bar-start* 6d0)) (wf-num (+ y 14d0))
+                           *wf-color-text*
+                           (vovas.engine.panel.artifacts:escape-xml label)))
+                 (let ((dns-start (vovas.engine.panel.assets:field-number entry "domainLookupStart"))
+                       (dns-end (vovas.engine.panel.assets:field-number entry "domainLookupEnd"))
+                       (conn-start (vovas.engine.panel.assets:field-number entry "connectStart"))
+                       (conn-end (vovas.engine.panel.assets:field-number entry "connectEnd"))
+                       (secure-start (vovas.engine.panel.assets:field-number entry "secureConnectionStart"))
+                       (req-start (vovas.engine.panel.assets:field-number entry "requestStart"))
+                       (resp-start (vovas.engine.panel.assets:field-number entry "responseStart"))
+                       (resp-end (vovas.engine.panel.assets:field-number entry "responseEnd")))
+                   (when (and (> dns-start 0d0) (> dns-end dns-start))
+                     (write-string
+                      (wf-bar (funcall to-x dns-start) (+ y 4d0)
+                              (max 1d0 (- (funcall to-x dns-end) (funcall to-x dns-start)))
+                              *wf-color-dns*
+                              (format nil "DNS: ~a" (vovas.engine.text:format-ms (- dns-end dns-start))))
+                      rows))
+                   (when (and (> conn-start 0d0) (> conn-end 0d0))
+                     (let ((tcp-width (max 1d0 (- (funcall to-x conn-end)
+                                                  (funcall to-x conn-start)))))
+                       ;; SSL eats the tail of the TCP span when it started later
+                       (when (and (> secure-start 0d0) (> secure-start conn-start))
+                         (setf tcp-width (max 1d0 (- (funcall to-x secure-start)
+                                                     (funcall to-x conn-start)))))
+                       (when (> tcp-width 0d0)
+                         (write-string
+                          (wf-bar (funcall to-x conn-start) (+ y 4d0) tcp-width
+                                  *wf-color-tcp*
+                                  (format nil "TCP: ~a" (vovas.engine.text:format-ms
+                                                         (- conn-end conn-start))))
+                          rows))))
+                   (when (and (> secure-start 0d0) (> conn-end secure-start))
+                     (write-string
+                      (wf-bar (funcall to-x secure-start) (+ y 4d0)
+                              (max 1d0 (- (funcall to-x conn-end) (funcall to-x secure-start)))
+                              *wf-color-ssl*
+                              (format nil "SSL: ~a" (vovas.engine.text:format-ms
+                                                     (- conn-end secure-start))))
+                      rows))
+                   (when (and (> req-start 0d0) (> resp-start req-start))
+                     (write-string
+                      (wf-bar (funcall to-x req-start) (+ y 4d0)
+                              (max 1d0 (- (funcall to-x resp-start) (funcall to-x req-start)))
+                              *wf-color-ttfb*
+                              (format nil "TTFB: ~a" (vovas.engine.text:format-ms
+                                                      (- resp-start req-start))))
+                      rows))
+                   (when (and (> resp-start 0d0) (> resp-end resp-start))
+                     (write-string
+                      (wf-bar (funcall to-x resp-start) (+ y 4d0)
+                              (max 1d0 (- (funcall to-x resp-end) (funcall to-x resp-start)))
+                              *wf-color-download*
+                              (format nil "Download: ~a" (vovas.engine.text:format-ms
+                                                          (- resp-end resp-start))))
+                      rows))
+                   ;; the total duration label, right of the last bar it covers
+                   (let* ((start (vovas.engine.panel.assets:field-number entry "startTime"))
+                          (duration (let ((v (- resp-end start)))
+                                      (if (/= v 0d0) v
+                                          (vovas.engine.panel.assets:field-number
+                                           entry "duration"))))
+                          (anchor (if (/= resp-end 0d0) resp-end (+ start duration))))
+                     (format rows "<text x=\"~a\" y=\"~a\" fill=\"#888\" font-size=\"10\" font-family=\"monospace\">~a</text>"
+                             (wf-num (+ (funcall to-x anchor) 6d0))
+                             (wf-num (+ y 14d0))
+                             (vovas.engine.text:format-ms duration))))))
+      ;; the time axis: at most 10 ticks, one per 100ms of the total, plus the
+      ;; boundary tick - hence `<=` and the inclusive loop
+      (let* ((num-ticks (min 10d0 (ceiling (if (zerop total-time) 0d0
+                                             (/ total-time 100d0)))))
+             (grid (make-string-output-stream)))
+        (loop for tick from 0d0
+              while (<= tick num-ticks)
+              do (let ((tx (+ *wf-bar-start*
+                              (if (zerop num-ticks) 0d0
+                                  (* (/ tick num-ticks) *wf-bar-w*)))))
+                   (format grid "<line x1=\"~a\" y1=\"40\" x2=\"~a\" y2=\"~a\" stroke=\"#333\" stroke-width=\"0.5\"/>"
+                           (wf-num tx) (wf-num tx) (wf-num (- chart-height 10d0)))
+                   (format grid "<text x=\"~a\" y=\"30\" fill=\"#777\" font-size=\"10\" font-family=\"monospace\" text-anchor=\"middle\">~a</text>"
+                           (wf-num tx)
+                           (vovas.engine.text:format-ms
+                            (if (zerop num-ticks) 0d0
+                                (* (/ tick num-ticks) total-time))))))
+        (with-output-to-string (out)
+          (write-string *wf-0* out)
+          (write-string (vovas.engine.pipeline:iso8601-now) out)
+          (write-string *wf-2* out)
+          (princ (length sorted) out)
+          (write-string *wf-4* out)
+          (write-string (vovas.engine.text:format-ms total-time) out)
+          (write-string *wf-6* out)
+          (write-string (vovas.engine.panel.artifacts:compute-recon-stats timings) out)
+          (write-string *wf-8* out)
+          (write-string *wf-color-dns* out)
+          (write-string *wf-10* out)
+          (write-string *wf-color-tcp* out)
+          (write-string *wf-12* out)
+          (write-string *wf-color-ssl* out)
+          (write-string *wf-14* out)
+          (write-string *wf-color-ttfb* out)
+          (write-string *wf-16* out)
+          (write-string *wf-color-download* out)
+          (write-string *wf-18* out)
+          (write-string (wf-num *wf-total-w*) out)
+          (write-string *wf-20* out)
+          (write-string (wf-num svg-height) out)
+          (write-string *wf-22* out)
+          (write-string (wf-num *wf-total-w*) out)
+          (write-string *wf-24* out)
+          (write-string (wf-num *wf-total-w*) out)
+          (write-string *wf-26* out)
+          (write-string (wf-num svg-height) out)
+          (write-string *wf-28* out)
+          (write-string *wf-color-bg* out)
+          (write-string *wf-30* out)
+          (write-string (get-output-stream-string grid) out)
+          (write-string (get-output-stream-string rows) out)
+          (write-string *wf-33* out)
+          (write-string (generate-table sorted) out)
+          (write-string *wf-35* out)
+          (write-string (vovas.engine.panel.artifacts:json-serialize-compact
+                         (coerce sorted 'vector))
+                        out)
+          (write-string *wf-37* out))))))

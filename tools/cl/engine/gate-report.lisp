@@ -204,3 +204,94 @@
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; generateWaterfallHtml
+;;;
+;;; The expected document is 13,057 characters. Printing two of those side by
+;;; side tells a reader nothing, so a failure reports the FIRST differing offset
+;;; and a window around it - the same shape as the Rust test's
+;;; `assert_same_document`, which compares in place after stripping the clock.
+;;; ---------------------------------------------------------------------------
+
+(defun gate-timing-case ()
+  "The five timings `waterfall_and_table_match_oracle` builds, verbatim."
+  (let ((first (gate-timing-defaults "https://demo.test/static/app.js?v=3" "script" 0 118.5d0))
+        (second (gate-timing-defaults "https://cdn.other.test/lib/vendor.css" "link" 12.25d0 77.75d0))
+        (third (gate-timing-defaults "https://demo.test/api/session" "fetch" 40d0 220d0))
+        (fourth (gate-timing-defaults "https://demo.test/img/logo.png" "img" 300d0 640.5d0))
+        (fifth (gate-timing-defaults "https://demo.test/beacon" "other" 950d0 12d0)))
+    (flet ((put (h &rest pairs)
+             (loop for (k v) on pairs by #'cddr do (setf (gethash k h) v))
+             h))
+      (put first "domainLookupStart" 0.4d0 "domainLookupEnd" 3.2d0
+           "connectStart" 3.2d0 "connectEnd" 14.6d0 "secureConnectionStart" 6.1d0
+           "requestStart" 15d0 "responseStart" 42.75d0 "responseEnd" 118.5d0
+           "transferSize" 20480 "encodedBodySize" 19000 "decodedBodySize" 51000)
+      (put second "connectStart" 12.25d0 "connectEnd" 30d0
+           "requestStart" 31d0 "responseStart" 55.5d0 "responseEnd" 90d0
+           "decodedBodySize" 1200)
+      (put third "requestStart" 41d0 "responseStart" 180.25d0 "responseEnd" 260d0
+           "transferSize" 512 "encodedBodySize" 512 "decodedBodySize" 900)
+      (put fourth "requestStart" 301d0 "responseStart" 305d0 "responseEnd" 940.5d0
+           "transferSize" 8192 "encodedBodySize" 8192 "decodedBodySize" 8192)
+      (vector first second third fourth fifth))))
+
+(defun gate-first-difference (got want)
+  "The offset of the first differing character, or NIL when equal.
+
+Beyond the offset it shows a short window from each side, because the alternative
+- two 13,000-character strings - is unreadable."
+  (let ((n (min (length got) (length want))))
+    (dotimes (i n)
+      (unless (char= (char got i) (char want i))
+        (return-from gate-first-difference
+          (format nil "offset ~a: got ~s want ~s"
+                  i
+                  (subseq got i (min (length got) (+ i 40)))
+                  (subseq want i (min (length want) (+ i 40)))))))
+    (when (/= (length got) (length want))
+      (format nil "length: got ~a want ~a (common prefix ~a chars)"
+              (length got) (length want) n))))
+
+(defun run-report-waterfall-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/artifacts-oracle.json")))
+         (exp (gethash "expected" fx))
+         (timings (coerce (gate-timing-case) 'list)))
+
+    ;; ---- the empty case -------------------------------------------------
+    (incf count)
+    (check result "generateWaterfallHTML/empty" "document"
+           (vovas.engine.panel.report:generate-waterfall-html '())
+           (coerce (gethash "generateWaterfallHTMLEmpty" exp) 'string))
+
+    ;; ---- the five-row document ------------------------------------------
+    ;;
+    ;; The Rust sorts by startTime before calling, because the TABLE it embeds
+    ;; must be in that order; the waterfall itself sorts internally.
+    (let* ((sorted (stable-sort (copy-list timings) #'<
+                                :key (lambda (e)
+                                       (vovas.engine.panel.assets:field-number
+                                        e "startTime"))))
+           (got (vovas.engine.panel.report:generate-waterfall-html sorted))
+           (want (coerce (gethash "generateWaterfallHTML" exp) 'string))
+           ;; the document stamps a clock, so both sides are cut at the same
+           ;; point: everything before the first quote after "Generated "
+           (cut (lambda (s)
+                  (let ((i (search "Generated " s)))
+                    (if i (subseq s 0 i) s))))
+           (diff (gate-first-difference (funcall cut got) (funcall cut want))))
+      (incf count)
+      (check result "generateWaterfallHTML/document" "document"
+             (or diff "identical")
+             "identical"))
+
+    (when verbose
+      (format t "~&report waterfall gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
