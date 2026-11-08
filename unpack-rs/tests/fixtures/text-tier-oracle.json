@@ -1,0 +1,790 @@
+{
+ "note": "Captured from dist/js/engine.wasm (the shipped wasm engine) via src/js/unpack-bridge.js",
+ "capturedAt": "fixed-input set; regenerate with node unpack-rs/scripts/text-oracle.mjs",
+ "collectStringLiterals": {
+  "plain": [
+   {
+    "start": 32,
+    "end": 60,
+    "quote": "\"",
+    "raw": "hello world, a string here",
+    "value": "hello world, a string here"
+   },
+   {
+    "start": 91,
+    "end": 104,
+    "quote": "'",
+    "raw": "another one",
+    "value": "another one"
+   }
+  ],
+  "template": [
+   {
+    "start": 10,
+    "end": 31,
+    "quote": "`",
+    "raw": "outer ${inner} tail",
+    "value": "outer ${inner} tail"
+   }
+  ],
+  "regex": [
+   {
+    "start": 23,
+    "end": 30,
+    "quote": "\"",
+    "raw": "a/b/c",
+    "value": "a/b/c"
+   }
+  ],
+  "escapes": [
+   {
+    "start": 8,
+    "end": 26,
+    "quote": "\"",
+    "raw": "a\\\"b\\\\c\\nd\\u00e9",
+    "value": "a\"b\\c\ndé"
+   }
+  ],
+  "minified": [],
+  "pretty": [],
+  "evalLayer": [
+   {
+    "start": 37,
+    "end": 46,
+    "quote": "\"",
+    "raw": "payload",
+    "value": "payload"
+   }
+  ],
+  "functionLayer": [
+   {
+    "start": 21,
+    "end": 24,
+    "quote": "\"",
+    "raw": "a",
+    "value": "a"
+   },
+   {
+    "start": 26,
+    "end": 40,
+    "quote": "\"",
+    "raw": "return a * 2",
+    "value": "return a * 2"
+   }
+  ],
+  "packed": [
+   {
+    "start": 55,
+    "end": 57,
+    "quote": "'",
+    "raw": "",
+    "value": ""
+   },
+   {
+    "start": 151,
+    "end": 157,
+    "quote": "'",
+    "raw": "\\\\w+",
+    "value": "\\w+"
+   },
+   {
+    "start": 207,
+    "end": 212,
+    "quote": "'",
+    "raw": "\\\\b",
+    "value": "\\b"
+   },
+   {
+    "start": 218,
+    "end": 223,
+    "quote": "'",
+    "raw": "\\\\b",
+    "value": "\\b"
+   },
+   {
+    "start": 224,
+    "end": 227,
+    "quote": "'",
+    "raw": "g",
+    "value": "g"
+   },
+   {
+    "start": 246,
+    "end": 259,
+    "quote": "'",
+    "raw": "0 1(\"2 3\");",
+    "value": "0 1(\"2 3\");"
+   },
+   {
+    "start": 264,
+    "end": 287,
+    "quote": "'",
+    "raw": "console|log|packed|ok",
+    "value": "console|log|packed|ok"
+   },
+   {
+    "start": 294,
+    "end": 297,
+    "quote": "'",
+    "raw": "|",
+    "value": "|"
+   }
+  ],
+  "base64": [
+   {
+    "start": 14,
+    "end": 52,
+    "quote": "\"",
+    "raw": "aGVsbG8gd29ybGQgdGhpcyBpcyBhIHRlc3Q=",
+    "value": "aGVsbG8gd29ybGQgdGhpcyBpcyBhIHRlc3Q="
+   }
+  ],
+  "jsfuck": [],
+  "sourceMapRef": [],
+  "inlineMap": [],
+  "bundle": [],
+  "stringArray": [
+   {
+    "start": 13,
+    "end": 20,
+    "quote": "\"",
+    "raw": "hello",
+    "value": "hello"
+   },
+   {
+    "start": 21,
+    "end": 28,
+    "quote": "\"",
+    "raw": "world",
+    "value": "world"
+   },
+   {
+    "start": 29,
+    "end": 34,
+    "quote": "\"",
+    "raw": "foo",
+    "value": "foo"
+   },
+   {
+    "start": 35,
+    "end": 40,
+    "quote": "\"",
+    "raw": "bar",
+    "value": "bar"
+   },
+   {
+    "start": 41,
+    "end": 46,
+    "quote": "\"",
+    "raw": "baz",
+    "value": "baz"
+   },
+   {
+    "start": 47,
+    "end": 52,
+    "quote": "\"",
+    "raw": "qux",
+    "value": "qux"
+   },
+   {
+    "start": 53,
+    "end": 59,
+    "quote": "\"",
+    "raw": "quux",
+    "value": "quux"
+   },
+   {
+    "start": 60,
+    "end": 67,
+    "quote": "\"",
+    "raw": "corge",
+    "value": "corge"
+   }
+  ],
+  "empty": [],
+  "whitespace": []
+ },
+ "detectLayers": {
+  "plain": [],
+  "template": [],
+  "regex": [],
+  "escapes": [],
+  "minified": [],
+  "pretty": [],
+  "evalLayer": [
+   {
+    "tool": "eval-unwrap",
+    "score": 0.75,
+    "detail": "1 eval() / 0 Function() call(s)"
+   }
+  ],
+  "functionLayer": [],
+  "packed": [
+   {
+    "tool": "packer",
+    "score": 0.9,
+    "detail": "Dean Edwards packer, base 4, 4 words"
+   },
+   {
+    "tool": "eval-unwrap",
+    "score": 0.75,
+    "detail": "1 eval() / 0 Function() call(s)"
+   }
+  ],
+  "base64": [],
+  "jsfuck": [
+   {
+    "tool": "jsfuck",
+    "score": 0.95,
+    "detail": "jsfuck, purity 100.0%"
+   }
+  ],
+  "sourceMapRef": [],
+  "inlineMap": [],
+  "bundle": [],
+  "stringArray": [],
+  "empty": [],
+  "whitespace": []
+ },
+ "peelText": {
+  "plain": {
+   "stages": [],
+   "outputs": [],
+   "final": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\n/* block\n comment */\nvar t = 'another one';",
+   "refusals": []
+  },
+  "template": {
+   "stages": [],
+   "outputs": [],
+   "final": "const x = `outer ${inner} tail`;\nconst y = 2;",
+   "refusals": []
+  },
+  "regex": {
+   "stages": [],
+   "outputs": [],
+   "final": "var re = /ab+c/gi, s = \"a/b/c\";\nvar d = a / b / c;\nvar q = /=+/;",
+   "refusals": []
+  },
+  "escapes": {
+   "stages": [],
+   "outputs": [],
+   "final": "var s = \"a\\\"b\\\\c\\nd\\u00e9\";",
+   "refusals": []
+  },
+  "minified": {
+   "stages": [],
+   "outputs": [],
+   "final": "function a(b){return b+1}var c=a(1);console.log(c);",
+   "refusals": []
+  },
+  "pretty": {
+   "stages": [],
+   "outputs": [],
+   "final": "function add(a, b) {\n    return a + b;\n}\n\nmodule.exports = { add };\n",
+   "refusals": []
+  },
+  "evalLayer": {
+   "stages": [
+    {
+     "depth": 1,
+     "tool": "eval-unwrap",
+     "inputBytes": 60,
+     "outputBytes": 53,
+     "digest": "ec9c55abee2ecc01b0e7324ee9728cfed28572939b8239e80e1d730556c60c1e",
+     "sourceUrl": null
+    }
+   ],
+   "outputs": [
+    "function(p,a,c,k,e,d){return p}(\"payload\",62,1,0,0,0)"
+   ],
+   "final": "function(p,a,c,k,e,d){return p}(\"payload\",62,1,0,0,0)",
+   "refusals": []
+  },
+  "functionLayer": {
+   "stages": [],
+   "outputs": [],
+   "final": "var f = new Function(\"a\", \"return a * 2\");",
+   "refusals": []
+  },
+  "packed": {
+   "stages": [
+    {
+     "depth": 1,
+     "tool": "packer",
+     "inputBytes": 305,
+     "outputBytes": 25,
+     "digest": "86838aafd68060c2fb92a8166975cb07e180ef0c3a053e1e1815073481ffdcfc",
+     "sourceUrl": null
+    }
+   ],
+   "outputs": [
+    "console log(\"packed ok\");"
+   ],
+   "final": "console log(\"packed ok\");",
+   "refusals": []
+  },
+  "base64": {
+   "stages": [],
+   "outputs": [],
+   "final": "var payload = \"aGVsbG8gd29ybGQgdGhpcyBpcyBhIHRlc3Q=\";",
+   "refusals": []
+  },
+  "jsfuck": {
+   "stages": [],
+   "outputs": [],
+   "final": "[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]]+[])[!+[]+!+[]+!+[]]+(![]+[])[+!+[]]+(![]+[])[!+[]+!+[]]]()",
+   "refusals": []
+  },
+  "sourceMapRef": {
+   "stages": [],
+   "outputs": [],
+   "final": "var a=1;\n//# sourceMappingURL=app.js.map\n",
+   "refusals": []
+  },
+  "inlineMap": {
+   "stages": [],
+   "outputs": [],
+   "final": "var a=1;\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImEudHMiXSwic291cmNlc0NvbnRlbnQiOlsiY29uc3QgYTogbnVtYmVyID0gMTsiXX0=",
+   "refusals": []
+  },
+  "bundle": {
+   "stages": [],
+   "outputs": [],
+   "final": "__webpack_require__.d(exports, { add: () => add });\nfunction add() {}\n//# sourceURL=webpack://app/./src/add.js",
+   "refusals": []
+  },
+  "stringArray": {
+   "stages": [],
+   "outputs": [],
+   "final": "var _0x1a2b=[\"hello\",\"world\",\"foo\",\"bar\",\"baz\",\"qux\",\"quux\",\"corge\"];for(var i=0;i<_0x1a2b.length;i++){console.log(_0x1a2b[i]);}",
+   "refusals": []
+  },
+  "empty": {
+   "stages": [],
+   "outputs": [],
+   "final": "",
+   "refusals": []
+  },
+  "whitespace": {
+   "stages": [],
+   "outputs": [],
+   "final": "   \n\t  \n",
+   "refusals": []
+  }
+ },
+ "detectJsfuck": {
+  "plain": {
+   "detected": false,
+   "purity": 0,
+   "reason": "purity 0.0% (0 charset bytes)"
+  },
+  "template": {
+   "detected": false,
+   "purity": 0,
+   "reason": "purity 0.0% (0 charset bytes)"
+  },
+  "regex": {
+   "detected": false,
+   "purity": 0.041666666666666664,
+   "reason": "purity 4.2% (2 charset bytes)"
+  },
+  "escapes": {
+   "detected": false,
+   "purity": 0,
+   "reason": "purity 0.0% (0 charset bytes)"
+  },
+  "minified": {
+   "detected": false,
+   "purity": 0.14583333333333334,
+   "reason": "purity 14.6% (7 charset bytes)"
+  },
+  "pretty": {
+   "detected": false,
+   "purity": 0.05660377358490566,
+   "reason": "purity 5.7% (3 charset bytes)"
+  },
+  "evalLayer": {
+   "detected": false,
+   "purity": 0.1016949152542373,
+   "reason": "purity 10.2% (6 charset bytes)"
+  },
+  "functionLayer": {
+   "detected": false,
+   "purity": 0.058823529411764705,
+   "reason": "purity 5.9% (2 charset bytes)"
+  },
+  "packed": {
+   "detected": false,
+   "purity": 0.1605351170568562,
+   "reason": "purity 16.1% (48 charset bytes)"
+  },
+  "base64": {
+   "detected": false,
+   "purity": 0,
+   "reason": "purity 0.0% (0 charset bytes)"
+  },
+  "jsfuck": {
+   "detected": true,
+   "purity": 1,
+   "reason": ""
+  },
+  "sourceMapRef": {
+   "detected": false,
+   "purity": 0,
+   "reason": "purity 0.0% (0 charset bytes)"
+  },
+  "inlineMap": {
+   "detected": false,
+   "purity": 0,
+   "reason": "purity 0.0% (0 charset bytes)"
+  },
+  "bundle": {
+   "detected": false,
+   "purity": 0.0594059405940594,
+   "reason": "purity 5.9% (6 charset bytes)"
+  },
+  "stringArray": {
+   "detected": false,
+   "purity": 0.07936507936507936,
+   "reason": "purity 7.9% (10 charset bytes)"
+  },
+  "empty": {
+   "detected": false,
+   "purity": 0,
+   "reason": "too short"
+  },
+  "whitespace": {
+   "detected": false,
+   "purity": 0,
+   "reason": "too short"
+  }
+ },
+ "decodeJsfuck": {
+  "plain": {
+   "value": null,
+   "captured": false
+  },
+  "template": {
+   "value": null,
+   "captured": false
+  },
+  "regex": {
+   "value": null,
+   "captured": false
+  },
+  "escapes": {
+   "value": null,
+   "captured": false
+  },
+  "minified": {
+   "value": null,
+   "captured": false
+  },
+  "pretty": {
+   "value": null,
+   "captured": false
+  },
+  "evalLayer": {
+   "value": null,
+   "captured": false
+  },
+  "functionLayer": {
+   "value": null,
+   "captured": false
+  },
+  "packed": {
+   "value": null,
+   "captured": false
+  },
+  "base64": {
+   "value": null,
+   "captured": false
+  },
+  "jsfuck": {
+   "value": null,
+   "captured": false
+  },
+  "sourceMapRef": {
+   "value": null,
+   "captured": false
+  },
+  "inlineMap": {
+   "value": null,
+   "captured": false
+  },
+  "bundle": {
+   "value": null,
+   "captured": false
+  },
+  "stringArray": {
+   "value": null,
+   "captured": false
+  },
+  "empty": {
+   "value": null,
+   "captured": false
+  },
+  "whitespace": {
+   "value": null,
+   "captured": false
+  }
+ },
+ "detectPacker": {
+  "plain": null,
+  "template": null,
+  "regex": null,
+  "escapes": null,
+  "minified": null,
+  "pretty": null,
+  "evalLayer": null,
+  "functionLayer": null,
+  "packed": {
+   "payload": "0 1(\"2 3\");",
+   "base": 4,
+   "count": 4,
+   "words": [
+    "console",
+    "log",
+    "packed",
+    "ok"
+   ]
+  },
+  "base64": null,
+  "jsfuck": null,
+  "sourceMapRef": null,
+  "inlineMap": null,
+  "bundle": null,
+  "stringArray": null,
+  "empty": null,
+  "whitespace": null
+ },
+ "unpackPacker": {
+  "plain": null,
+  "template": null,
+  "regex": null,
+  "escapes": null,
+  "minified": null,
+  "pretty": null,
+  "evalLayer": null,
+  "functionLayer": null,
+  "packed": "console log(\"packed ok\");",
+  "base64": null,
+  "jsfuck": null,
+  "sourceMapRef": null,
+  "inlineMap": null,
+  "bundle": null,
+  "stringArray": null,
+  "empty": null,
+  "whitespace": null
+ },
+ "detectStringArray": {
+  "plain": null,
+  "template": null,
+  "regex": null,
+  "escapes": null,
+  "minified": null,
+  "pretty": null,
+  "evalLayer": null,
+  "functionLayer": null,
+  "packed": null,
+  "base64": null,
+  "jsfuck": null,
+  "sourceMapRef": null,
+  "inlineMap": null,
+  "bundle": null,
+  "stringArray": null,
+  "empty": null,
+  "whitespace": null
+ },
+ "transformStringArray": {
+  "plain": null,
+  "template": null,
+  "regex": null,
+  "escapes": null,
+  "minified": null,
+  "pretty": null,
+  "evalLayer": null,
+  "functionLayer": null,
+  "packed": null,
+  "base64": null,
+  "jsfuck": null,
+  "sourceMapRef": null,
+  "inlineMap": null,
+  "bundle": null,
+  "stringArray": null,
+  "empty": null,
+  "whitespace": null
+ },
+ "extractBundleModules": {
+  "plain": [],
+  "template": [],
+  "regex": [],
+  "escapes": [],
+  "minified": [],
+  "pretty": [],
+  "evalLayer": [],
+  "functionLayer": [],
+  "packed": [],
+  "base64": [],
+  "jsfuck": [],
+  "sourceMapRef": [],
+  "inlineMap": [],
+  "bundle": [],
+  "stringArray": [],
+  "empty": [],
+  "whitespace": []
+ },
+ "findSourceMapRef": {
+  "plain": null,
+  "template": null,
+  "regex": null,
+  "escapes": null,
+  "minified": null,
+  "pretty": null,
+  "evalLayer": null,
+  "functionLayer": null,
+  "packed": null,
+  "base64": null,
+  "jsfuck": null,
+  "sourceMapRef": {
+   "kind": "external",
+   "value": "app.js.map"
+  },
+  "inlineMap": {
+   "kind": "inline",
+   "value": "data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImEudHMiXSwic291cmNlc0NvbnRlbnQiOlsiY29uc3QgYTogbnVtYmVyID0gMTsiXX0="
+  },
+  "bundle": null,
+  "stringArray": null,
+  "empty": null,
+  "whitespace": null
+ },
+ "looksMinified": {
+  "plain": false,
+  "template": true,
+  "regex": true,
+  "escapes": true,
+  "minified": true,
+  "pretty": false,
+  "evalLayer": true,
+  "functionLayer": true,
+  "packed": true,
+  "base64": true,
+  "jsfuck": false,
+  "sourceMapRef": true,
+  "inlineMap": true,
+  "bundle": true,
+  "stringArray": true,
+  "empty": false,
+  "whitespace": false
+ },
+ "findBalanced": {
+  "nested": 8,
+  "string": 6,
+  "template": 6,
+  "comment": 8,
+  "regex": 6,
+  "unclosed": null,
+  "array": 11,
+  "brace": 9,
+  "mismatch": 6
+ },
+ "decodeEscapes": {
+  "plain": "plain",
+  "a\\nb": "a\nb",
+  "a\\\\b": "a\\b",
+  "\\x41\\x42": "AB",
+  "\\u0041\\u00e9": "Aé",
+  "\\u{1F600}": "😀",
+  "\\0": "\u0000",
+  "\\\"": "\"",
+  "\\'": "'",
+  "\\q": "q",
+  "trailing\\": "trailingundefined"
+ },
+ "printableRatio": {
+  "\"\"": 0,
+  "\"abc\"": 1,
+  "\"a\\u0000b\"": 0.6666666666666666,
+  "\"ünïcode\"": 1,
+  "\"\\u0001\\u0002\\u0003\"": 0,
+  "\"a b c\"": 1,
+  "\"😀\"": 1
+ },
+ "resolveMapUrl": {
+  "https://h/a/b.js :: c.js.map": "https://h/a/c.js.map",
+  "https://h/a/b.js :: /root.map": "https://h/root.map",
+  "https://h/a/b.js :: //other.test/x.map": "https://other.test/x.map",
+  "https://h/a/b.js :: https://abs.test/y.map": "https://abs.test/y.map",
+  "https://h/a/b.js :: ../up.map": "https://h/up.map",
+  "https://h/a/ :: d.map": "https://h/a/d.map",
+  "not a url :: x.map": "x.map"
+ },
+ "sanitizeFilename": {
+  "": "unknown/resource",
+  "https://example.test/a.js": "example.test/a.js",
+  "https://EXAMPLE.Test/A/B.JS?v=1#f": "example.test/A/B__721c9bce.JS",
+  "https://x:8080/a.js": "x_8080/a.js",
+  "https://x:/a.js": "x/a.js",
+  "https://[::1]:8080/a.js": "[__1]_8080/a.js",
+  "https://user:pass@host.test/p/q.js": "host.test/p/q.js",
+  "https://host.test/": "host.test/index.html",
+  "https://host.test": "host.test/index.html",
+  "https://host.test/a%20b.js": "host.test/a b.js",
+  "https://host.test/a%zz.js": "host.test/a%zz.js",
+  "https://host.test/ünïcode/ä.js": "host.test/ünïcode/ä.js",
+  "https://host.test/😀.js": "host.test/😀.js",
+  "http://x/y": "x/y",
+  "file:///C:/x.js": "file/C_/x.js",
+  "chrome-extension://abc/js/x.js": "chrome-extension/abc/js/x.js",
+  "blob:https://h/p": "h/p__blob",
+  "blob:blob:https://h/p": "h/p__blob__blob",
+  "data:image/png;base64,AAAA": "inline/666fd387.png",
+  "data:text/plain,hello": "inline/4e1b25a2.plain",
+  "data:,": "inline/4fce4ba4.data",
+  "data:;base64,AA": "inline/4686ed92.data",
+  "not a url": "not a url",
+  "//protocol-relative.test/x.js": "protocol-relative.test/x.js",
+  "/absolute/path.js": "absolute/path.js",
+  "relative/path.js": "relative/path.js",
+  "custom-scheme:/x": "custom-scheme/x/index.html",
+  "a?b#c": "a",
+  "https://h/a?": "h/a",
+  "https://h/a#": "h/a",
+  "https://h/?q": "h/index__812.html",
+  "\\\\server\\share\\x.js": "server/share/x.js",
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.js": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "https://h/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy.js": "h/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+ },
+ "sanitizePageTitle": {
+  "": "page",
+  "page": "page",
+  "My: Page?": "My_ Page_",
+  "a/b\\c": "a_b_c",
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "ok": "ok",
+  "with\ttab": "with\ttab"
+ },
+ "sha256Hex": {
+  "": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "abc": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "hello world": "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+  "ünïcode": "b8be8967e4de3eb294835b1748184523179767250c2d510451e9d3a03df08977"
+ },
+ "assetSlug": {
+  "https://h/a/b.js #0": "0000-h__a__b.js",
+  "https://h/a/b.js #7": "0007-h__a__b.js",
+  "https://h/A/B.JS #0": "0000-h__A__B.JS",
+  "https://h/A/B.JS #7": "0007-h__A__B.JS",
+  "https://h/a%20b.js #0": "0000-h__a%20b.js",
+  "https://h/a%20b.js #7": "0007-h__a%20b.js",
+  "https://h/ #0": "0000-h__.js",
+  "https://h/ #7": "0007-h__.js",
+  "https://h #0": "0000-h.js",
+  "https://h #7": "0007-h.js",
+  "a-b_c.d #0": "0000-a-b_c.d.js",
+  "a-b_c.d #7": "0007-a-b_c.d.js",
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx #0": "0000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.js",
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx #7": "0007-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.js"
+ }
+}
