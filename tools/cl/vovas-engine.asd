@@ -116,6 +116,7 @@
                              (:file "gate-workspace-builders")
                              (:file "gate-analysis")
                              (:file "gate-report")
+                             (:file "gate-export")
                              (:file "gate-transforms")
                              (:file "gate-paths")
                              (:file "gate-graph")
