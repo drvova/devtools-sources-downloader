@@ -81,6 +81,7 @@
                              ;; analysis LAST of the panel modules: it calls every
                              ;; one of them, so it must load after them.
                              (:file "analysis")
+                             (:file "report")
                              (:file "paths")
                              (:file "graph")
                              ;; view BEFORE artifacts: artifacts escapes XML and
@@ -112,6 +113,7 @@
                              (:file "gate-workspace")
                              (:file "gate-workspace-builders")
                              (:file "gate-analysis")
+                             (:file "gate-report")
                              (:file "gate-transforms")
                              (:file "gate-paths")
                              (:file "gate-graph")

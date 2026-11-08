@@ -688,7 +688,9 @@ ERROR verdict when that gate finally runs."
         ;; `run-transforms-gate` was defined in gate-transforms.lisp but never
         ;; registered, so it had never run in the full suite. A gate outside
         ;; gate-list is invisible to CI and can regress silently.
-        (cons "transforms (engine gate)" #'run-transforms-gate)))
+        (cons "transforms (engine gate)" #'run-transforms-gate)
+        (cons "report rendering (panel oracle)" #'run-report-gate)
+        (cons "report table (panel oracle)" #'run-report-table-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

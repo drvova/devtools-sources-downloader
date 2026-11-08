@@ -418,6 +418,17 @@
    #:script-asset-wire #:boundary-details-wire #:module-signals-wire-table
    #:analysis-js-number #:analysis-wire #:analysis-wire-key
    #:analysis-alist-p #:analysis-proper-list-p))
+(defpackage :vovas.engine.panel.report
+  (:use :cl)
+  (:import-from :vovas.engine.panel.assets #:field #:field-str #:value-text
+                #:field-number)
+  (:import-from :vovas.engine.panel.model #:js-truthy)
+  ;; The HTML builders format sizes/times and escape text/attributes, so these
+  ;; come from their owners rather than being re-implemented here.
+  (:import-from :vovas.engine.text #:format-size #:format-ms)
+  (:import-from :vovas.engine.panel.view #:escape-html)
+  (:import-from :vovas.engine.panel.artifacts #:escape-attr)
+  (:export #:describe-capture-reason #:generate-table #:report-number-or))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)
