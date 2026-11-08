@@ -671,8 +671,8 @@ of assets with no bundler marker reports an EMPTY list rather than [\"unknown\"]
         (incf dyn)))
     (list :total-scripts (length assets)
           :bundlers-observed (remove "unknown" (nreverse bundlers) :test #'string=)
-          :classifications (counts-alist (count-classifications assets))
-          :boundary-labels (counts-alist (count-boundary-labels assets))
+          :classifications (counts-json (count-classifications assets))
+          :boundary-labels (counts-json (count-boundary-labels assets))
           :source-map-embedded sm
           :dynamic-importers dyn
           :labeled-scripts (count-tagged-entries assets))))
@@ -852,9 +852,9 @@ the analysis files serialize key order."
                 when (stringp label)
                   do (counts-add labels label)))))
     (list :total-runtime-entries (length origins)
-          :kinds (counts-alist (count-origin-property origins "kind"))
-          :origin-types (counts-alist (count-origin-property origins "originType"))
-          :boundary-labels (counts-alist labels)
+          :kinds (counts-json (count-origin-property origins "kind"))
+          :origin-types (counts-json (count-origin-property origins "originType"))
+          :boundary-labels (counts-json labels)
           :linked-to-chunks linked
           :labeled-entries labeled)))
 

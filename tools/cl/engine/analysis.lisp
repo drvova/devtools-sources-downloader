@@ -190,6 +190,12 @@ JSON null uses `json-null-symbol`."
     ;; rejects it. That silently emptied the boundary-category list and
     ;; collapsed nine workspaces into one.
     ((stringp value) value)
+    ;; THE MARKER PASSES THROUGH UNCHANGED. A struct is not a list, so without
+    ;; this test it would reach the `(t value)` fallback and survive - but every
+    ;; branch that inspects SHAPE would have to be read carefully to be sure, and
+    ;; the serializer is the one place that should decide how an empty container
+    ;; is spelled.
+    ((vovas.engine.panel.model:json-marker-p value) value)
     ((hash-table-p value)
      (let ((out (make-hash-table :test #'equal)))
        (maphash (lambda (k v) (setf (gethash k out) (analysis-wire v))) value)

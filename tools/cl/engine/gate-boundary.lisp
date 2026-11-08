@@ -172,6 +172,34 @@ vectors and hash tables. Scalars compare through `equal`; numbers compare by
 VALUE across the integer/double boundary, because a score of 24 arrives as a JSON
 integer and is produced as an integer, but a fixture may carry 24.0."
   (cond
+    ;; ---- empty containers, FIRST -----------------------------------------
+    ;;
+    ;; The port now marks an empty collection with a `json-marker` so the
+    ;; serializer cannot render it as boolean false. The ORACLE never carries a
+    ;; marker - it is parsed JSON, so an empty object is an empty hash table and
+    ;; an empty array is an empty vector. These clauses reconcile the two.
+    ;;
+    ;; They must come first: a marker is a STRUCT, so the sequence branches below
+    ;; do not see it, and the comparison would fall to `equal` on two structs -
+    ;; which compares slots and answers a confusing nil rather than naming the
+    ;; shape that disagreed.
+    ((or (vovas.engine.panel.model:json-marker-p got)
+         (vovas.engine.panel.model:json-marker-p want))
+     (let ((gk (and (vovas.engine.panel.model:json-marker-p got)
+                    (vovas.engine.panel.model:json-marker-kind got)))
+           (wk (and (vovas.engine.panel.model:json-marker-p want)
+                    (vovas.engine.panel.model:json-marker-kind want))))
+       (cond
+         ;; both markers: the kinds must agree
+         ((and gk wk) (eq gk wk))
+         ;; marker on one side only: infer the kind from the other side, and be
+         ;; strict about it. NIL is NOT an empty object any more - that assumption
+         ;; is exactly what shipped five wrong artifacts.
+         (t (let* ((kind (or gk wk))
+                   (other (if gk want got)))
+              (if (eq kind :array)
+                  (and (vectorp other) (zerop (length other)))
+                  (and (hash-table-p other) (zerop (hash-table-count other)))))))))
     ((and (or (vectorp got) (listp got)) (or (vectorp want) (listp want)))
      (let ((g (coerce got 'list)) (w (coerce want 'list)))
        (and (= (length g) (length w))
@@ -194,7 +222,6 @@ integer and is produced as an integer, but a fixture may carry 24.0."
      (gate-json= want got))
     ((and (numberp got) (numberp want)) (= got want))
     ((and (stringp got) (stringp want)) (string= got want))
-    ((and (null got) (hash-table-p want) (zerop (hash-table-count want))) t)
     (t (equal got want))))
 
 (defun run-boundary-label-gate (&key (verbose t))
@@ -356,17 +383,13 @@ integer and is produced as an integer, but a fixture may carry 24.0."
                (gethash key gs) (gethash key ws)))
       (dolist (key '("chunkLabels" "runtimeLabels"))
         (incf count)
+        ;; The port now answers a hash table (or an empty-object marker) because
+        ;; that is what the DOCUMENT needs - NIL used to reach the serializer as
+        ;; boolean false. `gate-json=` compares hash tables and markers directly,
+        ;; so the conversion this check used to perform is gone: it was papering
+        ;; over the shape the export would actually produce.
         (check result (format nil "buildBoundaryLabels/summary/~a" key) "counts"
-               (and (gate-json=
-                     ;; the port keeps counts as an insertion-ordered ALIST; the
-                     ;; oracle has a JSON object. Convert rather than compare
-                     ;; across shapes, so a missing or extra label is a diff.
-                     (let ((h (make-hash-table :test #'equal)))
-                       (dolist (pair (gethash key gs))
-                         (setf (gethash (car pair) h) (cdr pair)))
-                       h)
-                     (gethash key ws))
-                    t)
+               (and (gate-json= (gethash key gs) (gethash key ws)) t)
                t)))
 
     ;; ---- chunks ----------------------------------------------------------
@@ -629,15 +652,9 @@ the engine saw."
       (dolist (key '("eventKinds" "relations"))
         (incf count)
         (check result (format nil "flows/summary/~a" key) "counts"
-               ;; `counts-alist` gives an insertion-ordered ALIST; the oracle has
-               ;; a JSON object. Convert instead of comparing across shapes, so a
-               ;; missing or extra key shows up as a diff.
-               (and (gate-json=
-                     (let ((h (make-hash-table :test #'equal)))
-                       (dolist (pair (gethash key gs))
-                         (setf (gethash (car pair) h) (cdr pair)))
-                       h)
-                     (gethash key ws))
+               ;; Same as the boundary-report case: an empty counter is now
+               ;; `empty-object`, a distinct value, so the comparison is direct.
+               (and (gate-json= (gethash key gs) (gethash key ws))
                     t)
                t)))
 

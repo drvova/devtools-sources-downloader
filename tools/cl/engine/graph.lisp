@@ -400,7 +400,11 @@ timestamp sorts among the zeros instead of to an undefined place."
                                       :primary-boundary (script-asset-primary-boundary asset)
                                       :start-time (script-asset-start-time asset)
                                       :duration (script-asset-duration asset)
-                                      :startup-signals (script-asset-startup-signals asset))))
+                                      ;; a script with no signals must render
+                                      ;; `[]`, not `false`
+                                      :startup-signals
+                                      (let ((sig (script-asset-startup-signals asset)))
+                                        (if sig (coerce sig 'vector) (empty-array))))))
          (runtime (loop for origin in (if (> (length sorted-runtime) 40)
                                           (subseq sorted-runtime 0 40)
                                           sorted-runtime)
@@ -418,12 +422,20 @@ timestamp sorts among the zeros instead of to an undefined place."
           :profile (startup-chain-profile recon)
           :scripts scripts
           :runtime runtime
-          :data (loop for op in network-ops
-                      repeat 40
-                      collect op)
-          :graphql (loop for op in graphql-ops
-                         repeat 20
-                         collect op)
+          ;; A LIST when populated - callers walk these with `mapcar`, so a
+          ;; vector here breaks them - and a MARKER when empty, because NIL
+          ;; would reach the serializer as boolean false and the engine writes
+          ;; `[]`. Note the shape is preserved rather than normalised: only the
+          ;; EMPTY case changes representation, so nothing downstream that
+          ;; already works sees a different type.
+          :data (let ((rows (loop for op in network-ops
+                                  repeat 40
+                                  collect op)))
+                  (or rows (empty-array)))
+          :graphql (let ((rows (loop for op in graphql-ops
+                                     repeat 20
+                                     collect op)))
+                     (or rows (empty-array)))
           :summary (list :scripts (length assets)
                          :runtime (length origins)
                          :data-requests (length network-ops)

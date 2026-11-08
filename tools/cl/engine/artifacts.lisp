@@ -404,6 +404,11 @@ EVERY value and every string serialized as `null`."
     ((json-null-p value) "null")
     ((stringp value) (json-escape-string value))
     ((eq value t) "true")
+    ;; AN EMPTY CONTAINER IS NOT `false`. This test must precede the NIL branch:
+    ;; nil is how the port spells both "false" and "no value", and a counting map
+    ;; with no entries is neither. Without this, nine artifacts in one export
+    ;; carried `false` where the engine had `{}`.
+    ((json-marker-p value) (if (eq :array (json-marker-kind value)) "[]" "{}"))
     ((null value) "false")
     ((numberp value)
      (let ((out (js-number-value value)))

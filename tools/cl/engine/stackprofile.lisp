@@ -255,18 +255,10 @@ would pass every single-detection case and fail only the combination."
   "`Math.max(min, Math.min(max, value))`."
   (max (coerce min 'double-float) (min (coerce max 'double-float) value)))
 
-(defstruct (json-marker (:constructor %json-marker (kind)))
-  "A tagged stand-in for an empty JSON container.
-
-`nil` cannot serve: the same value would be an empty array, a false, or a missing
-key depending on where it appears, and JSON distinguishes all four. The serializer
-reads this marker's TYPE, so the producer states its intent once and the serializer
-never guesses from a key's name - which is what went wrong when `traits` was an
-array at the top level and an object inside `evidence`."
-  (kind :object :type keyword :read-only t))
-
-(defun empty-object () "A marker for an empty JSON OBJECT." (%json-marker :object))
-(defun empty-array () "A marker for an empty JSON ARRAY." (%json-marker :array))
+;; The empty-container marker USED to be defined here. It now lives in
+;; `model.lisp`, because `artifacts.lisp` - which owns the serializer that has to
+;; honour it - loads in a package that was declared before this one, and a struct
+;; it cannot name is a struct it cannot read. See the note in `package.lisp`.
 
 (defun analyze (snapshot)
   "`analyze(snapshot)`: the technology/trait profile plus its capture strategy.

@@ -192,8 +192,14 @@ entry's KIND, so an id present in both maps resolves to the right one."
 ;;; ---------------------------------------------------------------------------
 
 (defun report-pretty-json (value)
-  "VALUE as pretty JSON, the way serde_json prints it."
-  (com.inuoe.jzon:stringify value :pretty t))
+  "VALUE as pretty JSON, the way serde_json prints it.
+
+`resolve-json-markers` runs FIRST: JZON has no way to know that a struct standing
+for an empty collection should print as `{}` or `[]`, and left alone it prints the
+struct's slots - which is how five artifacts came to carry
+`{\"kind\": \"ARRAY\"}` where the engine had `[]`."
+  (com.inuoe.jzon:stringify (vovas.engine.panel.model:resolve-json-markers value)
+                            :pretty t))
 
 ;;; ---------------------------------------------------------------------------
 ;;; exportFrameworkArtifacts
@@ -493,7 +499,15 @@ the oracle pins as the empty case."
 (defparameter *investigation-doc*
   "~a<html lang=\"en\">~%<head>~%<meta charset=\"UTF-8\">~%<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">~%<title>Investigation Console</title>~%<style>~a</style>~%</head>~%<body>~%<div class=\"shell\">~%<aside class=\"sidebar\">~%<h1 class=\"title\">Investigation Console</h1>~%<div class=\"sub\">~a<br>~a</div>~%<div class=\"section-title\">Workspaces</div><div id=\"workspaceNav\" class=\"nav\"></div>~%<div class=\"section-title\">Journeys</div><div id=\"journeyNav\" class=\"nav\"></div>~%</aside>~%<main class=\"main\">~%<div id=\"summaryCards\" class=\"cards\"></div>~%<div id=\"view\"></div>~%</main>~%</div>~%<script id=\"investigation-data\" type=\"application/json\">~a</script>~%<script>~a</script>~%</body>~%</html>")
 
-(defparameter *investigation-doctype* "<!DOCTYPE html>")
+;; The doctype carries its OWN newline. The Rust's `format!` template puts
+;; `<!DOCTYPE html>` and `<html lang="en">` on separate lines, and this constant
+;; used to end at the closing bracket - so the port emitted
+;; `<!DOCTYPE html><html lang="en">` and every downstream byte comparison saw a
+;; one-character diff at offset 15. The newline belongs to the doctype, not to
+;; the template that concatenates it, because a template ending in `~a` cannot
+;; express it.
+(defparameter *investigation-doctype* "<!DOCTYPE html>
+")
 
 (defun generate-investigation-index-html (investigation)
   "`generateInvestigationIndexHtml`: the analysis rendered as a console page.

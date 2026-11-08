@@ -182,9 +182,17 @@
   (:import-from :vovas.engine.util #:js-trim)
   (:import-from :vovas.engine.text #:locale-compare)
   (:export
-   #:counts #:make-counts #:counts-add #:counts-alist
+   #:counts #:make-counts #:counts-add #:counts-alist #:counts-json
    #:js-string #:js-number #:js-truthy #:json-null-p
    #:json-null-symbol
+   ;; The empty-container marker lives HERE, not in stackprofile. It was written
+   ;; there and only stackprofile's gate knew how to read it, so in the real
+   ;; export path a marker was an opaque struct that the serializer rendered as
+   ;; `null`. `model` is a leaf that loads before every consumer, so putting it
+   ;; here is what lets the serializer, the wire conversion and the producers
+   ;; all name the same type.
+   #:json-marker #:json-marker-p #:json-marker-kind
+   #:empty-object #:empty-array #:resolve-json-markers
    #:+max-safe-integer+ #:finite-float-p #:js-number-value
    #:resource #:make-resource
    #:resource-status #:resource-kind #:resource-source #:resource-url
@@ -204,7 +212,7 @@
   ;; because five functions here use them; `model` is a LEAF that loads before
   ;; `assets`, so there is no cycle.
   (:import-from :vovas.engine.panel.model #:make-counts #:counts-add
-                #:counts-alist #:js-truthy #:js-number #:json-null-p)
+                #:counts-alist #:counts-json #:js-truthy #:js-number #:json-null-p)
   (:import-from :vovas.engine.text #:parse-url-for-panel #:parsed-url-path
                 #:safe-decode-uri-component)
   (:export
@@ -258,7 +266,8 @@
                 #:script-asset-duration #:script-asset-start-time
                 #:find-asset-by-reference #:value-text)
   (:import-from :vovas.engine.panel.model
-                #:make-counts #:counts-add #:counts-alist)
+                #:make-counts #:counts-add #:counts-alist #:counts-json
+                #:empty-array)
   (:import-from :vovas.engine.panel.model #:js-truthy #:json-null-symbol)
   ;; `js-number-value` is what turns a score into the integer the JSON shows.
   ;; It lives in `model`, beside the other JS number coercions - `artifacts`
@@ -314,7 +323,8 @@
 (defpackage :vovas.engine.panel.graph
   (:use :cl)
   (:import-from :vovas.engine.panel.policy #:*graphql-body-pattern* #:*graphql-body-keys*)
-  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p
+                #:empty-array)
   (:import-from :vovas.engine.panel.assets #:field #:field-str #:field-number
                 #:unique-strings #:find-asset-by-reference #:get-bare-file-name
                 #:script-asset-id #:script-asset-url #:script-asset-imports
@@ -344,7 +354,8 @@
   (:import-from :vovas.engine.number #:to-string)
   (:import-from :vovas.engine.text #:format-size #:format-ms)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p
-                #:js-number-value #:finite-float-p)
+                #:js-number-value #:finite-float-p
+                #:json-marker #:json-marker-p #:json-marker-kind)
   (:import-from :vovas.engine.panel.assets #:field #:field-str)
   (:import-from :vovas.engine.panel.view #:escape-html)
   (:export
@@ -429,18 +440,18 @@
                 #:sanitize-path-part)
   (:import-from :vovas.engine.panel.view #:escape-html)
   (:import-from :vovas.engine.panel.artifacts #:escape-attr)
-  (:import-from :vovas.engine.panel.paths
-                #:*framework-artifacts* #:framework-slice-present-p)
+  (:import-from :vovas.engine.panel.paths
+                #:*framework-artifacts* #:framework-slice-present-p)
   (:import-from :vovas.engine.decoders #:decode-base64-to-bytes)
   (:import-from :vovas.engine.panel.analysis #:build-semantic-analysis)
   ;; iso8601-now is NOT imported: pipeline declares its defpackage in
   ;; pipeline.lisp, which loads AFTER this file, so a package-level
   ;; import would fail at READ time. It is called via find-symbol.
-
-  (:export #:describe-capture-reason #:generate-table #:report-number-or
-   #:report-pretty-json #:export-framework-artifacts
-   #:export-runtime-artifacts
-   #:*runtime-manifest-omitted-keys* #:*readable-artifact-limit*
+
+  (:export #:describe-capture-reason #:generate-table #:report-number-or
+   #:report-pretty-json #:export-framework-artifacts
+   #:export-runtime-artifacts
+   #:*runtime-manifest-omitted-keys* #:*readable-artifact-limit*
    #:export-readable-artifacts-with
    #:generate-waterfall-html #:wf-num #:wf-bar
    #:*wf-row-h* #:*wf-label-w* #:*wf-total-w*
@@ -464,13 +475,13 @@
            #:export-summary #:*recon-slice-artifacts*))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
-  (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-string
+                #:json-marker #:json-marker-p #:json-marker-kind
+                #:empty-object #:empty-array)
   (:import-from :vovas.engine.panel.assets #:field)
   (:import-from :vovas.engine.util #:js-trim #:now-unix-millis)
   (:export #:analyze #:default-strategy #:build-strategy
-           #:*version* #:normalize-list #:has-url #:snap-field
-           #:empty-object #:empty-array
-           #:json-marker-p #:json-marker-kind))
+           #:*version* #:normalize-list #:has-url #:snap-field))
 
 (defpackage :vovas.engine.gate
   (:use :cl)

@@ -212,9 +212,9 @@ so booleans are named explicitly rather than guessed."
                              (write-string "\":" out)
                              (emit v))
                     (write-char #\} out))
-                   ((vovas.engine.panel.stackprofile:json-marker-p value)
+                   ((vovas.engine.panel.model:json-marker-p value)
                     (write-string (if (eq :array
-                                          (vovas.engine.panel.stackprofile:json-marker-kind value))
+                                          (vovas.engine.panel.model:json-marker-kind value))
                                       "[]"
                                       "{}")
                                   out))

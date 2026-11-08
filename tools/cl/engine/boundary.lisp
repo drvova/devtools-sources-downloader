@@ -561,10 +561,10 @@ the oracle pins their order."
             (gethash "summary" out)
             (let ((sm (make-hash-table :test #'equal)))
               (setf (gethash "chunkLabels" sm)
-                    (vovas.engine.panel.model:counts-alist
+                    (vovas.engine.panel.model:counts-json
                      (vovas.engine.panel.assets:count-boundary-labels assets))
                     (gethash "runtimeLabels" sm)
-                    (vovas.engine.panel.model:counts-alist
+                    (vovas.engine.panel.model:counts-json
                      (count-boundary-labels-values origins))
                     (gethash "taggedChunks" sm)
                     (vovas.engine.panel.assets:count-tagged-entries assets)
@@ -1655,14 +1655,18 @@ structuralFlows."
             (gethash "structuralFlows" summary) (- (length flows) cross)
             (gethash "labeledEvents" summary) (length labeled)
             (gethash "eventKinds" summary)
-            (vovas.engine.panel.model:counts-alist
+            (vovas.engine.panel.model:counts-json
              (count-property (coerce events 'list) "kind"))
             (gethash "relations" summary)
-            (vovas.engine.panel.model:counts-alist (count-property flows "relation")))
+            (vovas.engine.panel.model:counts-json (count-property flows "relation")))
       (setf (gethash "generatedAt" out) (vovas.engine.pipeline:iso8601-now)
             (gethash "summary" out) summary
             (gethash "topTransitions" out) (summarize-boundary-transitions flows)
-            (gethash "chains" out) (build-boundary-chains flows)
+            (gethash "chains" out)
+            ;; `build-boundary-chains` answers a LIST, and NIL reaches the
+            ;; serializer as boolean false. An empty chain list is `[]`.
+            (let ((chains (build-boundary-chains flows)))
+              (if chains (coerce chains 'vector) (empty-array)))
             (gethash "events" out)
             (coerce (subseq (mapcar #'strip-flow-event labeled)
                             0 (min *flow-events-limit* (length labeled)))
@@ -1745,7 +1749,7 @@ value before the capture status's.
           (if (vovas.engine.panel.model:js-truthy strategy) strategy (json-null-symbol))
           (gethash "captureReason" out) (field-str capture-status "reasonText")
           (gethash "assetClasses" out)
-          (vovas.engine.panel.model:counts-alist
+          (vovas.engine.panel.model:counts-json
            (vovas.engine.panel.assets:count-classifications assets))
           (gethash "bundlersObserved" out) (coerce bundlers 'vector)
           (gethash "boundaries" out)
@@ -1753,7 +1757,7 @@ value before the capture status's.
               (or (field boundary-labels "summary") (json-null-symbol))
               (json-null-symbol))
           (gethash "runtimeKinds" out)
-          (vovas.engine.panel.model:counts-alist (count-origin-kinds origins))
+          (vovas.engine.panel.model:counts-json (count-origin-kinds origins))
           (gethash "graphQLEndpoints" out)
           ;; `unique-strings` is computed ONCE into a binding: calling it twice
           ;; to get both the list and its length is a real cost on a long

@@ -38,6 +38,94 @@
   "The pairs as (key . value) in insertion order."
   (copy-tree (counts-pairs counts)))
 
+(defun counts-json (counts)
+  "COUNTS as a wire OBJECT - an empty counter is `{}`, never `false`.
+
+`counts-alist` answers NIL for an empty counter, and NIL reaching the serializer
+is BOOLEAN FALSE, so nine artifacts in a fifty-three file export carried
+`\"runtimeLabels\": false` where the engine had `{}`. The value was correct as a
+count and wrong as a document.
+
+This is the whole reason `json-marker` exists: NIL cannot express \"empty
+collection\" because JSON has four states - absent, null, empty, false - and
+a CL symbol has one. A caller that wants the alist (for a gate comparison, say)
+keeps using `counts-alist`; a caller building a document uses this."
+  (let ((pairs (counts-alist counts)))
+    (if pairs
+        (let ((out (make-hash-table :test #'equal)))
+          (dolist (pair pairs)
+            (setf (gethash (princ-to-string (car pair)) out) (cdr pair)))
+          out)
+        (empty-object))))
+
+;;; ---------------------------------------------------------------------------
+;;; The empty-container marker
+;;;
+;;; Defined HERE rather than in a module that uses it, because this is the leaf
+;;; every consumer loads after: the serializer in `artifacts.lisp`, the wire
+;;; conversion in `analysis.lisp`, and the producers in `assets.lisp` and
+;;; `boundary.lisp` all name one type. While this lived in `stackprofile.lisp`
+;;; only that module's own gate could decode it, and in the real export path a
+;;; marker was an opaque struct the serializer rendered as `null` - a mechanism
+;;; that existed and was invisible.
+;;; ---------------------------------------------------------------------------
+
+(defstruct (json-marker (:constructor %json-marker (kind)))
+  "A tagged stand-in for an empty JSON container.
+
+`nil` cannot serve: the same value would be an empty array, a false, or a missing
+key depending on where it appears, and JSON distinguishes all four. The serializer
+reads this marker's TYPE, so the producer states its intent once and the serializer
+never guesses from a key's name - which is what went wrong when `traits` was an
+array at the top level and an object inside `evidence`."
+  (kind :object :type keyword :read-only t))
+
+(defun empty-object () "A marker for an empty JSON OBJECT." (%json-marker :object))
+(defun empty-array () "A marker for an empty JSON ARRAY." (%json-marker :array))
+
+(defun resolve-json-markers (value)
+  "VALUE with every `json-marker` replaced by the container it stands for.
+
+Two writers exist in this tree - `json-serialize-compact` (hand-rolled, knows the
+marker) and JZON `stringify` (cannot, and renders a struct as
+`{\"kind\": \"OBJECT\"}`). `report-pretty-json` was the second kind, which is how
+five analysis artifacts ended up carrying `{\"kind\": \"ARRAY\"}` where the engine
+had `[]`: the marker was doing its job and neither writer had been told.
+
+Walking here rather than teaching JZON means ONE definition of the conversion, so
+a third writer added later inherits it instead of re-deriving it. The shapes are
+the natural ones - an empty hash table and an empty vector - because those are
+what a JSON object and array already are to this port."
+  (cond
+    ((json-marker-p value)
+     (if (eq :array (json-marker-kind value)) #() (make-hash-table :test #'equal)))
+    ;; A STRING IS A VECTOR. This test must precede the `vectorp` branch below or
+    ;; every string decomposes into a vector of characters - the same mistake the
+    ;; ledger already records three times for `analysis-wire`, `gate-value=` and
+    ;; `value-as-text`. Fourth occurrence; the ordering is not stylistic.
+    ((stringp value) value)
+    ((hash-table-p value)
+     (let ((out (make-hash-table :test #'equal)))
+       (maphash (lambda (k v) (setf (gethash k out) (resolve-json-markers v))) value)
+       out))
+    ;; NIL is NOT converted wholesale. It is tempting - a `loop ... collect` that
+    ;; found nothing answers NIL and the engine writes `[]` - but NIL in this port
+    ;; ALSO spells boolean false and an absent plist value, and a blanket rule here
+    ;; would turn every `:truncated nil` into `[]`. Producers that build a
+    ;; collection state the empty case themselves; this function only rewrites the
+    ;; markers, which are unambiguous by construction.
+    ((consp value)
+     (if (proper-list-p value)
+         (mapcar #'resolve-json-markers value)
+         (cons (resolve-json-markers (car value))
+               (resolve-json-markers (cdr value)))))
+    ((vectorp value)
+     (let ((out (make-array (length value))))
+       (dotimes (i (length value))
+         (setf (aref out i) (resolve-json-markers (aref value i))))
+       out))
+    (t value)))
+
 ;;; ---------------------------------------------------------------------------
 ;;; js-string and js-number over JZON values
 ;;;
