@@ -310,6 +310,25 @@
    #:json-serialize-compact #:json-escape-string
    #:generate-dom-snapshot-html #:build-readable-artifact-with))
 
+(defpackage :vovas.engine.panel.workspace
+  (:use :cl)
+  ;; `workspace` reads the analysis object every other panel module built; the
+  ;; field accessors and the six boundary predicates are its whole dependency
+  ;; for the profile tier. The builders that land next will add `artifacts` for
+  ;; `js-number-value` and `assets` for the tag counters.
+  (:import-from :vovas.engine.panel.assets #:field #:field-str #:field-number)
+  (:import-from :vovas.engine.panel.model #:js-truthy)
+  (:import-from :vovas.engine.panel.boundary
+                #:array-contains-any #:matches-boundary-entry
+                #:chain-touches-boundary
+                #:flow-touches-any-boundary #:flow-touches-boundary
+                #:matches-any-boundary)
+  (:export
+   #:*boundary-profiles* #:*journey-questions*
+   #:*default-boundary-questions* #:*default-journey-questions*
+   #:boundary-profile
+   #:get-boundary-title #:get-boundary-description #:get-boundary-questions
+   #:get-journey-questions))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)

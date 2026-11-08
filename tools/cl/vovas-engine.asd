@@ -77,6 +77,7 @@
                              ;; field accessors, and assets is its only
                              ;; panel-tier dependency.
                              (:file "boundary")
+                             (:file "workspace")
                              (:file "paths")
                              (:file "graph")
                              ;; view BEFORE artifacts: artifacts escapes XML and
@@ -105,6 +106,7 @@
                              (:file "gate-model")
                              (:file "gate-assets")
                              (:file "gate-boundary")
+                             (:file "gate-workspace")
                              (:file "gate-paths")
                              (:file "gate-graph")
                              (:file "gate-stackprofile")

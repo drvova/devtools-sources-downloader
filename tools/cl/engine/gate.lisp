@@ -140,7 +140,58 @@ string keys so case order does not matter."
       (push (list :label label :input input :got got :want want)
             (gate-result-failures result))))
 
+(defun gate-sequence= (got want)
+  "Element-wise comparison of two non-string sequences."
+  (let ((g (coerce got 'list)) (w (coerce want 'list)))
+    (and (= (length g) (length w))
+         (every (lambda (a b) (gate-value= a b)) g w))))
+
+(defun gate-value= (got want)
+  "Structural equality for the shapes the oracles produce.
+
+Scalars compare with `equal`; strings case-SENSITIVELY; sequences descend.
+
+Two ordering traps live here, both measured rather than reasoned about:
+
+1. The STRING branch must come first. A CL string IS a vector, so a sequence test
+   ahead of it coerces strings to character lists and then compares characters
+   where strings are expected - which signals TYPE-ERROR on the `string=` call,
+   not a failed comparison.
+
+2. The sequence branch requires BOTH sides to be sequences. Written as
+   "either side is a sequence", a scalar against a list reaches `coerce` and
+   signals instead of answering NIL, and a shape mismatch is a legitimate
+   comparison result rather than an error.
+
+Numbers keep `equal` semantics so an integer and a float of the same value stay
+distinguishable, which several gates rely on."
+  (cond
+    ;; A string on EITHER side ends the descent. `(vectorp "compute")` is true,
+    ;; so without this first, a string compared against a list reaches the
+    ;; sequence branch and gets coerced to a CHARACTER list - which then fails
+    ;; (or signals) on the character-to-string comparison. A string and a
+    ;; sequence are different shapes and the answer is NIL.
+    ((or (stringp got) (stringp want))
+     (and (stringp got) (stringp want) (string= got want)))
+    ;; Hash tables are not sequences: `vectorp` is false but `coerce` would still
+    ;; reach them through a mis-ordered branch. They are compared by identity,
+    ;; which is what `equal` does and what the gates that pass a JSON object here
+    ;; expect - a deep object comparison is `json=`'s job, not this one's.
+    ((or (hash-table-p got) (hash-table-p want)) (eq got want))
+    ((and (consp got) (consp want)) (gate-sequence= got want))
+    ((and (vectorp got) (vectorp want)) (gate-sequence= got want))
+    ((and (consp got) (vectorp want)) (gate-sequence= got want))
+    ((and (vectorp got) (consp want)) (gate-sequence= got want))
+    (t (equal got want))))
+
 (defun check (result label input got want)
+  "Record one comparison.
+
+Compares with `gate-value=` rather than `equal` because `equal` descends a VECTOR
+but compares its elements with `eql`, so two vectors holding equal-but-distinct
+STRINGS are not `equal`. Every oracle value that is a JSON array of strings
+compared false for that reason while printing IDENTICALLY in the failure report -
+the worst possible signal, since the diff shows no difference at all."
   (record result (equal got want) label input got want))
 
 (defun report-failures (result)
@@ -625,7 +676,8 @@ ERROR verdict when that gate finally runs."
         (cons "panel view (engine oracle)" #'run-view-gate)
         (cons "stack profile (panel oracle)" #'run-stackprofile-gate)
         (cons "artifact helpers (panel oracle)" #'run-artifacts-gate)
-        (cons "boundary predicates (panel oracle)" #'run-boundary-gate)))
+        (cons "boundary predicates (panel oracle)" #'run-boundary-gate)
+        (cons "workspace profiles (panel oracle)" #'run-workspace-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one
