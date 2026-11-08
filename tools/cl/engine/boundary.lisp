@@ -680,6 +680,20 @@ ordering among equal scores depends on the real value being read."
 ;;; buildFrameworkStateSummary
 ;;; ---------------------------------------------------------------------------
 
+(defun framework-state-slice (state key)
+  "STATE's slice at KEY as a vector, or an empty vector when absent.
+
+Uses a BARE `gethash`, like the Rust's `.get(...)`, so a present-but-falsy slice
+is forwarded rather than filtered out. `field` would apply the truthiness rule
+and drop it."
+  (let ((v (and (hash-table-p state) (gethash key state))))
+    (if (or (vectorp v) (listp v)) (coerce v 'vector) #())))
+
+(defun framework-state-slice-length (state key)
+  "The LENGTH of STATE's slice at KEY, or 0. Same presence rule as the slices."
+  (let ((v (and (hash-table-p state) (gethash key state))))
+    (if (or (vectorp v) (listp v)) (length v) 0)))
+
 (defun build-framework-state-summary (framework-state)
   "`buildFrameworkStateSummary`: the panel's view of the recon framework state.
 
@@ -707,12 +721,8 @@ package exists."
                       (make-hash-table :test #'equal)))
          (technologies (let ((v (gethash "technologies" state)))
                          (if (or (vectorp v) (listp v)) v #())))
-         (array-len (lambda (key)
-                      (let ((v (gethash key state)))
-                        (if (or (vectorp v) (listp v)) (length v) 0))))
-         (router-len (lambda (key)
-                       (let ((v (gethash key router)))
-                         (if (or (vectorp v) (listp v)) (length v) 0))))
+
+
          (detected
            (let ((names '()))
              (dolist (item (coerce technologies 'list))
@@ -737,30 +747,31 @@ package exists."
          (profile (let ((p (field-str state "profile")))
                     (if (plusp (length p)) p "generic-app")))
          (out (make-hash-table :test #'equal)))
-    (flet ((slice (key)
-             (let ((v (gethash key state)))
-               (if (or (vectorp v) (listp v)) (coerce v 'vector) #()))))
-      (setf (gethash "profile" out) profile
-            (gethash "generatedAt" out) (field-str state "generatedAt")
-            (gethash "reason" out) (field-str state "reason")
-            (gethash "rootCount" out) (funcall array-len "roots")
-            (gethash "storeCount" out) (funcall array-len "stores")
-            (gethash "queryCount" out) (funcall array-len "queries")
-            (gethash "hydrationCount" out) (funcall array-len "hydration")
-            (gethash "authCount" out) (funcall array-len "auth")
-            (gethash "routerFramework" out) router-framework
-            (gethash "route" out) route
-            (gethash "routerSource" out) (field-str router "source")
-            (gethash "queryKeyCount" out) (funcall router-len "queryKeys")
-            (gethash "detectedTechnologies" out) (coerce detected 'vector)
-            (gethash "roots" out) (funcall slice "roots")
-            (gethash "stores" out) (funcall slice "stores")
-            (gethash "queries" out) (funcall slice "queries")
-            (gethash "hydration" out) (funcall slice "hydration")
-            (gethash "auth" out) (funcall slice "auth")
-            (gethash "relatedArtifacts" out)
-            (coerce (funcall (find-symbol "COLLECT-FRAMEWORK-ARTIFACT-PATHS"
-                                          :vovas.engine.panel.paths)
-                             state)
-                    'vector))
-      out)))
+    ;; The slice accessor is a top-level helper rather than an `flet`: a local
+    ;; function referenced from inside a long `setf` of `gethash` places is a
+    ;; shape SBCL compiles without complaint and then reports as an unbound
+    ;; VARIABLE at run time, which is a confusing way to learn that lesson.
+    (setf (gethash "profile" out) profile
+          (gethash "generatedAt" out) (field-str state "generatedAt")
+          (gethash "reason" out) (field-str state "reason")
+          (gethash "rootCount" out) (framework-state-slice-length state "roots")
+          (gethash "storeCount" out) (framework-state-slice-length state "stores")
+          (gethash "queryCount" out) (framework-state-slice-length state "queries")
+          (gethash "hydrationCount" out) (framework-state-slice-length state "hydration")
+          (gethash "authCount" out) (framework-state-slice-length state "auth")
+          (gethash "routerFramework" out) router-framework
+          (gethash "route" out) route
+          (gethash "routerSource" out) (field-str router "source")
+          (gethash "queryKeyCount" out) (framework-state-slice-length router "queryKeys")
+          (gethash "detectedTechnologies" out) (coerce detected 'vector)
+          (gethash "roots" out) (framework-state-slice state "roots")
+          (gethash "stores" out) (framework-state-slice state "stores")
+          (gethash "queries" out) (framework-state-slice state "queries")
+          (gethash "hydration" out) (framework-state-slice state "hydration")
+          (gethash "auth" out) (framework-state-slice state "auth")
+          (gethash "relatedArtifacts" out)
+          (coerce (funcall (find-symbol "COLLECT-FRAMEWORK-ARTIFACT-PATHS"
+                                        :vovas.engine.panel.paths)
+                           state)
+                  'vector))
+    out))

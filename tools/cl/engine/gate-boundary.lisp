@@ -446,3 +446,102 @@ integer and is produced as an integer, but a fixture may carry 24.0."
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildFrameworkStateSummary + collectFrameworkArtifactPaths
+;;;
+;;; The fixture's technologies array is deliberately messy - a duplicate, an
+;;; empty object and a JSON null - so this gates the dedup, the truthiness filter
+;;; on each item, and the drop of empty names all at once.
+;;;
+;;; It also gates the PRESENCE rule that couples the writer to the index:
+;;; `hydration` is an empty array, so hydrationCount is 0 AND
+;;; _framework/hydration-payloads.json is absent from relatedArtifacts. An
+;;; implementation that treated an empty array as present would list a file that
+;;; was never written.
+;;; ---------------------------------------------------------------------------
+
+(defun gate-framework-state-fixture ()
+  "The exact framework_state the Rust test builds, including its awkward entries.
+
+The `null` member is JZON's null SYMBOL, not CL NIL: a CL NIL inside a vector
+would read as \"no name\" through js-truthy anyway, but it is not the same value
+the JSON parser produces, and the point of this fixture is to feed the port what
+the engine saw."
+  (let ((technologies (vector (ht "name" "Next.js")
+                              (ht "name" "Next.js")
+                              (ht)
+                              (intern "NULL" :com.inuoe.jzon))))
+    (ht "profile" "next"
+        "generatedAt" "2026-01-01T00:00:00.000Z"
+        "reason" "why"
+        "roots" (vector 1 2)
+        "stores" (vector 1)
+        "queries" (vector 1 2 3)
+        "hydration" #()
+        "auth" (vector 1)
+        "router" (ht "framework" "next" "route" "/a" "source" "x"
+                     "queryKeys" (vector "q"))
+        "summary" (ht "routerFramework" "fallback"
+                      "detectedTechnologies" (vector "Redux"))
+        "technologies" technologies)))
+
+(defun run-framework-state-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/boundary-oracle.json")))
+         (exp (gethash "expected" fx))
+         (state (gate-framework-state-fixture))
+         (got (vovas.engine.panel.boundary:build-framework-state-summary state)))
+
+    ;; ---- the full summary ------------------------------------------------
+    (let ((want (gethash "buildFrameworkStateSummary" exp)))
+      (dolist (key '("profile" "generatedAt" "reason" "rootCount" "storeCount"
+                     "queryCount" "hydrationCount" "authCount"
+                     "routerFramework" "route" "routerSource" "queryKeyCount"))
+        (incf count)
+        (check result (format nil "frameworkState/~a" key) "field"
+               (and (gate-json= (gethash key got) (gethash key want)) t)
+               t))
+      (dolist (key '("detectedTechnologies" "roots" "stores" "queries"
+                     "hydration" "auth" "relatedArtifacts"))
+        (incf count)
+        (check result (format nil "frameworkState/~a" key) "slice"
+               (and (gate-json= (gethash key got) (gethash key want)) t)
+               t)))
+
+    ;; ---- the null branch -------------------------------------------------
+    ;;
+    ;; A non-truthy state answers JSON null, not an empty summary - the caller
+    ;; uses that to tell "no framework state" from "empty framework state".
+    ;;
+    ;; The comparison NORMALISES both sides: JZON parses null to its own symbol
+    ;; while the port answers CL NIL, and `(equal nil <symbol>)` is false - which
+    ;; would read as a wrong answer rather than a null.
+    (incf count)
+    (check result "frameworkState/null" "null"
+           (json-null (vovas.engine.panel.boundary:build-framework-state-summary nil))
+           (json-null (gethash "buildFrameworkStateSummaryNull" exp)))
+
+    ;; ---- collectFrameworkArtifactPaths ----------------------------------
+    (incf count)
+    (check result "artifactPaths/present" "paths"
+           (and (gate-json=
+                 (coerce (vovas.engine.panel.paths:collect-framework-artifact-paths state)
+                         'vector)
+                 (gethash "collectFrameworkArtifactPaths" exp))
+                t)
+           t)
+    (incf count)
+    (check result "artifactPaths/empty-state" "paths"
+           (length (vovas.engine.panel.paths:collect-framework-artifact-paths
+                    (ht)))
+           (length (gethash "collectFrameworkArtifactPathsEmpty" exp)))
+
+    (when verbose
+      (format t "~&framework state gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

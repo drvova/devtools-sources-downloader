@@ -276,6 +276,7 @@
    #:count-boundary-labels-values #:count-tagged-entries-values
    #:build-boundary-labels
    #:entrypoint-why #:collect-interesting-entrypoints
+   #:framework-state-slice #:framework-state-slice-length
    #:build-framework-state-summary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
