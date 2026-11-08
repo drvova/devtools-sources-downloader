@@ -119,6 +119,32 @@ not — `pipeline.rs` contains zero jsfuck references. `transforms.rs` is what
 imports jsfuck, and `pipeline` imports `transforms`. The dependency direction
 matters because it changes which module is the blocker, and I had it backwards
 for two turns because I read a summary instead of grepping the source.
+
+### Known gaps, with the fixture that would close each
+
+Stated here rather than buried in a gate comment, because a gap nobody can act on
+is indistinguishable from an omission.
+
+**jsc bytecode, terminal-op check.** Every fixture happens to end on a terminal
+op, so the check is pinned by construction rather than by a case. The truncation
+lengths that DO exercise it were measured against the real stream: 1, 4, 7, 16,
+31, 35, 38, 53. The fixture is `jsc-chunk-terminal-truncated.jsc` — jsc-chunk.jsc
+with record 368's `0x38`-tail `.instr` count varint patched from 55 to any value in
+that set. `bind-jsc-block` must then answer zero candidates, and a port without the
+terminal check answers one while every other assertion stays green. **One byte edit
+from being an oracle case.**
+
+**jsc bytecode, slot tags.** Three of the four tags are construction-pinned, not
+two — tag 2 is the only one the fixtures exercise, because `moduleLoader` and
+`starNamespace` are matched by *hash* in `recover-jsc-strings` and never reach
+`decode-jsc-slot`. Each needs its own payload, and the assertion each would gain is
+written in `gate-jscbytecode.lisp`: tag 0 → the decoded name is the inline string
+and a slot-to-slot pointer resolves to depth 3; tag 3 → the name renders
+`<slot hex>` instead of collapsing to empty; tag 1 → characters come out
+low-byte-first from bit 8, the reverse of what a naive port produces.
+
+**transforms, `collect-refusals`.** Empty for all 17 oracle cases, so it is pinned
+structurally against packers' own refusal detection rather than by an oracle.
 | `jscbytecode.rs`, `v8codecache.rs`, `wasm.rs`, `zip.rs` | binary tier | queued |
 | `panel/*` | the panel | out of scope for now |
 
