@@ -12,6 +12,11 @@
   download [url] [--fixture]~@
                   press Download All in the real panel and verify the archive;~@
                   --fixture serves a local page with eval/Function/worker~@
+  engine [name] [args]~@
+                  list every callable engine function, or call one with a~@
+                  JSON argument array and print its answer~@
+  unpack <capture.json> [--out DIR]~@
+                  run the export engine over a capture and write the files~@
   version         print versions~%~
 ~%~
 REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
@@ -39,6 +44,10 @@ REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
           ((string= cmd "download")
            (download-check :url (second args)
                            :fixture (and (member "--fixture" args :test #'string=) t)))
+          ((string= cmd "engine")
+           (engine-command (rest args)))
+          ((string= cmd "unpack")
+           (unpack-command (rest args)))
           ((string= cmd "version")
            (format t "vovas-tools on ~a ~a (~a)~%"
                    (lisp-implementation-type)
