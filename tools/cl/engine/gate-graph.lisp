@@ -23,6 +23,27 @@
 double-float stays a double-float."
   (json-null value))
 
+(defun graph-recon-for-test (recon-fixture input)
+  "The recon the Rust test assembles: the fixture with `graphRecon` under
+`recon`, and `page` / `captureStatus` grafted at the top level."
+  (let ((r (make-hash-table :test #'equal)))
+    (maphash (lambda (k v) (setf (gethash k r) v)) recon-fixture)
+    (setf (gethash "recon" r) (gethash "graphRecon" input)
+          (gethash "page" r) (gethash "page" input)
+          (gethash "captureStatus" r) (gethash "captureStatus" input))
+    r))
+
+(defun graph-recon-from-stack (recon-fixture profile)
+  "A recon whose ONLY profile source is `stackProfile.strategy.profile`."
+  (let ((r (make-hash-table :test #'equal))
+        (sp (make-hash-table :test #'equal))
+        (st (make-hash-table :test #'equal)))
+    (maphash (lambda (k v) (setf (gethash k r) v)) recon-fixture)
+    (setf (gethash "profile" st) profile
+          (gethash "strategy" sp) st
+          (gethash "stackProfile" r) sp)
+    r))
+
 (defun run-graph-gate (&key (verbose t))
   (let* ((oracle (read-json-file (fixture-path "panel/graph-oracle.json")))
          (exp (gethash "expected" oracle))
@@ -134,11 +155,149 @@ double-float stays a double-float."
       (check result "collectNetworkOperations" "timestamps ascending"
              (loop for op in got collect (getf op :timestamp))
              (loop for op across want
-                   collect (coerce (gethash "timestamp" op) 'double-float))))
+                   collect (coerce (gethash "timestamp" op) 'double-float)))
+
+    ;; --- 6. buildModuleGraph / buildStartupChain --------------------------
+    ;;
+    ;; The recon object is ASSEMBLED the way the Rust test assembles it: the
+    ;; fixture, with graphRecon grafted in under "recon" and `page` /
+    ;; `captureStatus` copied to the top level. Comparing against a differently
+    ;; shaped recon would test the port against my own guess, not the oracle's
+    ;; input.
+    (let* ((input (gethash "input" oracle))
+           (scripts (coerce (gethash "scriptFixture" input) 'list))
+           (recon-fixture (gethash "reconFixture" input))
+           (entries (coerce (gethash "runtimeEntries" input) 'list))
+           (manifest (coerce (gethash "runtimeManifest" input) 'list))
+           (assets (vovas.engine.panel.assets:prepare-script-assets scripts recon-fixture))
+           (origins (vovas.engine.panel.assets:build-runtime-origins
+                     entries manifest assets))
+           (recon (graph-recon-for-test recon-fixture input))
+           (graph (vovas.engine.panel.graph:build-module-graph recon assets origins))
+           (want-graph (gethash "buildModuleGraph" exp))
+           (chain (vovas.engine.panel.graph:build-startup-chain recon assets origins))
+           (want-chain (gethash "buildStartupChain" exp)))
+
+      ;; ---- nodes, in insertion order ----------------------------------
+      (let ((got (getf graph :nodes))
+            (want (coerce (gethash "nodes" want-graph) 'list)))
+        (incf count) (check result "buildModuleGraph/node count" "nodes"
+                            (length got) (length want))
+        (incf count) (check result "buildModuleGraph/node ids" "id order"
+                            (mapcar (lambda (n) (getf n :id)) got)
+                            (mapcar (lambda (n) (coerce (gethash "id" n) 'string)) want))
+        (incf count) (check result "buildModuleGraph/node types" "type order"
+                            (mapcar (lambda (n) (getf n :type)) got)
+                            (mapcar (lambda (n) (coerce (gethash "type" n) 'string)) want))
+        (incf count) (check result "buildModuleGraph/node labels" "label order"
+                            (mapcar (lambda (n) (getf n :label)) got)
+                            (mapcar (lambda (n) (coerce (gethash "label" n) 'string)) want)))
+
+      ;; ---- edges, in insertion order ----------------------------------
+      ;; A runtime edge's REASON is the origin type, so this also pins
+      ;; determineRuntimeOriginType without a separate assertion.
+      (let ((got (getf graph :edges))
+            (want (coerce (gethash "edges" want-graph) 'list)))
+        (incf count) (check result "buildModuleGraph/edge count" "edges"
+                            (length got) (length want))
+        (incf count)
+        (check result "buildModuleGraph/edges" "from->to:reason order"
+               (mapcar (lambda (e) (format nil "~a->~a:~a"
+                                           (getf e :from) (getf e :to) (getf e :reason)))
+                       got)
+               (mapcar (lambda (e) (format nil "~a->~a:~a"
+                                           (coerce (gethash "from" e) 'string)
+                                           (coerce (gethash "to" e) 'string)
+                                           (coerce (gethash "reason" e) 'string)))
+                       want)))
+
+      (let ((got (getf graph :summary))
+            (want (gethash "summary" want-graph)))
+        (dolist (pair '(("nodes" . :nodes) ("edges" . :edges)
+                        ("runtimeNodes" . :runtime-nodes)
+                        ("chunkNodes" . :chunk-nodes)))
+          (incf count)
+          (check result (format nil "buildModuleGraph/summary.~a" (car pair)) "count"
+                 (getf got (cdr pair))
+                 (truncate (gethash (car pair) want)))))
+
+      ;; ---- startup chain: profile -------------------------------------
+      (incf count)
+      (check result "buildStartupChain/profile" "captureStatus wins"
+             (getf chain :profile) (coerce (gethash "profile" want-chain) 'string))
+
+      ;; ---- scripts sorted by startTime, stably -------------------------
+      ;; script-3 and script-4 BOTH start at 0, so their relative order is what
+      ;; proves the sort is stable rather than merely correct on distinct keys.
+      (incf count)
+      (check result "buildStartupChain/script order" "stable startTime order"
+             (mapcar (lambda (s) (getf s :id)) (getf chain :scripts))
+             (mapcar (lambda (s) (coerce (gethash "id" s) 'string))
+                     (coerce (gethash "scripts" want-chain) 'list)))
+      (incf count)
+      (check result "buildStartupChain/script fields" "url/class/boundary/start"
+             (mapcar (lambda (s) (list (getf s :url) (getf s :classification)
+                                       (getf s :primary-boundary) (getf s :start-time)))
+                     (getf chain :scripts))
+             (mapcar (lambda (s) (list (coerce (gethash "url" s) 'string)
+                                       (coerce (gethash "classification" s) 'string)
+                                       (coerce (gethash "primaryBoundary" s) 'string)
+                                       (coerce (gethash "startTime" s) 'double-float)))
+                     (coerce (gethash "scripts" want-chain) 'list)))
+
+      ;; ---- runtime origins sorted by timestamp -------------------------
+      (incf count)
+      (check result "buildStartupChain/runtime order" "timestamp order"
+             (mapcar (lambda (r) (getf r :id)) (getf chain :runtime))
+             (mapcar (lambda (r) (coerce (gethash "id" r) 'string))
+                     (coerce (gethash "runtime" want-chain) 'list)))
+      (incf count)
+      (check result "buildStartupChain/runtime relatedChunks" "chunk links"
+             (mapcar (lambda (r) (coerce (getf r :related-chunks) 'list))
+                     (getf chain :runtime))
+             (mapcar (lambda (r) (map 'list (lambda (c) (coerce c 'string))
+                                      (gethash "relatedChunks" r)))
+                     (coerce (gethash "runtime" want-chain) 'list)))
+
+      ;; ---- the data and graphql slices ---------------------------------
+      (incf count)
+      (check result "buildStartupChain/data" "network operations"
+             (mapcar (lambda (d) (list (getf d :type) (getf d :url) (getf d :method)))
+                     (getf chain :data))
+             (mapcar (lambda (d) (list (coerce (gethash "type" d) 'string)
+                                       (coerce (gethash "url" d) 'string)
+                                       (coerce (gethash "method" d) 'string)))
+                     (coerce (gethash "data" want-chain) 'list)))
+      (incf count)
+      (check result "buildStartupChain/graphql" "operation urls"
+             (mapcar (lambda (g) (getf g :url)) (getf chain :graphql))
+             (mapcar (lambda (g) (coerce (gethash "url" g) 'string))
+                     (coerce (gethash "graphql" want-chain) 'list)))
+
+      (let ((got (getf chain :summary))
+            (want (gethash "summary" want-chain)))
+        (dolist (pair '(("scripts" . :scripts) ("runtime" . :runtime)
+                        ("dataRequests" . :data-requests)
+                        ("graphqlOperations" . :graphql-operations)))
+          (incf count)
+          (check result (format nil "buildStartupChain/summary.~a" (car pair)) "count"
+                 (getf got (cdr pair))
+                 (truncate (gethash (car pair) want)))))
+
+      ;; ---- the profile FALLBACK chain ----------------------------------
+      ;; captureStatus is absent here and stackProfile.strategy.profile is
+      ;; "ssr", while captureStatus above said "spa" - so this case proves the
+      ;; PRECEDENCE, not just that the value can be read.
+      (let ((chain2 (vovas.engine.panel.graph:build-startup-chain
+                     (graph-recon-from-stack recon-fixture "ssr") assets origins)))
+        (incf count)
+        (check result "buildStartupChain/profile-from-stack" "strategy fallback"
+               (getf chain2 :profile)
+               (coerce (gethash "buildStartupChainProfileFromStack" exp) 'string))))
 
     (when verbose
-      (format t "~&graph gate: ~a/~a cases match (GraphQL tier)~%"
+      (format t "~&graph gate: ~a/~a cases match (GraphQL + module graph)~%"
               (gate-result-passed result) (gate-result-total result))
       (report-failures result))
     (and (= (gate-result-passed result) (gate-result-total result))
-         (plusp count))))
+         (plusp count)))))

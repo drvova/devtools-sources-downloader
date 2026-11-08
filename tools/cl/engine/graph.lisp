@@ -226,3 +226,205 @@ truthy of three possible keys, in a fixed order."
                         (if (sb-ext:float-nan-p v) 0d0 v))
                       (let ((v (getf b :timestamp)))
                         (if (sb-ext:float-nan-p v) 0d0 v)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildModuleGraph
+;;;
+;;; Two closures with SIDE EFFECTS is the whole design: `add-node` and
+;;; `add-edge` de-duplicate by id and by `from->to:reason` respectively, and the
+;;; ORDER of first insertion is the output order. That is why they are local
+;;; functions over captured lists rather than a set-then-sort pass: the oracle's
+;;; node order is insertion order, and re-sorting would silently reorder it.
+;;; ---------------------------------------------------------------------------
+
+(defstruct (graph-builder (:constructor make-graph-builder ()))
+  (nodes '())
+  (edges '())
+  (node-ids '())
+  (edge-keys '()))
+
+(defun gb-add-node (gb id type label &optional meta)
+  "Add a node unless ID is already present. First insertion wins on content."
+  (unless (member id (graph-builder-node-ids gb) :test #'string=)
+    (push id (graph-builder-node-ids gb))
+    (let ((node (list :id id :type type :label label)))
+      (when meta (setf node (append node (list :meta meta))))
+      (push node (graph-builder-nodes gb))))
+  nil)
+
+(defun gb-add-edge (gb from to reason &optional meta)
+  "Add an edge unless `FROM->TO:REASON` is already present."
+  (let ((key (format nil "~a->~a:~a" from to reason)))
+    (unless (member key (graph-builder-edge-keys gb) :test #'string=)
+      (push key (graph-builder-edge-keys gb))
+      (let ((edge (list :from from :to to :reason reason)))
+        (when meta (setf edge (append edge (list :meta meta))))
+        (push edge (graph-builder-edges gb)))))
+  nil)
+
+(defun build-module-graph (recon assets origins)
+  "`buildModuleGraph`: page, chunk, package/reference, runtime and endpoint nodes,
+with the edges that connect them.
+
+Node ids de-duplicate across ALL five kinds, so an asset and a runtime origin
+could never share one; edges de-duplicate on `from->to:reason`, so the same
+import seen twice is one edge. The endpoint cap is 12."
+  (let ((gb (make-graph-builder)))
+
+    (let ((page-url (field (and (hash-table-p recon) (field recon "page")) "url")))
+      (gb-add-node gb "page" "page"
+                   (if (js-truthy page-url)
+                       (graphql-value-text page-url)
+                       "page")))
+
+    (dolist (asset assets)
+      (gb-add-node gb (script-asset-id asset) "chunk"
+                   (get-bare-file-name (script-asset-url asset))
+                   (list :classification (script-asset-classification asset)
+                         :bundler (script-asset-bundler asset)
+                         :primary-boundary (script-asset-primary-boundary asset)))
+      (gb-add-edge gb "page" (script-asset-id asset) "resource"
+                   (list :start-time (script-asset-start-time asset)))
+      (dolist (specifier (script-asset-imports asset))
+        (let ((target (find-asset-by-reference specifier assets)))
+          (if (and target (not (string= (script-asset-id target) (script-asset-id asset))))
+              (gb-add-edge gb (script-asset-id asset) (script-asset-id target) "imports"
+                           (list :specifier specifier))
+              (let* ((prefix (if (or (and (plusp (length specifier))
+                                          (char= (char specifier 0) #\.))
+                                 (find #\/ specifier))
+                                 "ref:"
+                                 "pkg:"))
+                     (dep-id (concatenate 'string prefix specifier)))
+                (gb-add-node gb dep-id
+                             (if (string= prefix "pkg:") "package" "reference")
+                             specifier)
+                (gb-add-edge gb (script-asset-id asset) dep-id "imports"
+                             (list :specifier specifier)))))))
+
+    (dolist (origin origins)
+      (let* ((origin-id (field-str origin "id"))
+             (runtime-id (concatenate 'string "runtime:" origin-id))
+             (related (field origin "relatedChunks")))
+        (gb-add-node gb runtime-id "runtime" (field-str origin "kind")
+                     (list :origin-type (field-str origin "originType")
+                           :file (field-str origin "file")
+                           :primary-boundary (field-str origin "primaryBoundary")))
+        (cond
+          ;; a non-empty relatedChunks list: each chunk "spawns" this runtime
+          ((and (vectorp related) (plusp (length related)))
+           (loop for chunk across related
+                 do (gb-add-edge gb (graphql-value-text chunk) runtime-id
+                                 (field-str origin "originType"))))
+          ;; no chunks but a blob: the blob is the parent
+          ((let ((b (field origin "blobId"))) (and b (js-truthy b)))
+           (gb-add-edge gb
+                        (concatenate 'string "runtime:"
+                                     (graphql-value-text (field origin "blobId")))
+                        runtime-id "spawns"))
+          (t (gb-add-edge gb "page" runtime-id (field-str origin "originType"))))))
+
+    (let* ((graphql-ops (if (hash-table-p recon)
+                            (collect-graphql-operations (field recon "recon"))
+                            '()))
+           ;; NOTE: an operation here is one of THIS module's plists ("url" is
+           ;; `:url`), not a JSON object, so it is read with `getf` - `field-str`
+           ;; looks up string keys in a hash table and would answer "" for every
+           ;; operation, silently producing an `endpoint:` node with no URL.
+           (endpoints (let ((all (unique-strings
+                                  (mapcar (lambda (op) (or (getf op :url) ""))
+                                          graphql-ops))))
+                        (if (> (length all) 12) (subseq all 0 12) all))))
+      (dolist (endpoint endpoints)
+        (let ((node-id (concatenate 'string "endpoint:" endpoint)))
+          (gb-add-node gb node-id "endpoint" endpoint)
+          (gb-add-edge gb "page" node-id "graphql"))))
+
+    (list :generated-at (vovas.engine.pipeline:iso8601-now)
+          :summary (list :nodes (length (graph-builder-nodes gb))
+                         :edges (length (graph-builder-edges gb))
+                         :runtime-nodes (length origins)
+                         :chunk-nodes (length assets))
+          :nodes (nreverse (graph-builder-nodes gb))
+          :edges (nreverse (graph-builder-edges gb)))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildStartupChain
+;;;
+;;; The `profile` fallback chain is the fragile part and it is ordered exactly:
+;;; `captureStatus.profile` first, then `stackProfile.strategy.profile`, then the
+;;; literal "generic-app". Only a TRUTHY value advances the chain, so an empty
+;;; string falls through rather than winning.
+;;; ---------------------------------------------------------------------------
+
+(defun startup-chain-profile (recon)
+  "The capture profile: captureStatus, then the stack strategy, then `generic-app`."
+  (let* ((status (and (hash-table-p recon) (field recon "captureStatus")))
+         (from-status (and status (field status "profile"))))
+    (if (js-truthy from-status)
+        (graphql-value-text from-status)
+        (let* ((sp (and (hash-table-p recon) (field recon "stackProfile")))
+               (strategy (and sp (field sp "strategy")))
+               (from-stack (and strategy (field strategy "profile"))))
+          (if (js-truthy from-stack)
+              (graphql-value-text from-stack)
+              "generic-app")))))
+
+(defun build-startup-chain (recon assets origins)
+  "`buildStartupChain`: the first 40 scripts and 40 runtime origins in START
+order, plus the first 40 data requests and 20 GraphQL operations.
+
+Both sorts are by numeric timestamp with NaN folded to 0, so an entry with no
+timestamp sorts among the zeros instead of to an undefined place."
+  (let* ((recon-data (and (hash-table-p recon) (field recon "recon")))
+         (network-ops (collect-network-operations recon-data))
+         (graphql-ops (if recon-data (collect-graphql-operations recon-data) '()))
+         (sorted-scripts (stable-sort (copy-list assets)
+                                      (lambda (a b)
+                                        (< (let ((v (script-asset-start-time a)))
+                                             (if (sb-ext:float-nan-p v) 0d0 v))
+                                           (let ((v (script-asset-start-time b)))
+                                             (if (sb-ext:float-nan-p v) 0d0 v))))))
+         (sorted-runtime (stable-sort (copy-list origins)
+                                      (lambda (a b)
+                                        (flet ((ts (o)
+                                                 (let ((v (field-number o "timestamp")))
+                                                   (if (sb-ext:float-nan-p v) 0d0 v))))
+                                          (< (ts a) (ts b))))))
+         (scripts (loop for asset in (if (> (length sorted-scripts) 40)
+                                         (subseq sorted-scripts 0 40)
+                                         sorted-scripts)
+                        collect (list :id (script-asset-id asset)
+                                      :url (script-asset-url asset)
+                                      :classification (script-asset-classification asset)
+                                      :primary-boundary (script-asset-primary-boundary asset)
+                                      :start-time (script-asset-start-time asset)
+                                      :duration (script-asset-duration asset)
+                                      :startup-signals (script-asset-startup-signals asset))))
+         (runtime (loop for origin in (if (> (length sorted-runtime) 40)
+                                          (subseq sorted-runtime 0 40)
+                                          sorted-runtime)
+                        collect (list :id (field-str origin "id")
+                                      :kind (field-str origin "kind")
+                                      :origin-type (field-str origin "originType")
+                                      :primary-boundary (field-str origin "primaryBoundary")
+                                      :timestamp (field-number origin "timestamp")
+                                      ;; the Rust clones the field or defaults to
+                                      ;; `[]`; both render as an empty array
+                                      :related-chunks (let ((rc (field origin "relatedChunks")))
+                                                        (if (vectorp rc) rc #()))
+                                      :file (field-str origin "file")))))
+    (list :generated-at (vovas.engine.pipeline:iso8601-now)
+          :profile (startup-chain-profile recon)
+          :scripts scripts
+          :runtime runtime
+          :data (loop for op in network-ops
+                      repeat 40
+                      collect op)
+          :graphql (loop for op in graphql-ops
+                         repeat 20
+                         collect op)
+          :summary (list :scripts (length assets)
+                         :runtime (length origins)
+                         :data-requests (length network-ops)
+                         :graphql-operations (length graphql-ops)))))

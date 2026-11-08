@@ -254,11 +254,18 @@
   (:use :cl)
   (:import-from :vovas.engine.panel.policy #:*graphql-body-pattern* #:*graphql-body-keys*)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p)
-  (:import-from :vovas.engine.panel.assets #:field #:field-str #:field-number)
+  (:import-from :vovas.engine.panel.assets #:field #:field-str #:field-number
+                #:unique-strings #:find-asset-by-reference #:get-bare-file-name
+                #:script-asset-id #:script-asset-url #:script-asset-imports
+                #:script-asset-classification #:script-asset-bundler
+                #:script-asset-primary-boundary #:script-asset-start-time
+                #:script-asset-duration #:script-asset-startup-signals)
   (:import-from :vovas.engine.util #:utf16-prefix)
   (:export #:looks-like-graphql-body-p #:normalize-graphql-payload
            #:parse-graphql-operation #:collect-graphql-operations
-           #:collect-network-operations #:graphql-value-text #:text-or))
+           #:collect-network-operations #:graphql-value-text #:text-or
+           #:build-module-graph #:build-startup-chain #:startup-chain-profile
+           #:graph-builder #:make-graph-builder))
 
 (defpackage :vovas.engine.panel.view
   (:use :cl)
