@@ -74,3 +74,25 @@ impossible: one predicate, called by both sides."
   (> (vovas.engine.panel.assets:keys-len
       (and (hash-table-p state) (gethash key state)))
      0))
+
+;;; ---------------------------------------------------------------------------
+;;; collectFrameworkArtifactPaths
+;;; ---------------------------------------------------------------------------
+
+(defun collect-framework-artifact-paths (framework-state)
+  "`collectFrameworkArtifactPaths`: the archive paths of the framework slices
+present in FRAMEWORK-STATE, in table order.
+
+Lives here, not in `boundary`, because it is a pure query over
+`*framework-artifacts*` and `framework-slice-present-p` - both of which this file
+owns. Putting it in `boundary` would either duplicate the table or make `boundary`
+depend on a module that loads after it.
+
+A non-truthy state answers an EMPTY list rather than the full path table: absence
+of framework state means nothing was written, and an index listing files that do
+not exist is the failure this pairing of writer and index is meant to prevent."
+  (if (not (vovas.engine.panel.model:js-truthy framework-state))
+      '()
+      (loop for (path . key) in *framework-artifacts*
+            when (framework-slice-present-p framework-state key)
+              collect path)))

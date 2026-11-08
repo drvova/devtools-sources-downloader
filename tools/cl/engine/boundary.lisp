@@ -578,3 +578,189 @@ the oracle pins their order."
             (map 'vector (lambda (o) (strip-boundary-entry o "runtime"))
                  tagged-runtime))
       out)))
+
+;;; ---------------------------------------------------------------------------
+;;; collectInterestingEntrypoints
+;;; ---------------------------------------------------------------------------
+
+(defun entrypoint-why (parts)
+  "Join the non-empty strings in PARTS with \" | \".
+
+Empty parts are DROPPED, not placeholders - an asset with no bundler yields
+\"bootstrap | framework\" rather than \"bootstrap | framework |  | \"."
+  (format nil "~{~a~^ | ~}" (remove-if (lambda (s) (zerop (length s))) parts)))
+
+(defun collect-interesting-entrypoints (assets origins)
+  "`collectInterestingEntrypoints`: the ranked entrypoint list, capped at 14.
+
+Chunks and runtimes are collected into ONE list and then sorted together, so a
+runtime can outrank a chunk. Two sort keys, in order: score descending, then
+TIMESTAMP ASCENDING as the tiebreak - the second key is why this is not a plain
+`sort-by-score`.
+
+The runtime `timestamp` is read through `field-number`, which applies the
+truthiness rule: an entry whose timestamp is 0 reports 0 either way, but the
+ordering among equal scores depends on the real value being read."
+  (let ((items '()))
+    (dolist (asset assets)
+      (let* ((bare (vovas.engine.panel.assets:get-bare-file-name
+                    (script-asset-url asset)))
+             (label (if (plusp (length bare)) bare (script-asset-id asset)))
+             (item (make-hash-table :test #'equal)))
+        (setf (gethash "kind" item) "chunk"
+              (gethash "id" item) (script-asset-id asset)
+              (gethash "label" item) label
+              (gethash "file" item) (script-asset-file asset)
+              (gethash "url" item) (script-asset-url asset)
+              (gethash "score" item) (js-number-value (script-asset-score asset))
+              (gethash "classification" item) (script-asset-classification asset)
+              (gethash "primaryBoundary" item) (script-asset-primary-boundary asset)
+              (gethash "boundaryLabels" item)
+              (coerce (script-asset-boundary-labels asset) 'vector)
+              (gethash "why" item)
+              (entrypoint-why (list (script-asset-primary-boundary asset)
+                                    (script-asset-classification asset)
+                                    (script-asset-bundler asset)
+                                    (format nil "~{~a~^, ~}"
+                                            (script-asset-startup-signals asset))))
+              (gethash "startupSignals" item)
+              (coerce (script-asset-startup-signals asset) 'vector)
+              (gethash "routeHints" item) (coerce (script-asset-route-hints asset) 'vector)
+              (gethash "frameworkHints" item)
+              (coerce (script-asset-framework-hints asset) 'vector))
+        (push item items)))
+    (dolist (origin origins)
+      (let* ((file (field-str origin "file"))
+             (url (field-str origin "url"))
+             (kind (field-str origin "kind"))
+             (id (field-str origin "id"))
+             (source (cond ((plusp (length file)) file)
+                           ((plusp (length url)) url)
+                           (t kind)))
+             (bare (vovas.engine.panel.assets:get-bare-file-name source))
+             (label (if (plusp (length bare)) bare id))
+             (related (string-list origin "relatedChunks"))
+             (display-url (if (plusp (length url)) url (field-str origin "objectUrl")))
+             (item (make-hash-table :test #'equal)))
+        (setf (gethash "kind" item) "runtime"
+              (gethash "id" item) id
+              (gethash "label" item) label
+              (gethash "file" item) file
+              (gethash "url" item) display-url
+              (gethash "score" item)
+              (js-number-value (field-number origin "score"))
+              (gethash "originType" item) (field-str origin "originType")
+              (gethash "timestamp" item)
+              (js-number-value (field-number origin "timestamp"))
+              (gethash "primaryBoundary" item) (field-str origin "primaryBoundary")
+              (gethash "boundaryLabels" item)
+              (let ((l (field origin "boundaryLabels")))
+                (if (or (vectorp l) (listp l)) l #()))
+              (gethash "why" item)
+              (entrypoint-why (list (field-str origin "primaryBoundary")
+                                    kind
+                                    (field-str origin "originType")
+                                    (format nil "~{~a~^, ~}" related)))
+              (gethash "relatedChunks" item) (coerce related 'vector))
+        (push item items)))
+    ;; sort: score DESC, then timestamp ASC
+    (let ((sorted
+            (stable-sort
+             (nreverse items)
+             (lambda (a b)
+               (let ((sa (field-number a "score"))
+                     (sb (field-number b "score")))
+                 (if (/= sa sb)
+                     (> sa sb)
+                     (< (field-number a "timestamp")
+                        (field-number b "timestamp"))))))))
+      (coerce (subseq sorted 0 (min 14 (length sorted))) 'vector))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildFrameworkStateSummary
+;;; ---------------------------------------------------------------------------
+
+(defun build-framework-state-summary (framework-state)
+  "`buildFrameworkStateSummary`: the panel's view of the recon framework state.
+
+A non-truthy state answers JSON NULL rather than an empty summary, so the caller
+can tell \"the page had no framework state\" from \"the framework state was empty\".
+
+Two access rules appear here and they are NOT interchangeable:
+  - `field-str` / `field-number` apply the TRUTHINESS filter, so a falsy value
+    reads as absent;
+  - the pass-through slices (`roots`, `stores`, ...) and `queryKeys` use a bare
+    `gethash`, because the Rust calls `.get(...)` there and a present-but-falsy
+    slice must still be forwarded and still be counted.
+
+`related-artifacts` is asked of `paths` SYMBOLICALLY: that module owns the slice
+table and loads after this one, so a package-level import would be read before the
+package exists."
+  (unless (vovas.engine.panel.model:js-truthy framework-state)
+    (return-from build-framework-state-summary nil))
+  (let* ((state framework-state)
+         (router (or (and (hash-table-p (gethash "router" state))
+                          (gethash "router" state))
+                     (make-hash-table :test #'equal)))
+         (summary (or (and (hash-table-p (gethash "summary" state))
+                           (gethash "summary" state))
+                      (make-hash-table :test #'equal)))
+         (technologies (let ((v (gethash "technologies" state)))
+                         (if (or (vectorp v) (listp v)) v #())))
+         (array-len (lambda (key)
+                      (let ((v (gethash key state)))
+                        (if (or (vectorp v) (listp v)) (length v) 0))))
+         (router-len (lambda (key)
+                       (let ((v (gethash key router)))
+                         (if (or (vectorp v) (listp v)) (length v) 0))))
+         (detected
+           (let ((names '()))
+             (dolist (item (coerce technologies 'list))
+               (push (if (vovas.engine.panel.model:js-truthy item)
+                         (field-str item "name")
+                         "")
+                     names))
+             (dolist (item (coerce (let ((v (gethash "detectedTechnologies" summary)))
+                                     (if (or (vectorp v) (listp v)) v #()))
+                                   'list))
+               (when (stringp item) (push item names)))
+             (remove "" (vovas.engine.panel.assets:unique-strings (nreverse names))
+                     :test #'string=)))
+         (router-framework
+           (let ((fw (field-str router "framework")))
+             (if (plusp (length fw))
+                 fw
+                 (let ((fb (field-str summary "routerFramework")))
+                   (if (plusp (length fb)) fb "generic")))))
+         (route (let ((r (field-str router "route")))
+                  (if (plusp (length r)) r (field-str router "pathname"))))
+         (profile (let ((p (field-str state "profile")))
+                    (if (plusp (length p)) p "generic-app")))
+         (out (make-hash-table :test #'equal)))
+    (flet ((slice (key)
+             (let ((v (gethash key state)))
+               (if (or (vectorp v) (listp v)) (coerce v 'vector) #()))))
+      (setf (gethash "profile" out) profile
+            (gethash "generatedAt" out) (field-str state "generatedAt")
+            (gethash "reason" out) (field-str state "reason")
+            (gethash "rootCount" out) (funcall array-len "roots")
+            (gethash "storeCount" out) (funcall array-len "stores")
+            (gethash "queryCount" out) (funcall array-len "queries")
+            (gethash "hydrationCount" out) (funcall array-len "hydration")
+            (gethash "authCount" out) (funcall array-len "auth")
+            (gethash "routerFramework" out) router-framework
+            (gethash "route" out) route
+            (gethash "routerSource" out) (field-str router "source")
+            (gethash "queryKeyCount" out) (funcall router-len "queryKeys")
+            (gethash "detectedTechnologies" out) (coerce detected 'vector)
+            (gethash "roots" out) (funcall slice "roots")
+            (gethash "stores" out) (funcall slice "stores")
+            (gethash "queries" out) (funcall slice "queries")
+            (gethash "hydration" out) (funcall slice "hydration")
+            (gethash "auth" out) (funcall slice "auth")
+            (gethash "relatedArtifacts" out)
+            (coerce (funcall (find-symbol "COLLECT-FRAMEWORK-ARTIFACT-PATHS"
+                                          :vovas.engine.panel.paths)
+                             state)
+                    'vector))
+      out)))

@@ -394,3 +394,55 @@ integer and is produced as an integer, but a fixture may carry 24.0."
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; collectInterestingEntrypoints
+;;;
+;;; Six pinned entries from the fixture's own pipeline output. The oracle fixes
+;;; the ORDER as well as the contents, so this gates the two-key sort (score
+;;; descending, then timestamp ascending) rather than just the field mapping.
+;;; ---------------------------------------------------------------------------
+
+(defun run-boundary-entrypoints-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/boundary-oracle.json")))
+         (input (gethash "input" fx))
+         (want (gethash "collectInterestingEntrypoints" (gethash "expected" fx)))
+         (scripts (coerce (gethash "scriptFixture" input) 'list))
+         (recon-fixture (gethash "reconFixture" input))
+         (assets (vovas.engine.panel.assets:prepare-script-assets scripts recon-fixture))
+         (origins (vovas.engine.panel.assets:build-runtime-origins
+                   (coerce (gethash "runtimeEntries" input) 'list)
+                   (coerce (gethash "runtimeManifest" input) 'list)
+                   assets))
+         ;; Labeling FIRST, exactly as the Rust test does: the entrypoint rows
+         ;; report primaryBoundary and boundaryLabels, which prepare-script-assets
+         ;; leaves empty and build-boundary-labels fills in.
+         (_labels (vovas.engine.panel.boundary:build-boundary-labels assets origins))
+         (got (vovas.engine.panel.boundary:collect-interesting-entrypoints
+               assets origins)))
+
+    (declare (ignore _labels))
+
+    ;; The labeling has to run first: entrypoints report primaryBoundary and
+    ;; boundaryLabels, which `prepare-script-assets` leaves empty. The Rust test
+    ;; calls build_boundary_labels before this, so the gate does too.
+    (incf count)
+    (check result "collectInterestingEntrypoints/count" "count"
+           (length got) (length want))
+
+    (loop for index below (min (length got) (length want))
+          do (incf count)
+             (check result (format nil "collectInterestingEntrypoints/~a" index)
+                    "entrypoint"
+                    (and (gate-json= (aref got index) (aref want index)) t)
+                    t))
+
+    (when verbose
+      (format t "~&boundary entrypoints gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

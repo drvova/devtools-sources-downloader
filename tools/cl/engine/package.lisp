@@ -249,6 +249,7 @@
                 #:script-asset-classification #:script-asset-framework-hints
                 #:script-asset-route-hints #:script-asset-startup-signals
                 #:script-asset-imports #:script-asset-content #:script-asset-score
+                #:script-asset-bundler
                 #:script-asset-boundary-details #:script-asset-boundary-labels
                 #:script-asset-primary-boundary #:script-asset-boundary-reasons
                 #:make-boundary-detail #:boundary-detail-score
@@ -273,7 +274,9 @@
    #:strip-boundary-entry
    #:script-asset->json #:write-boundary-labels-into-asset
    #:count-boundary-labels-values #:count-tagged-entries-values
-   #:build-boundary-labels))
+   #:build-boundary-labels
+   #:entrypoint-why #:collect-interesting-entrypoints
+   #:build-framework-state-summary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
   (:export
@@ -288,7 +291,8 @@
    #:*analysis-framework-runtime*
    #:*analysis-interesting-entrypoints*
    #:*analysis-index-html*
-   #:framework-slice-present-p))
+   #:framework-slice-present-p
+   #:collect-framework-artifact-paths))
 
 (defpackage :vovas.engine.panel.graph
   (:use :cl)
