@@ -19,6 +19,7 @@
    ;; `utf16-*`, because the archive paths are indexed in UTF-16 units.
    #:js-trim
    #:js-whitespace-p
+   #:is-ascii-js-space
    #:utf16-length
    #:utf16-prefix
    #:utf16-suffix
@@ -82,7 +83,7 @@
 
 (defpackage :vovas.engine.scanner
   (:use :cl)
-  (:import-from :vovas.engine.util #:js-whitespace-p #:utf16-length)
+  (:import-from :vovas.engine.util #:is-ascii-js-space #:utf16-length)
   (:import-from :vovas.engine.decoders #:decode-escapes)
   (:export
    #:skip-quoted

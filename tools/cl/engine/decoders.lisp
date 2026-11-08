@@ -159,13 +159,16 @@ string-concatenates the result of reading past the end."
 ;;; ---------------------------------------------------------------------------
 
 (defun ascii-js-space-p (c)
-  "util.rs `is_ascii_js_space`: the ASCII whitespace JavaScript's `String
-.trim` and base64 normalisation drop. Deliberately NOT `js-whitespace-p`: the
-Rust strips only these six here, so U+00A0 or U+FEFF inside a base64 payload
-stays and makes the decode fail, and the engine's answer follows the Rust."
-  (case c
-    ((#\Space #\Tab #\Newline #\Page #\Return) t)
-    (t (= (char-code c) 11))))          ; VT; Page above is FF (12)
+  "util.rs `is_ascii_js_space`: the ASCII whitespace JavaScript's `String.trim`
+and base64 normalisation drop. Deliberately NOT `js-whitespace-p`: the Rust
+strips only these six here, so U+00A0 or U+FEFF inside a base64 payload stays
+and makes the decode fail, and the engine's answer follows the Rust.
+
+ONE DEFINITION: this delegates to vovas.engine.util:is-ascii-js-space. The body
+was written twice during the parallel port (once here, once in util because the
+scanner needed it) with identical code and identical reasoning, which is exactly
+how two copies drift apart later."
+  (vovas.engine.util:is-ascii-js-space c))
 
 (defparameter *base64-alphabet*
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -332,5 +335,6 @@ the output wrong, which then shifts every index a caller computes from it."
 ;; accessible" instead. Quote the interned names, or use strings.
 (eval-when (:load-toplevel :execute)
   (export (list (find-symbol "DECODE-BASE64-TO-BYTES" :vovas.engine.decoders)
-                (find-symbol "BYTES-TO-TEXT" :vovas.engine.decoders))
+                (find-symbol "BYTES-TO-TEXT" :vovas.engine.decoders)
+                (find-symbol "ASCII-JS-SPACE-P" :vovas.engine.decoders))
           :vovas.engine.decoders))

@@ -27,8 +27,23 @@
 (defparameter *limits-min-payload-length* 24)
 
 ;;; ---------------------------------------------------------------------------
-;;; Whitespace
+;;; Whitespace: TWO sets, and they are not interchangeable
 ;;; ---------------------------------------------------------------------------
+
+(defun is-ascii-js-space (c)
+  "util.rs `is_ascii_js_space`: the SIX ASCII whitespace characters and nothing
+more.
+
+Deliberately NOT `js-whitespace-p`. The Rust keeps both sets and uses them for
+different jobs: the ASCII one for every SCANNER decision (is this slash a regex?
+is this a token separator?) and the full one only where JavaScript itself would
+trim `\\s`. Collapsing them changes what the scanners match, silently - measured
+on the shipped engine, a regex preceded by U+00A0 and one preceded by a space
+give findBalanced answers of 10 and 9 for the same input. Using the full set in
+a scanner produces exactly that divergence."
+  (case c
+    ((#\Space #\Tab #\Newline #\Page #\Return) t)
+    (t (= (char-code c) 11))))          ; VT
 
 (declaim (inline js-whitespace-p))
 (defun js-whitespace-p (c)

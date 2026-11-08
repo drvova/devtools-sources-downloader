@@ -88,7 +88,7 @@ nest arbitrarily. Answers the position just past the closing backtick."
 The test is the previous non-whitespace character: after an identifier, a
 number, `)`, `]` or `_`/`$` a slash divides; anywhere else it starts a regex."
   (let ((j (1- index)))
-    (loop while (and (>= j 0) (vovas.engine.util:js-whitespace-p (char text j)))
+    (loop while (and (>= j 0) (is-ascii-js-space (char text j)))
           do (decf j))
     (if (minusp j)
         t                                   ; start of input: a regex

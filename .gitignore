@@ -14,6 +14,13 @@ desktop.ini
 .cache/
 cdp-profile/
 
-# SBCL toolchain artifacts: the saved image and release zips are build output
+# SBCL toolchain artifacts: the saved image and release zips are build output.
+# Compiled fasls are build output too, and an UNTRACKED one sitting beside the
+# sources is actively dangerous: a stale fasl loads in preference to the source
+# and produces "these symbols are not accessible" errors that look like source
+# bugs. Ignoring them makes a stray one visible in `git status` behaviour rather
+# than invisible.
 tools/cl/vovas.exe
+tools/cl/**/*.fasl
+tools/cl/**/*.fas
 unpack-rs/dist-*.zip

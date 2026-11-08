@@ -253,6 +253,25 @@ which reads as a wrong index rather than a null."
                  (incf count)
                  (check result "findBalanced" name got (json-null want)))))
 
+    ;; The two whitespace sets must stay distinguishable, and the test input must
+    ;; be ASCII so byte and character indices agree.
+    ;;
+    ;; An earlier version of this probe used U+00A0 and looked like a real bug:
+    ;; the engine answered 10 where the port answered 9. It was a MEASUREMENT
+    ;; artifact - U+00A0 is two bytes in UTF-8, so the engine (byte-indexed) and
+    ;; the port (char-indexed) were both answering "end of string" for a
+    ;; 10-byte, 9-character input. The lesson is in the input, not the code:
+    ;; compare indices only on inputs where the two units coincide.
+    ;;
+    ;; With VT (a single-byte ASCII whitespace character) the distinction is
+    ;; real and unit-safe: VT is in the ASCII set, so it terminates the regex
+    ;; scan exactly as a space does.
+    (incf count)
+    (check result "findBalanced-ascii-vt-is-whitespace" "vt"
+           (vovas.engine.scanner:find-balanced
+            (concatenate 'string "a(" (string (code-char 11)) "/)/ g)") 1)
+           9)
+
     (when verbose
       (format t "~&scanner gate: ~a/~a cases match~%"
               (gate-result-passed result) (gate-result-total result))
