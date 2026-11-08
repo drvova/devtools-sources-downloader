@@ -1672,3 +1672,107 @@ structuralFlows."
                             0 (min *flow-transitions-limit* (length flows)))
                     'vector))
       out)))
+
+;;; ---------------------------------------------------------------------------
+;;; countOriginKinds + buildFrameworkRuntimeSummary
+;;; ---------------------------------------------------------------------------
+
+(defun count-origin-kinds (origins)
+  "`countOriginKinds`: a Counts over each origin's kind, empty as \"unknown\"."
+  (let ((c (vovas.engine.panel.model:make-counts)))
+    (dolist (origin origins)
+      (let ((value (field-str origin "kind")))
+        (vovas.engine.panel.model:counts-add
+         c (if (zerop (length value)) "unknown" value))))
+    c))
+
+(defun build-framework-runtime-summary (recon assets origins
+                                        interesting-entrypoints
+                                        boundary-labels cross-boundary-flows)
+  "`buildFrameworkRuntimeSummary`: the panel's framework/runtime overview.
+
+Reads six optional inputs and answers one object. Three of its fields are JSON
+NULL when their source is absent or falsy - `strategy`, `boundaries` and
+`signals` - while the collection fields answer empty ARRAYS. That asymmetry is in
+the original and a uniform \"default to []\" would change the report.
+
+The PROFILE falls back in three steps (capture profile, then the stack strategy's
+profile, then \"generic-app\"), and CONFIDENCE likewise takes the stack profile's
+value before the capture status's.
+  - assets provide the classification counts and the bundler list, which drops
+    both the empty string AND the literal \"unknown\";
+  - flows provide up to 8 top transitions;
+  - entrypoints are capped at 6.
+  "
+  (let* ((stack-profile (or (field recon "stackProfile") (make-hash-table :test #'equal)))
+         (capture-status (or (field recon "captureStatus") (make-hash-table :test #'equal)))
+         (graphql-ops (or (funcall (find-symbol "COLLECT-GRAPHQL-OPERATIONS"
+                                                :vovas.engine.panel.graph)
+                                   (field recon "recon"))
+                          '()))
+         (framework-state (build-framework-state-summary
+                           (let ((v (field recon "frameworkState")))
+                             (and (vovas.engine.panel.model:js-truthy v) v))))
+         (page (or (field recon "page") (make-hash-table :test #'equal)))
+         (strategy (field stack-profile "strategy"))
+         (profile
+           (let ((from-capture (field-str capture-status "profile")))
+             (if (plusp (length from-capture))
+                 from-capture
+                 (let ((from-stack (if (hash-table-p strategy)
+                                       (field-str strategy "profile") "")))
+                   (if (plusp (length from-stack)) from-stack "generic-app")))))
+         (confidence (or (truthy-number stack-profile "confidence")
+                         (truthy-number capture-status "confidence")
+                         0d0))
+         (bundlers (remove-if (lambda (b) (or (zerop (length b)) (string= b "unknown")))
+                              (vovas.engine.panel.assets:unique-strings
+                               (mapcar #'script-asset-bundler assets))))
+         (top-flows (if (hash-table-p cross-boundary-flows)
+                        (vector-of (field cross-boundary-flows "topTransitions"))
+                        #()))
+         (entrypoints (coerce (subseq interesting-entrypoints
+                                      0 (min 6 (length interesting-entrypoints)))
+                              'vector))
+         (out (make-hash-table :test #'equal)))
+    (setf (gethash "generatedAt" out) (vovas.engine.pipeline:iso8601-now)
+          (gethash "page" out) page
+          (gethash "profile" out) profile
+          (gethash "confidence" out) (js-number-value confidence)
+          (gethash "technologies" out) (vector-of (field stack-profile "technologies"))
+          (gethash "traits" out) (vector-of (field stack-profile "traits"))
+          (gethash "strategy" out)
+          (if (vovas.engine.panel.model:js-truthy strategy) strategy (json-null-symbol))
+          (gethash "captureReason" out) (field-str capture-status "reasonText")
+          (gethash "assetClasses" out)
+          (vovas.engine.panel.model:counts-alist
+           (vovas.engine.panel.assets:count-classifications assets))
+          (gethash "bundlersObserved" out) (coerce bundlers 'vector)
+          (gethash "boundaries" out)
+          (if (hash-table-p boundary-labels)
+              (or (field boundary-labels "summary") (json-null-symbol))
+              (json-null-symbol))
+          (gethash "runtimeKinds" out)
+          (vovas.engine.panel.model:counts-alist (count-origin-kinds origins))
+          (gethash "graphQLEndpoints" out)
+          ;; `unique-strings` is computed ONCE into a binding: calling it twice
+          ;; to get both the list and its length is a real cost on a long
+          ;; operation list, and the two calls could drift apart.
+          (let ((urls (vovas.engine.panel.assets:unique-strings
+                       ;; `collect-graphql-operations` returns PLISTS, not hash
+                       ;; tables - `field-str` looks up STRING keys in a hash
+                       ;; table, so it answers "" for every operation and the
+                       ;; endpoint list comes back empty.
+                       (mapcar (lambda (op) (or (getf op :url) "")) graphql-ops))))
+            (coerce (subseq urls 0 (min 20 (length urls))) 'vector))
+          (gethash "topBoundaryFlows" out)
+          (coerce (subseq (coerce top-flows 'list) 0 (min 8 (length top-flows))) 'vector)
+          (gethash "likelyEntrypoints" out) entrypoints
+          ;; an absent framework state is JSON NULL, not CL nil: nil would
+          ;; serialise as false or as an omitted key.
+          (gethash "frameworkState" out)
+          (or framework-state (json-null-symbol))
+          (gethash "signals" out)
+          (let ((s (field capture-status "signals")))
+            (if (vovas.engine.panel.model:js-truthy s) s (json-null-symbol))))
+    out))

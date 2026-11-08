@@ -181,6 +181,17 @@ integer and is produced as an integer, but a fixture may carry 24.0."
           (loop for k being the hash-keys of want
                 always (and (nth-value 1 (gethash k got))
                             (gate-json= (gethash k got) (gethash k want))))))
+    ;; A COUNTS object is the port's insertion-ordered alist against the
+    ;; oracle's JSON object. Compared field-for-field rather than across
+    ;; representations - the ORDER is genuinely not compared here, because the
+    ;; oracle's object order is its own and the count values are what matter.
+    ((and (consp got) (hash-table-p want))
+     (and (= (length got) (hash-table-count want))
+          (loop for (k . v) in got
+                always (and (nth-value 1 (gethash k want))
+                            (gate-json= v (gethash k want))))))
+    ((and (hash-table-p got) (consp want))
+     (gate-json= want got))
     ((and (numberp got) (numberp want)) (= got want))
     ((and (stringp got) (stringp want)) (string= got want))
     ((and (null got) (hash-table-p want) (zerop (hash-table-count want))) t)
@@ -632,6 +643,61 @@ the engine saw."
 
     (when verbose
       (format t "~&boundary flows gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildFrameworkRuntimeSummary
+;;;
+;;; The Rust test feeds two stub entrypoints and the real report + flows, then
+;;; compares all sixteen fields. Three of them (`strategy`, `boundaries`,
+;;; `signals`) are JSON NULL rather than [] when absent - the asymmetry this
+;;; section exists to pin.
+;;; ---------------------------------------------------------------------------
+
+(defun run-framework-runtime-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/boundary-oracle.json")))
+         (input (gethash "input" fx))
+         (want (gethash "buildFrameworkRuntimeSummary" (gethash "expected" fx)))
+         (scripts (coerce (gethash "scriptFixture" input) 'list))
+         (recon-fixture (gethash "reconFixture" input))
+         (recon (let ((c (make-hash-table :test #'equal)))
+                  (maphash (lambda (k v) (setf (gethash k c) v)) recon-fixture)
+                  (setf (gethash "recon" c) (gethash "recon" input))
+                  c))
+         (assets (vovas.engine.panel.assets:prepare-script-assets scripts recon-fixture))
+         (origins (vovas.engine.panel.assets:build-runtime-origins
+                   (coerce (gethash "runtimeEntries" input) 'list)
+                   (coerce (gethash "runtimeManifest" input) 'list)
+                   assets))
+         (report (vovas.engine.panel.boundary:build-boundary-labels assets origins))
+         (flows (vovas.engine.panel.boundary:build-cross-boundary-flows
+                 recon assets origins))
+         ;; the Rust test's own stub entrypoints
+         (entrypoints (list (ht "id" "ep1") (ht "id" "ep2")))
+         (got (vovas.engine.panel.boundary:build-framework-runtime-summary
+               recon assets origins entrypoints report flows)))
+
+    ;; `generatedAt` is a clock: stripped from both sides rather than faked.
+    (let ((gc (gate-without-generated-at got))
+          (wc (gate-without-generated-at want)))
+      (dolist (key '("page" "profile" "confidence" "technologies" "traits"
+                     "strategy" "captureReason" "assetClasses" "bundlersObserved"
+                     "boundaries" "runtimeKinds" "graphQLEndpoints"
+                     "topBoundaryFlows" "likelyEntrypoints" "frameworkState"
+                     "signals"))
+        (incf count)
+        (check result (format nil "frameworkRuntime/~a" key) "field"
+               (and (gate-json= (gethash key gc) (gethash key wc)) t)
+               t)))
+
+    (when verbose
+      (format t "~&framework runtime gate: ~a/~a cases match~%"
               (gate-result-passed result) (gate-result-total result))
       (report-failures result))
 

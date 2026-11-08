@@ -292,6 +292,7 @@
    #:*flow-transition-window-ms* #:*flow-lookahead* #:*flow-score-threshold*
    #:*flow-events-limit* #:*flow-transitions-limit*
    #:build-cross-boundary-flows
+   #:count-origin-kinds #:build-framework-runtime-summary
    #:build-framework-state-summary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
