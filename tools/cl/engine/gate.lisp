@@ -619,10 +619,12 @@ ERROR verdict when that gate finally runs."
         (cons "capture policy (panel oracle)" #'run-policy-gate)
         (cons "resource model (panel module tests)" #'run-model-gate)
         (cons "asset helpers (paired oracle)" #'run-assets-gate)
+        (cons "asset pipeline tier (panel oracle)" #'run-assets-pipeline-gate)
         (cons "archive layout (structural)" #'run-paths-gate)
         (cons "graphql collection (panel oracle)" #'run-graph-gate)
         (cons "panel view (engine oracle)" #'run-view-gate)
-        (cons "stack profile (panel oracle)" #'run-stackprofile-gate)))
+        (cons "stack profile (panel oracle)" #'run-stackprofile-gate)
+        (cons "artifact helpers (panel oracle)" #'run-artifacts-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

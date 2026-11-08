@@ -95,8 +95,15 @@ equivalent `1.0d-320` then agree, which they must, being the same number."
 
 (defun to-string (value)
   "JS `String(number)` / `Number.prototype.toString()` (ECMA-262 7.1.12.1).
-The five shapes below are the specification's branches."
+The five shapes below are the specification's branches.
+
+An INTEGER is accepted and answered exactly: `js-round` returns an integer, as
+`Math.round` does, and a caller feeding its result here must not trip the float
+predicates. The integer branch comes first so no float test ever sees one -
+SBCL's `float-nan-p` requires a float and signals a TYPE-ERROR otherwise, which
+is how `format-ms` of 0 crashed on an empty timings list."
   (cond
+    ((integerp value) (format nil "~d" value))
     ((float-nan-p value) "NaN")
     ((zerop value) "0")                     ; -0 prints "0", as JS does
     ((float-infinite-p value)

@@ -75,7 +75,11 @@
                              (:file "assets")
                              (:file "paths")
                              (:file "graph")
+                             ;; view BEFORE artifacts: artifacts escapes XML and
+                             ;; attributes with view's `escape-html`, so the order
+                             ;; is a real dependency, not a preference.
                              (:file "view")
+                             (:file "artifacts")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -99,4 +103,5 @@
                              (:file "gate-paths")
                              (:file "gate-graph")
                              (:file "gate-stackprofile")
-                             (:file "gate-view")))))
+                             (:file "gate-view")
+                             (:file "gate-artifacts")))))

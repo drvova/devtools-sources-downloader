@@ -277,6 +277,24 @@
   (:import-from :vovas.engine.text #:format-size)
   (:export #:escape-html #:resource-rows-html #:type-options-html #:tracker-view))
 
+(defpackage :vovas.engine.panel.artifacts
+  (:use :cl)
+  (:import-from :vovas.engine.util #:js-trim)
+  (:import-from :vovas.engine.number #:to-string)
+  (:import-from :vovas.engine.text #:format-size #:format-ms)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p)
+  (:import-from :vovas.engine.panel.assets #:field #:field-str)
+  (:import-from :vovas.engine.panel.view #:escape-html)
+  (:export
+   #:js-number-value #:finite-float-p
+   #:runtime-folder-name #:runtime-extension #:build-runtime-path
+   #:build-runtime-unpack-assets #:merge-unpack-reports
+   #:parse-cookies #:split-on-char
+   #:serialize-inline-json #:json-escape-html-chars
+   #:escape-xml #:escape-attr #:value-as-text
+   #:compute-recon-stats #:truthy-or
+   #:json-serialize-compact #:json-escape-string))
+
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)
