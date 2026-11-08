@@ -1,0 +1,11 @@
+(require :asdf)
+(load "C:/Users/bigmo/quicklisp/setup.lisp")
+(asdf:load-asd (truename "tools/cl/vovas-engine.asd"))
+(asdf:load-system :vovas-engine)
+(format t "~&loaded; calling run-jsfuck-gate~%") (finish-output)
+(let ((t0 (get-internal-real-time)))
+  (let ((ok (handler-case (vovas.engine.gate::run-jsfuck-gate :verbose t)
+              (error (e) (format t "~&GATE ERROR: ~a~%" e) :err))))
+    (format t "~&=> ~s in ~,2f s~%" ok
+            (/ (- (get-internal-real-time) t0) internal-time-units-per-second))))
+(sb-ext:exit :code 0)

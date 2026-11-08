@@ -57,6 +57,11 @@
                              (:file "jscbytecode")
                              (:file "v8codecache")
                              (:file "zip")
+                             ;; jsfuck LAST of the modules. Its defpackage lives in
+                             ;; its own file and imports CIVIL-FROM-UNIX-SECS from
+                             ;; vovas.engine.zip, so zip must be loaded first - the
+                             ;; package-order trap, again, in a file I did not write.
+                             (:file "jsfuck")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -68,6 +73,7 @@
                              (:file "gate-detectors")
                              (:file "gate-sourcemaps")
                              (:file "gate-packers")
+                             (:file "gate-jsfuck")
                              (:file "gate-wasm")
                              (:file "gate-jscbytecode")
                              (:file "gate-v8codecache")

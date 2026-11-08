@@ -568,6 +568,7 @@ ERROR verdict when that gate finally runs."
         (cons "detectors (wasm oracle)" #'run-detectors-gate)
         (cons "sourcemaps (wasm oracle)" #'run-sourcemaps-gate)
         (cons "packers (wasm oracle)" #'run-packers-gate)
+        (cons "jsfuck (encoder-derived oracle)" #'run-jsfuck-gate)
         ;; binary tier
         (cons "wasm parser (binary fixtures)" #'run-wasm-gate)
         (cons "jsc bytecode (binary fixtures)" #'run-jscbytecode-gate)
