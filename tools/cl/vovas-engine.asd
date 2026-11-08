@@ -69,6 +69,7 @@
                              ;; panel tier: policy is a LEAF (text.rs is already
                              ;; ported as text.lisp), so it goes here rather than
                              ;; with the panel modules that follow later.
+                             (:file "stackprofile")
                              (:file "policy")
                              (:file "model")
                              (:file "assets")
@@ -97,4 +98,5 @@
                              (:file "gate-assets")
                              (:file "gate-paths")
                              (:file "gate-graph")
+                             (:file "gate-stackprofile")
                              (:file "gate-view")))))

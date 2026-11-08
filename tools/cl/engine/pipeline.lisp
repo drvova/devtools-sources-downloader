@@ -541,7 +541,9 @@ in every report starts with it, so a port defaulting it to `\"\"` would write
 
 (defun make-asset-result (entry files) (list :entry entry :files files))
 (defun asset-result-entry (result) (getf result :entry))
+(defun (setf asset-result-entry) (value result) (setf (getf result :entry) value))
 (defun asset-result-files (result) (getf result :files))
+(defun (setf asset-result-files) (value result) (setf (getf result :files) value))
 
 (defun make-totals (&key (assets 0) (unpacked 0) (modules 0) (sources 0) (beautified 0))
   (list :assets assets :unpacked unpacked :modules modules
@@ -562,6 +564,7 @@ the batch appends one entry per asset and spelling that as
 `(setf (getf report :assets) ...)` in the loop reads as ad-hoc plist surgery."
   (setf (getf report :assets) value))
 (defun report-totals (report) (getf report :totals))
+(defun (setf report-totals) (value report) (setf (getf report :totals) value))
 (defun report-root (report) (getf report :root))
 (defun report-unpacked-at (report) (getf report :unpacked-at))
 (defun report-generated-by (report) (getf report :generated-by))
@@ -1105,11 +1108,13 @@ the Rust's: a table that resolved fewer than eight names is noise, not a table."
   (values nil nil))
 
 (defun any-jsc-asset-p (assets)
+  "T when any asset is JSC-shaped, which is the only case where scanning for a
+shared table can pay off. No length guard here: `detect-jsc-bytecode` is
+`parse-jsc-header`, which already refuses anything shorter than the five-word
+header, so adding one would be a second, unmeasured guard over the same rule."
   (some (lambda (asset)
           (and (eq (asset-kind asset) :bytes)
-               (let ((bytes (asset-bytes asset)))
-                 (and bytes (>= (length bytes) 32)
-                      (detect-jsc-bytecode bytes)))))
+               (detect-jsc-bytecode (asset-bytes asset))))
         assets))
 
 (defun unpack-assets (assets opts)

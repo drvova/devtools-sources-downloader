@@ -20,6 +20,8 @@
    #:js-trim
    #:js-whitespace-p
    #:is-ascii-js-space
+   #:now-unix-millis
+   #:now-unix-secs
    #:utf16-length
    #:utf16-prefix
    #:utf16-suffix
@@ -240,6 +242,16 @@
                 #:resource-filters-kind #:resource-filters-sort)
   (:import-from :vovas.engine.text #:format-size)
   (:export #:escape-html #:resource-rows-html #:type-options-html #:tracker-view))
+
+(defpackage :vovas.engine.panel.stackprofile
+  (:use :cl)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)
+  (:import-from :vovas.engine.panel.assets #:field)
+  (:import-from :vovas.engine.util #:js-trim #:now-unix-millis)
+  (:export #:analyze #:default-strategy #:build-strategy
+           #:*version* #:normalize-list #:has-url #:snap-field
+           #:empty-object #:empty-array
+           #:json-marker-p #:json-marker-kind))
 
 (defpackage :vovas.engine.gate
   (:use :cl)

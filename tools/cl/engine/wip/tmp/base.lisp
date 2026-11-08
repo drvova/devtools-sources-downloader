@@ -1,0 +1,5 @@
+(require :asdf)
+(load "C:/Users/bigmo/quicklisp/setup.lisp")
+(asdf:load-asd (truename "tools/cl/vovas-engine.asd"))
+(handler-case (progn (asdf:load-system :vovas-engine) (format t "BASE OK (with whatever preloads)~%"))
+  (error (e) (format t "BASE FAIL: ~a~%" (type-of e))))

@@ -350,11 +350,18 @@ reconstructed text."
     count))
 
 ;;; ---------------------------------------------------------------------------
-;;; Tier 5: assetSlug, reusing the text-tier oracle's own 14 cases
+;;; Tier 5: assetSlug, from BOTH oracles
 ;;;
-;;; The pipeline OWNS `asset_slug`, so these cases belong here as well as in
-;;; whatever gate the text tier has. The keys are `"<url> #<index>"`; splitting
-;;; on the last `" #"` is the only safe rule because a URL can contain `#`.
+;;; The pipeline OWNS `asset_slug`, so the text-tier oracle's 14 cases belong
+;;; here too. But those 14 all end their text exactly where a PCRE `$` would
+;;; also end, so they CANNOT distinguish Rust's end-of-haystack `$` from PCRE's
+;;; end-or-before-final-newline `$`. The probe oracle carries the
+;;; trailing-newline URLs that can, and the mutation test proved the difference
+;;; was real: a `$`-based port passed all 14 original cases and failed only the
+;;; probe ones.
+;;;
+;;; Both use `"<url> #<index>"` keys; splitting on the LAST `" #"` is the only
+;;; safe rule because a URL can itself contain `#`.
 ;;; ---------------------------------------------------------------------------
 
 (defun split-slug-key (key)
@@ -363,13 +370,12 @@ reconstructed text."
     (values (subseq key 0 marker)
             (parse-integer key :start (+ marker 2)))))
 
-(defun gate-pipeline-slug (result oracle)
-  (let ((cases (gethash "assetSlug" oracle))
-        (count 0))
+(defun gate-pipeline-slug (result cases label)
+  (let ((count 0))
     (loop for key being the hash-keys of cases using (hash-value want)
           do (incf count)
              (multiple-value-bind (url index) (split-slug-key key)
-               (check result "assetSlug" key
+               (check result (format nil "~a/assetSlug" label) key
                       (vovas.engine.pipeline:asset-slug url index) want)))
     count))
 
@@ -619,7 +625,8 @@ reconstructed text."
       (incf count (gate-pipeline-batch-binary result batch-oracle))
       (incf count (gate-pipeline-zip result batch-oracle))
       (incf count (gate-pipeline-budget result budget-oracle))
-      (incf count (gate-pipeline-slug result text-tier))
+      (incf count (gate-pipeline-slug result (gethash "assetSlug" text-tier) "text-tier"))
+      (incf count (gate-pipeline-slug result (gethash "assetSlug" probe-oracle) "probe"))
       (incf count (gate-pipeline-probes result probe-oracle))
       (incf count (gate-pipeline-structural result))
       (incf count (gate-pipeline-wrong-impl result)))
@@ -630,7 +637,8 @@ reconstructed text."
       (format t "  oracle-pinned: 13 text unpackAsset cases (entry + every file),~%")
       (format t "                 8 binary unpackAsset cases,~%")
       (format t "                 1 text batch + 1 binary batch (report + files),~%")
-      (format t "                 3 budget cases, 14 assetSlug cases,~%")
+      (format t "                 3 budget cases, 14+~a assetSlug cases~%"
+              (hash-table-count (gethash "assetSlug" probe-oracle)))
       (format t "                 ~a looksBinaryScript probes + 2 UTF-16 unit cases~%"
               (hash-table-count (gethash "looksBinaryScript" probe-oracle)))
       (format t "  byte-pinned:   functions.json, wasm-info.json, cache-header.json,~%")

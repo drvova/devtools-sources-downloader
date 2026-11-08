@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="210" viewBox="0 0 1160 210" role="img" aria-label="The pipeline: the page world records into window.__CAPTURE__, the panel polls it, the Rust engine compiled to WebAssembly unpacks it, and the panel writes one sources.zip.">
+  <title>The pipeline</title>
+  <desc>Page world to panel to engine to archive.</desc>
+
+  <defs>
+    <linearGradient id="node" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2027"/>
+      <stop offset="1" stop-color="#12161b"/>
+    </linearGradient>
+    <linearGradient id="wire" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb454" stop-opacity=".15"/>
+      <stop offset=".5" stop-color="#ffb454" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#ffb454" stop-opacity=".15"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    .n-title { font: 600 15px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; fill: #f4f6f8; }
+    .n-sub   { font: 400 12px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; fill: #8b949e; }
+    .w-label { font: 500 10px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 1.2px; fill: #6e7681; }
+
+    /* a packet crosses each wire, then the next wire's packet starts */
+    .packet { animation: flow 3s linear infinite; }
+    .packet.w2 { animation-delay: 1s; }
+    .packet.w3 { animation-delay: 2s; }
+    @keyframes flow {
+      0%   { transform: translateX(0);    opacity: 0; }
+      8%   { opacity: 1; }
+      30%  { opacity: 1; }
+      38%  { transform: translateX(60px); opacity: 0; }
+      100% { transform: translateX(60px); opacity: 0; }
+    }
+    .wire { stroke-dasharray: 4 4; animation: march 1.2s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -8; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .packet, .wire { animation: none; }
+      .packet { opacity: 0; }
+    }
+  </style>
+
+  <rect width="1160" height="210" fill="#0b0d10"/>
+
+  <!-- nodes -->
+  <g>
+    <rect x="40" y="66" width="220" height="76" rx="8" fill="url(#node)" stroke="#2a323c"/>
+    <text class="n-title" x="60" y="98">page world</text>
+    <text class="n-sub"   x="60" y="120">window.__CAPTURE__</text>
+  </g>
+  <g>
+    <rect x="320" y="66" width="220" height="76" rx="8" fill="url(#node)" stroke="#2a323c"/>
+    <text class="n-title" x="340" y="98">panel</text>
+    <text class="n-sub"   x="340" y="120">page.js</text>
+  </g>
+  <g>
+    <rect x="600" y="66" width="220" height="76" rx="8" fill="url(#node)" stroke="#ffb454" stroke-opacity=".45"/>
+    <text class="n-title" x="620" y="98">engine</text>
+    <text class="n-sub"   x="620" y="120">engine.wasm</text>
+  </g>
+  <g>
+    <rect x="880" y="66" width="220" height="76" rx="8" fill="url(#node)" stroke="#2a323c"/>
+    <text class="n-title" x="900" y="98">archive</text>
+    <text class="n-sub"   x="900" y="120">sources.zip</text>
+  </g>
+
+  <!-- wires, with the label above and a packet crossing each -->
+  <g>
+    <line class="wire" x1="260" y1="104" x2="320" y2="104" stroke="url(#wire)" stroke-width="1.5"/>
+    <text class="w-label" x="260" y="88">poll</text>
+    <circle class="packet" cx="262" cy="104" r="2.5" fill="#ffb454"/>
+  </g>
+  <g>
+    <line class="wire" x1="540" y1="104" x2="600" y2="104" stroke="url(#wire)" stroke-width="1.5"/>
+    <text class="w-label" x="540" y="88">xu_call</text>
+    <circle class="packet w2" cx="542" cy="104" r="2.5" fill="#ffb454"/>
+  </g>
+  <g>
+    <line class="wire" x1="820" y1="104" x2="880" y2="104" stroke="url(#wire)" stroke-width="1.5"/>
+    <text class="w-label" x="820" y="88">download</text>
+    <circle class="packet w3" cx="822" cy="104" r="2.5" fill="#ffb454"/>
+  </g>
+
+  <!-- the one line that says what the middle does -->
+  <text class="n-sub" x="40" y="180" fill="#6e7681">the page world records; the panel collects; the engine peels; the panel writes one zip.</text>
+</svg>

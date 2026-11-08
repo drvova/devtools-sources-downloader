@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/banner.svg" alt="devtools-unpack — capture everything a page loads and runs, then peel every layer off it." width="100%">
+</p>
+
 # devtools-unpack — project wiki
 
 A Chrome DevTools extension that captures everything an inspected page loads and runs, then
@@ -21,6 +25,10 @@ collects:
 console.
 
 ## The short version of how it works
+
+<p align="center">
+  <img src="../assets/pipeline.svg" alt="The pipeline: the page world records into window.__CAPTURE__, the panel polls it, the Rust engine unpacks it, and the panel writes one sources.zip." width="100%">
+</p>
 
 ```
 page world (JS)  →  window.__CAPTURE__  {policy, tracker, trackerReady, recon, status, profile, snapshot, signals, …}

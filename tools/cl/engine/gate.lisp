@@ -621,7 +621,8 @@ ERROR verdict when that gate finally runs."
         (cons "asset helpers (paired oracle)" #'run-assets-gate)
         (cons "archive layout (structural)" #'run-paths-gate)
         (cons "graphql collection (panel oracle)" #'run-graph-gate)
-        (cons "panel view (engine oracle)" #'run-view-gate)))
+        (cons "panel view (engine oracle)" #'run-view-gate)
+        (cons "stack profile (panel oracle)" #'run-stackprofile-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

@@ -57,17 +57,26 @@ table.")
       (setf *jsfuck-oracle* (read-json-file (fixture-path *jsfuck-oracle-name*)))))
 
 (defun jsfuck-family (name)
-  "The case table for family NAME, as an alist of (case-name . plist).
+  "The cases of family NAME, as an alist of (case-name . case-table) with the
+family prefix STRIPPED from the key.
+
+The fixture is FLAT — `{\"programs/retOne\": {...}, \"detection/oneTab\": {...}}` —
+because that is the shape the assignment specifies and because a nested map makes
+two families able to hold the same case name without either noticing. The prefix
+is split here, once, so callers keep working in bare case names.
 
 Answers NIL for an absent family, which the caller's floor assertion turns into a
-loud failure naming the family — not a zero-iteration loop that reports success."
-  (let* ((families (gethash "families" (jsfuck-oracle)))
-         (table (and families (gethash name families))))
-    (when table
-      (sort (loop for key being the hash-keys of table
-                  using (hash-value value)
-                  collect (cons key value))
-            #'string< :key #'car))))
+loud failure naming the family rather than a zero-iteration loop reporting
+success."
+  (let ((cases (gethash "cases" (jsfuck-oracle))))
+    (when cases
+      (let ((prefix (concatenate 'string name "/")))
+        (sort (loop for key being the hash-keys of cases
+                    using (hash-value value)
+                    when (and (> (length key) (length prefix))
+                              (string= prefix key :end2 (length prefix)))
+                      collect (cons (subseq key (length prefix)) value))
+              #'string< :key #'car)))))
 
 (defun jsfuck-case-source (case)
   (gethash "source" (cdr case)))

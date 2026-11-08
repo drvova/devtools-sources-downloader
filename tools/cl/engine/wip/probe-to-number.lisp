@@ -42,7 +42,28 @@
     ("false" . :nan) ("true" . :nan) ("undefined" . :nan) ("null" . :nan)
     ("abc" . :nan) ("1,2" . :nan) ("0xzz" . :nan) ("0x" . :nan)
     ("1e" . :nan) ("1e+" . :nan) ("- 1" . :nan) (" " . 0d0)
-    (" " . 0d0) ("1 2" . :nan) ("--1" . :nan)))
+    (" " . 0d0) ("1 2" . :nan) ("--1" . :nan)
+    ;; The two classes the DIFFERENTIAL probe (probe-to-number-diff.lisp) found
+    ;; after this table's first 36 cases passed 36/36. Kept here as well so the
+    ;; hand-typed table and the rustc oracle both cover them; a regression shows
+    ;; up in whichever runs first.
+    ;;
+    ;; u64 OVERFLOW: `u64::from_str_radix` fails, so Rust answers NaN, while CL's
+    ;; unbounded PARSE-INTEGER answered 1.8e19.
+    ("0x10000000000000000" . :nan)
+    ("0xFFFFFFFFFFFFFFFFF" . :nan)
+    ("-0x10000000000000000" . :nan)
+    ("0xfffffffffffffffff" . :nan)
+    ;; ...but a u64 EXACTLY at the limit is still a number, and leading zeros
+    ;; must not count against the 16-digit width.
+    ("0xFFFFFFFFFFFFFFFF" . 1.8446744073709552d19)
+    ("0x7FFFFFFFFFFFFFFF" . 9.223372036854776d18)
+    ("0x00000000000000000001" . 1d0)
+    ;; NON-ASCII DIGITS: SBCL's DIGIT-CHAR-P accepts them, Rust's `is_ascii_digit`
+    ;; does not. U+FF11 FULLWIDTH DIGIT ONE answered 1.
+    ("\uFF11" . :nan)
+    ("1\uFF11" . :nan)
+    ("\u0661" . :nan)))
 
 (defun describe-value (v)
   "Normalise a value for COMPARISON, not for display.

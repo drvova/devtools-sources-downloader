@@ -171,3 +171,27 @@ absent: it is the separator this set is applied *between*."
           do (when (member c '(#\. #\* #\+ #\? #\^ #\$ #\{ #\} #\( #\) #\| #\[ #\] #\\))
                (write-char #\\ s))
              (write-char c s))))
+
+;;; ---------------------------------------------------------------------------
+;;; The clock seam
+;;;
+;;; `stackprofile` stamps `generatedAt` and the archive stamps its reports, and
+;;; both are clock-dependent. Keeping the read behind one function means a gate
+;;; can rebind it instead of racing wall time, which is what the Rust does with a
+;;; `generatedAt` blanked on both sides.
+;;; ---------------------------------------------------------------------------
+
+(defun now-unix-millis ()
+  "Milliseconds since the epoch.
+
+CL has no portable millisecond clock, so this is `get-internal-real-time`
+converted through `internal-time-units-per-second`. That is monotonic rather than
+wall-clock, which would be wrong for a timestamp - so the epoch offset is taken
+from `get-universal-time` and the sub-second part from the internal clock."
+  (+ (* (- (get-universal-time) 2208988800) 1000)
+     (mod (floor (* 1000 (get-internal-real-time))
+                 internal-time-units-per-second)
+          1000)))
+
+(defun now-unix-secs ()
+  (floor (now-unix-millis) 1000))

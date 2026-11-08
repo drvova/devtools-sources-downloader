@@ -91,26 +91,12 @@ kebab form; `capture-policy` renders the camelCase wire names.")
 ;;; ---------------------------------------------------------------------------
 
 (defun default-strategy ()
-  "`default_strategy`: the timings the page world uses before the panel's analysed
-profile arrives.
+  "`default_strategy`.
 
-The four booleans are all NIL - the generic profile does not opt into hydrated
-DOM, framework state, GraphQL operations or source-map priority. Rendering them as
-NIL rather than omitting them is what the engine does, and the page world reads
-them directly."
-  (list :profile "generic-app"
-        :boot-delay-ms 1200
-        :network-quiet-ms 1000
-        :mutation-quiet-ms 1200
-        :runtime-quiet-ms 1000
-        :socket-quiet-ms 2200
-        :worker-grace-ms 1200
-        :max-capture-ms 18000
-        :prefer-hydrated-dom nil
-        :capture-framework-state nil
-        :capture-graphql-ops nil
-        :prioritize-source-maps nil
-        :reasons '("Generic adaptive profile")))
+ONE DEFINITION: this now delegates to `panel.stackprofile`, which owns the
+function in the Rust. It was inlined here when policy was the only ported user,
+with a note saying it would move - this is that move."
+  (vovas.engine.panel.stackprofile:default-strategy))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Rendering the wire object

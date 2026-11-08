@@ -12,7 +12,7 @@
 // i.e. the source is `[]["at"]["constructor"](<body>)()`.
 //
 // So a port could return the null constant and pass the old oracle. This
-// script removes that hole. It has three case families, all answering the
+// script removes that hole. It has four case families, all answering the
 // same question — "what does the shipped engine say?" — and all captured
 // through src/js/unpack-bridge.js, the bridge text-oracle.mjs uses:
 //
@@ -322,11 +322,12 @@ const bridge = await import('../src/js/unpack-bridge.js');
 const oracle = {
     note:
         'Captured from the shipped wasm engine (unpack-rs/.cache/engine.wasm) via ' +
-        'src/js/unpack-bridge.js. `programs` sources are produced by the shipped ' +
-        'JSFuck 0.5.0 encoder (test/fixtures/jsfuck-encoder.js) with wrapWithEval, ' +
-        'which emits Function(body)() — the seam `captured` reports on.',
+        'src/js/unpack-bridge.js. Keys are "<family>/<case>"; `programs` and ' +
+        '`scoped` sources are produced by the shipped JSFuck 0.5.0 encoder ' +
+        '(test/fixtures/jsfuck-encoder.js), `expressions` by its fragment mode, ' +
+        '`detection` are boundary inputs written by hand.',
     capturedAt: 'fixed-input set; regenerate with node unpack-rs/scripts/jsfuck-oracle.mjs',
-    families: { programs: {}, scoped: {}, expressions: {}, detection: {} },
+    cases: {},
 };
 
 const rows = [];
@@ -343,7 +344,7 @@ async function capture(family, name, source, origin) {
         rows.push({ family, name, origin, source, detect, decode: null, trap: String(err.message) });
         return;
     }
-    oracle.families[family][name] = { source, detect, decode };
+    oracle.cases[family + '/' + name] = { source, detect, decode };
     rows.push({ family, name, origin, source, detect, decode });
 }
 
