@@ -73,6 +73,7 @@
                              (:file "model")
                              (:file "assets")
                              (:file "paths")
+                             (:file "graph")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -93,4 +94,5 @@
                              (:file "gate-policy")
                              (:file "gate-model")
                              (:file "gate-assets")
-                             (:file "gate-paths")))))
+                             (:file "gate-paths")
+                             (:file "gate-graph")))))

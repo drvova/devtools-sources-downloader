@@ -278,3 +278,38 @@ archive and left out of the index pointing at it. One rule, here, is the fix."
     ((vectorp value) (length value))
     ((stringp value) (length value))
     (t 0)))
+
+;;; ---------------------------------------------------------------------------
+;;; Field accessors
+;;;
+;;; The JS pattern `entry[key]` appears in every panel module, so the coercion
+;;; rules live in one place rather than per call site.
+;;; ---------------------------------------------------------------------------
+
+(defun field (entry key)
+  "`entry[key]`, or NIL when ENTRY is not an object or the key is absent.
+
+NIL and JSON null are both "absent" here, which matches the Rust: it matches on
+`Some(value)` only, so an explicit null falls to the same branch as a missing key."
+  (when (hash-table-p entry)
+    (multiple-value-bind (value present) (gethash key entry)
+      (when present
+        (if (vovas.engine.panel.model:json-null-p value) nil value)))))
+
+(defun field-str (entry key)
+  "`fieldStr`: a STRING for a string or number field, empty otherwise.
+
+A number renders through the JS number formatting, so `5` becomes "5" and not
+"5.0" - and an object or array becomes EMPTY, not "[object Object]", because
+this is the accessor used where a reference must be text."
+  (let ((value (field entry key)))
+    (cond
+      ((null value) "")
+      ((stringp value) value)
+      ((numberp value) (vovas.engine.number:to-string (coerce value 'double-float)))
+      (t ""))))
+
+(defun field-number (entry key)
+  "`fieldNumber`: the field coerced by `Number(...)`, or 0 when absent."
+  (let ((value (field entry key)))
+    (if (null value) 0d0 (vovas.engine.panel.model:js-number value))))

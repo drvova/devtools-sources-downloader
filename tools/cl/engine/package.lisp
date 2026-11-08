@@ -202,7 +202,8 @@
    #:clean-stack-reference #:extract-stack-refs #:unique-strings
    #:asset-sample #:detect-bundler-name #:detect-framework-hints
    #:detect-startup-signals #:extract-route-hints-from-url
-   #:extract-import-specifiers #:split-on-slash #:keys-len))
+   #:extract-import-specifiers #:split-on-slash #:keys-len
+   #:field #:field-str #:field-number))
 
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
@@ -219,6 +220,16 @@
    #:*analysis-interesting-entrypoints*
    #:*analysis-index-html*
    #:framework-slice-present-p))
+
+(defpackage :vovas.engine.panel.graph
+  (:use :cl)
+  (:import-from :vovas.engine.panel.policy #:*graphql-body-pattern* #:*graphql-body-keys*)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p)
+  (:import-from :vovas.engine.panel.assets #:field #:field-str #:field-number)
+  (:import-from :vovas.engine.util #:utf16-prefix)
+  (:export #:looks-like-graphql-body-p #:normalize-graphql-payload
+           #:parse-graphql-operation #:collect-graphql-operations
+           #:collect-network-operations #:graphql-value-text #:text-or))
 
 (defpackage :vovas.engine.gate
   (:use :cl)
