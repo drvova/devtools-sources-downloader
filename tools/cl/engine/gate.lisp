@@ -693,6 +693,7 @@ ERROR verdict when that gate finally runs."
         (cons "report table (panel oracle)" #'run-report-table-gate)
         (cons "report exports (panel oracle)" #'run-report-export-gate)
         (cons "semantic export (structural)" #'run-export-semantic-gate)
+        (cons "finalize export (structural)" #'run-finalize-gate)
         (cons "report waterfall (panel oracle)" #'run-report-waterfall-gate)
         (cons "report investigation page (structural)" #'run-report-investigation-gate)))
 
