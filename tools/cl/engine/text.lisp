@@ -37,102 +37,15 @@ what `(- h #x100000000)` produces before abs."
       (let ((signed (if (>= hash #x80000000) (- hash #x100000000) hash)))
         (format nil "~(~x~)" (abs signed))))))
 
-;;; ---------------------------------------------------------------------------
-;;; URI component decoding (strict: invalid sequences answer NIL, like the throw)
-;;; ---------------------------------------------------------------------------
-
-(defun decode-uri-component-strict (text)
-  "JS `decodeURIComponent`: strict %XX decoding, `+` is NOT a space, and an
-invalid sequence or invalid UTF-8 answers NIL (the JS throws)."
-  (let* ((n (length text))
-         (out (make-array 0 :element-type '(unsigned-byte 8)
-                            :adjustable t :fill-pointer 0)))
-    (loop with i = 0
-          while (< i n)
-          do (let ((c (char text i)))
-               (if (char= c #\%)
-                   (progn
-                     (when (> (+ i 2) (1- n))
-                       ;; fewer than two characters after the '%'
-                       (when (> (+ i 2) n) (return-from decode-uri-component-strict nil))
-                       (return-from decode-uri-component-strict nil))
-                     (let ((hi (digit-value-of (char text (1+ i))))
-                           (lo (digit-value-of (char text (+ i 2)))))
-                       (unless (and hi lo)
-                         (return-from decode-uri-component-strict nil))
-                       (vector-push-extend (+ (* 16 hi) lo) out)
-                       (incf i 3)))
-                   (progn
-                     (vector-push-extend (char-code c) out)
-                     (incf i)))))
-    (utf8-decode out)))
-
-(defun digit-value-of (c)
-  (let ((pos (position (char-downcase c) "0123456789abcdef")))
-    pos))
-
-(defun utf8-decode (octets)
-  "Decode OCTETS as UTF-8, answering NIL for any malformed sequence. This is
-JavaScript's behaviour: decodeURIComponent rejects overlong forms, lone
-surrogates and truncated tails rather than producing replacement characters."
-  (let ((n (length octets))
-        (out (make-string-output-stream)))
-    (labels ((byte-at (i) (aref octets i)))
-      (loop with i = 0
-            while (< i n)
-            do (let ((b (byte-at i)))
-                 (cond
-                   ((< b #x80)
-                    (write-char (code-char b) out)
-                    (incf i))
-                   ((= (logand b #xE0) #xC0)
-                    (when (> (+ i 2) n) (return-from utf8-decode nil))
-                    (let ((b2 (byte-at (1+ i))))
-                      (unless (= (logand b2 #xC0) #x80)
-                        (return-from utf8-decode nil))
-                      (let ((code (logior (ash (logand b #x1F) 6)
-                                          (logand b2 #x3F))))
-                        (when (< code #x80) (return-from utf8-decode nil))
-                        (write-char (code-char code) out))
-                      (incf i 2)))
-                   ((= (logand b #xF0) #xE0)
-                    (when (> (+ i 3) n) (return-from utf8-decode nil))
-                    (let ((b2 (byte-at (1+ i)))
-                          (b3 (byte-at (+ i 2))))
-                      (unless (and (= (logand b2 #xC0) #x80)
-                                   (= (logand b3 #xC0) #x80))
-                        (return-from utf8-decode nil))
-                      (let ((code (logior (ash (logand b #x0F) 12)
-                                          (ash (logand b2 #x3F) 6)
-                                          (logand b3 #x3F))))
-                        (when (or (< code #x800) (<= #xD800 code #xDFFF))
-                          (return-from utf8-decode nil))
-                        (write-char (code-char code) out))
-                      (incf i 3)))
-                   ((= (logand b #xF8) #xF0)
-                    (when (> (+ i 4) n) (return-from utf8-decode nil))
-                    (let ((b2 (byte-at (1+ i)))
-                          (b3 (byte-at (+ i 2)))
-                          (b4 (byte-at (+ i 3))))
-                      (unless (and (= (logand b2 #xC0) #x80)
-                                   (= (logand b3 #xC0) #x80)
-                                   (= (logand b4 #xC0) #x80))
-                        (return-from utf8-decode nil))
-                      (let ((code (logior (ash (logand b #x07) 18)
-                                          (ash (logand b2 #x3F) 12)
-                                          (ash (logand b3 #x3F) 6)
-                                          (logand b4 #x3F))))
-                        (when (or (< code #x10000) (> code #x10FFFF))
-                          (return-from utf8-decode nil))
-                        (write-char (code-char code) out))
-                      (incf i 4)))
-                   (t (return-from utf8-decode nil)))))
-      (get-output-stream-string out))))
-
 (defun safe-decode-uri-component (value)
   "`safeDecodeURIComponent`: decode strictly, and hand back the input unchanged
-when the JS engine would have thrown."
-  (or (decode-uri-component-strict value) (copy-seq value)))
+when the JS engine would have thrown.
+
+The strict decoder lives in vovas.engine.transforms, not here: it was written
+twice during the port (once for the panel's paths, once for the engine), and two
+implementations of a decoder is how an archive path and an engine peel end up
+disagreeing about the same URL."
+  (or (vovas.engine.transforms:decode-uri-component value) (copy-seq value)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Path segments

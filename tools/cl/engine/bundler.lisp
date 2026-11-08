@@ -54,11 +54,11 @@ LazyLock intent in the Rust.")
 match at position 0.")
 
 (defparameter *source-url*
-  (cl-ppcre:create-scanner "//[#@]\\s*sourceURL\\s*=\\s*(\\S+)")
-  "transforms.rs's SOURCE_URL_COMMENT. The constant lands in transforms.lisp
-eventually; it is spelled here so this module has no forward dependency on a
-file that does not exist yet, and the two must be kept equal - a test in the
-gate asserts they agree when transforms arrives.")
+  (cl-ppcre:create-scanner vovas.engine.transforms:*source-url-comment*)
+  "The `//# sourceURL=` comment pattern. The PATTERN lives in transforms.lisp
+(its owner in the Rust) and is compiled here; bundler keeps no copy of its own.
+The bundler gate asserts this compiles from the shared constant, so the two
+cannot drift.")
 
 (defparameter *webpack-prefix* (cl-ppcre:create-scanner "^webpack(-internal)?://"))
 (defparameter *dot-slash* (cl-ppcre:create-scanner "^\\./"))

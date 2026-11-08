@@ -47,6 +47,12 @@
    #:to-fixed
    #:parse-int))
 
+(defpackage :vovas.engine.transforms
+  (:use :cl)
+  (:export
+   #:decode-uri-component
+   #:*source-url-comment*))
+
 (defpackage :vovas.engine.text
   (:use :cl)
   (:import-from :vovas.engine.util
@@ -55,6 +61,7 @@
                 #:regex-escape)
   (:import-from :vovas.engine.number
                 #:to-string #:js-round #:to-fixed)
+  (:import-from :vovas.engine.transforms #:decode-uri-component)
   (:export
    #:hash-string
    #:safe-decode-uri-component

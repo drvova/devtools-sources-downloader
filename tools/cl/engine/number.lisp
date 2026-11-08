@@ -20,9 +20,14 @@
 (defparameter +digit-chars+ "0123456789abcdefghijklmnopqrstuvwxyz")
 
 (defun nan ()
-  "A fresh NaN. SBCL has no read-time NaN literal that survives a fasl, so it is
-computed: 0/0 is a quiet NaN, and `float` keeps it a double."
-  (/ 0d0 0d0))
+  "A fresh quiet NaN.
+
+Every arithmetic route to NaN gets CONSTANT-FOLDED by SBCL's compiler, and
+folding `(/ 0d0 0d0)` SIGNALS floating-point-invalid-operation - so the
+division-based definition fails at compile time with a constant-folding style
+warning, through a `let` as well as directly. Building the IEEE-754 quiet-NaN
+pattern is a bit operation, which folds to a value with no float trap."
+  (sb-kernel:make-double-float #x7ff80000 0))
 
 (defun float-nan-p (value)
   "Whether VALUE is NaN.
