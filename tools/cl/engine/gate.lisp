@@ -689,6 +689,7 @@ ERROR verdict when that gate finally runs."
         ;; registered, so it had never run in the full suite. A gate outside
         ;; gate-list is invisible to CI and can regress silently.
         (cons "transforms (engine gate)" #'run-transforms-gate)
+        (cons "locale compare (spec)" #'run-locale-gate)
         (cons "report rendering (panel oracle)" #'run-report-gate)
         (cons "report table (panel oracle)" #'run-report-table-gate)
         (cons "report exports (panel oracle)" #'run-report-export-gate)
@@ -758,3 +759,62 @@ port bug rather than a test-harness one."
     (vovas.engine.panel.report:export-runtime-artifacts
      (lambda (path content) (push path files)) entries)
     (format t "~&RT-FILES ~s~%" (nreverse files))))
+
+;;; ---------------------------------------------------------------------------
+;;; locale-compare
+;;;
+;;; This function had NO gate on either side - the Rust has no test for
+;;; `js_locale_compare` and the fixtures carry no key for it - yet `model.lisp`
+;;; uses it for all three sort orders, so a wrong tie-break reorders the panel's
+;;; resource list silently.
+;;;
+;;; The port DID have the wrong tie-break: it fell through to `string<` on the
+;;; raw strings, where #\A < #\a by code point, which inverts every case-differing
+;;; pair. The specification compares a per-character case key instead, uppercase
+;;; = 1 and lowercase = 0, so among case-folded-equal strings LOWERCASE WINS.
+;;;
+;;; These cases are derived from the Rust body, not captured from an oracle:
+;;; there is no oracle to capture. Two groups - folded-unequal, where only the
+;;; fold matters, and folded-equal, where only the case key does.
+;;; ---------------------------------------------------------------------------
+
+(defun run-locale-gate (&key (verbose t))
+  (let ((result (make-gate-result))
+        (count 0))
+    (flet ((expect (left right want)
+             (incf count)
+             (check result (format nil "locale/~s~a~s" left "<->" right)
+                    "ordering"
+                    (vovas.engine.text:locale-compare left right)
+                    want)))
+      ;; ---- folded differ: the fold decides, case never consulted ----------
+      (expect "a" "b" :less)
+      (expect "b" "a" :greater)
+      (expect "B" "a" :greater)      ; "b" > "a" after folding
+      (expect "apple" "Banana" :less)
+      (expect "Banana" "apple" :greater)
+      (expect "" "a" :less)
+      (expect "a" "" :greater)
+
+      ;; ---- folded equal: the CASE KEY decides, and lowercase is 0 ---------
+      (expect "a" "A" :less)
+      (expect "A" "a" :greater)
+      (expect "aB" "Ab" :less)       ; keys [0 1] vs [1 0], first char decides
+      (expect "Ab" "aB" :greater)
+      (expect "ab" "AB" :less)
+      (expect "AB" "ab" :greater)
+      (expect "b" "B" :less)
+      (expect "B" "b" :greater)
+
+      ;; ---- identical strings are EQUAL, not "less by tie-break" ----------
+      (expect "abc" "abc" :equal)
+      (expect "" "" :equal)
+      (expect "ABC" "ABC" :equal))
+
+    (when verbose
+      (format t "~&locale gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

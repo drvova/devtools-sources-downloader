@@ -381,16 +381,38 @@ units, falling back to \"page\"."
     (t (format nil "~a s" (to-fixed (/ ms 1000d0) 2)))))
 
 (defun locale-compare (left right)
-  "`localeCompare` approximation for the panel's sort orders: compare case
-folded, then lowercase before uppercase. Answers :LESS, :EQUAL or :GREATER."
+  "`js_locale_compare`: case-folded compare, then a CASE KEY tie-break.
+
+The tie-break is NOT a plain string compare. The Rust builds a per-character key
+where UPPERCASE is 1 and lowercase is 0, then compares those vectors
+lexicographically - so among strings that fold equal, LOWERCASE SORTS FIRST.
+Comparing the raw strings instead puts `#\\A` before `#\\a` by code point and
+inverts the order for every case-differing pair.
+
+Answers :LESS, :EQUAL or :GREATER."
   (let ((lf (string-downcase left))
         (rf (string-downcase right)))
     (cond
       ((string< lf rf) :less)
       ((string> lf rf) :greater)
-      ;; fold equal: the tie-break puts lowercase first, which is the default
-      ;; collation's tertiary level for ASCII
       ((string= left right) :equal)
-      ((string< left right) :less)
-      ((string> left right) :greater)
-      (t :equal))))
+      (t (let* ((n (min (length left) (length right)))
+                (cmp 0))
+           ;; element-wise over the case keys; the first difference decides
+           (dotimes (i n)
+             (when (zerop cmp)
+               (let ((lk (if (and (char>= (char left i) #\A)
+                                  (char<= (char left i) #\Z))
+                             1 0))
+                     (rk (if (and (char>= (char right i) #\A)
+                                  (char<= (char right i) #\Z))
+                             1 0)))
+                 (cond ((< lk rk) (setf cmp -1))
+                       ((> lk rk) (setf cmp 1))))))
+           ;; all shared positions matched: the SHORTER key is less, matching
+           ;; the lexicographic compare on unequal-length byte vectors
+           (cond ((< cmp 0) :less)
+                 ((> cmp 0) :greater)
+                 ((< (length left) (length right)) :less)
+                 ((> (length left) (length right)) :greater)
+                 (t :equal)))))))
