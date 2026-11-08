@@ -104,3 +104,204 @@ a non-zero count, so a renamed section fails loudly."
       (report-failures result))
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count)))))
+
+
+;;; ===========================================================================
+;;; SLICE 2 gate: the pipeline tier
+;;;
+;;; `prepare-script-assets` and the runtime builders, driven by the paired
+;;; fixture's shared inputs (`fixtures.scriptFixture`, `reconFixture`,
+;;; `runtimeEntries`, `runtimeManifest`). The oracle compares PROJECTED records -
+;;; the prepared assets were captured before the boundary pass, so the entries
+;;; carry no boundary keys - which is why the comparison here projects the same
+;;; keys the oracle's template carries rather than requiring an exact record.
+;;; ===========================================================================
+
+(defun assets-fixtures ()
+  (let* ((fx (read-json-file (fixture-path "panel/assets-oracle-paired.json")))
+         (f (gethash "fixtures" fx)))
+    (values (coerce (gethash "scriptFixture" f) 'list)
+            (gethash "reconFixture" f)
+            (coerce (gethash "runtimeEntries" f) 'list)
+            (coerce (gethash "runtimeManifest" f) 'list))))
+
+(defun project-record (plist keys)
+  "Keep only KEYS, in the oracle's order."
+  (loop for k in keys append (list k (getf plist k))))
+
+(defun json-wire (keyword)
+  "`:transfer-size` -> `\"transferSize\"`, for comparing against oracle keys."
+  (let ((out (make-string-output-stream))
+        (up nil))
+    (loop for c across (string-downcase (symbol-name keyword))
+          do (cond ((char= c #\-) (setf up t))
+                   (up (write-char (char-upcase c) out) (setf up nil))
+                   (t (write-char c out))))
+    (get-output-stream-string out)))
+
+(defun plist-to-wire (plist)
+  "A plist compared by WIRE key name, so oracle JSON and port plist can be
+compared without a hand-written per-field table."
+  (let ((h (make-hash-table :test #'equal)))
+    (loop for (k v) on plist by #'cddr
+          do (setf (gethash (json-wire k) h) v))
+    h))
+
+(defun wire-scalar (v)
+  "Normalise a JSON scalar for comparison: JZON null to NIL, numbers to
+double-floats, and a character vector to a string."
+  (cond
+    ((null (json-null v)) nil)
+    ((and (vectorp v) (plusp (length v)) (characterp (aref v 0))) (coerce v 'string))
+    ((numberp v) (coerce v 'double-float))
+    (t v)))
+
+(defun module-signals-wire (signals)
+  "A `module-signals` struct as the oracle spells it, for field-by-field compare."
+  (when signals
+    (let ((h (make-hash-table :test #'equal)))
+      (setf (gethash "importCount" h) (vovas.engine.panel.assets:module-signals-import-count signals)
+            (gethash "dynamicImports" h) (vovas.engine.panel.assets:module-signals-dynamic-imports signals)
+            (gethash "requires" h) (vovas.engine.panel.assets:module-signals-requires signals)
+            (gethash "exports" h) (vovas.engine.panel.assets:module-signals-exports signals))
+      h)))
+
+(defun jzon-null-p (v)
+  "Whether V is JZON's `null` symbol (or NIL, which is what the port uses)."
+  (or (null v)
+      (and (symbolp v) (string= (symbol-name v) "NULL"))))
+
+(defun json-scalar= (got want)
+  "Compare a port value against a JZON-parsed oracle value, coercing the shapes
+that differ by representation rather than meaning: JZON gives strings as
+CHARACTER VECTORS, arrays as VECTORS, null as its own symbol, while the port
+holds Lisp strings, lists and NIL.
+
+`json-null` returns its argument unchanged for non-nulls, so `(null (json-null x))`
+is TRUE for every value - the null tests below must use `jzon-null-p` instead."
+  (let ((g-null (jzon-null-p got))
+        (w-null (jzon-null-p want)))
+    (cond
+      ;; an empty JSON array and a port NIL are the same answer: the port spells
+      ;; \"no entries\" as NIL, the oracle as []
+      ((and (vectorp want) (zerop (length want)))
+       (or g-null (and (listp got) (null got)) (and (vectorp got) (zerop (length got)))))
+      ((and (vectorp got) (zerop (length got))) w-null)
+      (g-null w-null)
+      (w-null nil)
+      ;; JZON string: a vector of characters
+      ((and (vectorp want) (plusp (length want)) (characterp (aref want 0)))
+       (and (stringp got) (string= got (coerce want 'string))))
+      ((and (vectorp got) (plusp (length got)) (characterp (aref got 0)))
+       (and (vectorp want) (string= (coerce got 'string) (coerce want 'string))))
+      ((and (numberp got) (numberp want))
+       (= (coerce got 'double-float) (coerce want 'double-float)))
+      ;; a port LIST against a JZON VECTOR: same JSON array, different container
+      ((and (listp got) (vectorp want))
+       (and (= (length got) (length want))
+            (loop for i below (length want)
+                  always (json-scalar= (nth i got) (aref want i)))))
+      ((and (vectorp got) (listp want)) (json-scalar= want got))
+      ((and (vectorp got) (vectorp want))
+       (and (= (length got) (length want))
+            (loop for i below (length want)
+                  always (json-scalar= (aref got i) (aref want i)))))
+      (t (equal got want)))))
+
+(defun run-assets-pipeline-gate (&key (verbose t))
+  (let* ((oracle (read-json-file (fixture-path "panel/assets-oracle.json")))
+         (exp (gethash "expected" oracle))
+         (result (make-gate-result))
+         (count 0)
+         (prepared nil))
+    (multiple-value-bind (scripts recon entries manifest) (assets-fixtures)
+      (setf prepared (vovas.engine.panel.assets:prepare-script-assets scripts recon))
+
+      ;; --- prepareScriptAssets: the projection the oracle carries ----------
+      (let ((want (gethash "prepareScriptAssets" exp)))
+        (incf count)
+        (check result "prepare-script-assets/count" "scripts"
+               (length prepared) (length want))
+        (when (= (length prepared) (length want))
+          (loop for got in prepared
+                for i from 0
+                for w across want
+                do (let ((gh (plist-to-wire
+                              (vovas.engine.panel.assets:strip-chunk-asset got))))
+                     ;; `content` is NOT in the stripped view (that is what strip
+                     ;; means) but the oracle's captured projection carries it,
+                     ;; because the snapshot was taken before the boundary pass.
+                     (setf (gethash "content" gh)
+                           (vovas.engine.panel.assets:script-asset-content got))
+                     (setf (gethash "moduleSignals" gh)
+                           (module-signals-wire
+                            (vovas.engine.panel.assets:script-asset-module-signals got)))
+                     ;; every key the oracle template carries must agree
+                     (loop for key being the hash-keys of w
+                           do (incf count)
+                              (let ((want-v (gethash key w))
+                                    (got-v (gethash key gh)))
+                                (if (hash-table-p want-v)
+                                    ;; nested object: compare key by key
+                                    (check result (format nil "prepare/~a" key) i
+                                           (loop for wk being the hash-keys of want-v
+                                                 collect (cons wk (wire-scalar (gethash wk got-v))))
+                                           (loop for wk being the hash-keys of want-v
+                                                 collect (cons wk (wire-scalar (gethash wk want-v)))))
+                                    ;; scalars and arrays: `json-scalar=` knows
+                                    ;; that a port LIST and a JZON VECTOR are the
+                                    ;; same JSON array
+                                    (check result (format nil "prepare/~a" key) i
+                                           (json-scalar= got-v want-v) t))))))))
+
+      ;; --- the same with no recon ------------------------------------------
+      (let* ((no-recon (vovas.engine.panel.assets:prepare-script-assets scripts nil))
+             (want (gethash "prepareScriptAssetsNoRecon" exp)))
+        (incf count)
+        (check result "prepare-no-recon/count" "scripts"
+               (length no-recon) (length want)))
+
+      ;; --- chunk summary and strip ----------------------------------------
+      (let ((got (vovas.engine.panel.assets:build-chunk-summary prepared))
+            (want (gethash "buildChunkSummary" exp)))
+        (dolist (pair '(("totalScripts" . :total-scripts)
+                        ("sourceMapEmbedded" . :source-map-embedded)
+                        ("dynamicImporters" . :dynamic-importers)
+                        ("labeledScripts" . :labeled-scripts)))
+          (incf count)
+          (check result (format nil "chunk-summary/~a" (car pair)) "summary"
+                 (getf got (cdr pair))
+                 (truncate (gethash (car pair) want)))))
+      (let ((want (gethash "stripChunkAsset" exp)))
+        (incf count)
+        ;; `strip_chunk_asset` is single-asset in the Rust and returns the 19-key
+        ;; view; the oracle's `stripChunkAsset` is that one view. Passing the whole
+        ;; list was a gate bug - the port was already faithful.
+        (let ((got (vovas.engine.panel.assets:strip-chunk-asset (first prepared))))
+          (check result "strip-chunk-asset/keys" "key count"
+                 (/ (length got) 2) (hash-table-count want))))
+
+      ;; --- runtime origins -------------------------------------------------
+      (let ((origins (vovas.engine.panel.assets:build-runtime-origins
+                      entries manifest prepared)))
+        (incf count)
+        (check result "runtime-origins/count" "origins"
+               (length origins) (length (gethash "buildRuntimeOrigins" exp)))
+        (let ((summary (vovas.engine.panel.assets:build-runtime-summary origins))
+              (want (gethash "buildRuntimeSummary" exp)))
+          (incf count)
+          (check result "runtime-summary/total" "entries"
+                 (getf summary :total-runtime-entries)
+                 (truncate (gethash "totalRuntimeEntries" want)))
+          (incf count)
+          (check result "runtime-summary/linked" "linked"
+                 (getf summary :linked-to-chunks)
+                 (truncate (gethash "linkedToChunks" want)))))
+      )
+
+    (when verbose
+      (format t "~&assets pipeline gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

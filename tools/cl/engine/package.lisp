@@ -197,6 +197,12 @@
 (defpackage :vovas.engine.panel.assets
   (:use :cl)
   (:import-from :vovas.engine.util #:js-trim #:utf16-length)
+  ;; The counting helpers live in `model` (it owns the insertion-ordered
+  ;; `counts` struct). Imported by name rather than qualified at each call site
+  ;; because five functions here use them; `model` is a LEAF that loads before
+  ;; `assets`, so there is no cycle.
+  (:import-from :vovas.engine.panel.model #:make-counts #:counts-add
+                #:counts-alist #:js-truthy #:js-number #:json-null-p)
   (:import-from :vovas.engine.text #:parse-url-for-panel #:parsed-url-path
                 #:safe-decode-uri-component)
   (:export
@@ -205,7 +211,28 @@
    #:asset-sample #:detect-bundler-name #:detect-framework-hints
    #:detect-startup-signals #:extract-route-hints-from-url
    #:extract-import-specifiers #:split-on-slash #:keys-len
-   #:field #:field-str #:field-number))
+   #:field #:field-str #:field-number
+   #:module-signals #:make-module-signals
+   #:module-signals-import-count #:module-signals-dynamic-imports
+   #:module-signals-requires #:module-signals-exports
+   #:script-asset #:make-script-asset
+   #:script-asset-id #:script-asset-url #:script-asset-file #:script-asset-size
+   #:script-asset-transfer-size #:script-asset-start-time #:script-asset-duration
+   #:script-asset-imports #:script-asset-module-signals #:script-asset-bundler
+   #:script-asset-framework-hints #:script-asset-route-hints
+   #:script-asset-startup-signals #:script-asset-source-map-embedded
+   #:script-asset-content #:script-asset-classification #:script-asset-score
+   #:script-asset-boundary-details #:script-asset-boundary-labels
+   #:script-asset-primary-boundary #:script-asset-boundary-reasons
+   #:boundary-detail #:make-boundary-detail #:boundary-detail-label
+   #:boundary-detail-score #:boundary-detail-reasons
+   #:prepare-script-assets #:classify-script-asset #:score-script-asset
+   #:count-classifications #:count-boundary-labels #:count-tagged-entries
+   #:build-chunk-summary #:strip-chunk-asset
+   #:find-asset-by-reference #:value-text
+   #:determine-runtime-origin-type #:score-runtime-entry
+   #:build-runtime-origins #:build-runtime-summary #:strip-runtime-entry
+   #:count-origin-property #:asset-sample #:count-matches))
 
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
