@@ -82,6 +82,7 @@
                              ;; one of them, so it must load after them.
                              (:file "analysis")
                              (:file "wf-consts")
+                             (:file "inv-consts")
                              (:file "report")
                              (:file "paths")
                              (:file "graph")

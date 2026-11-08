@@ -447,7 +447,9 @@
    #:*wf-color-dns* #:*wf-color-tcp* #:*wf-color-ssl*
    #:*wf-color-ttfb* #:*wf-color-download*
    #:*wf-color-text* #:*wf-color-bg* #:*wf-color-stripe*
-   #:*wf-strip-origin*))
+   #:*wf-strip-origin*
+   #:generate-investigation-index-html
+   #:*styles* #:*script* #:*investigation-doc* #:*investigation-doctype*))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)

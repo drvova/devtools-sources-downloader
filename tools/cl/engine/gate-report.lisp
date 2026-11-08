@@ -295,3 +295,107 @@ Beyond the offset it shows a short window from each side, because the alternativ
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; generateInvestigationIndexHtml
+;;;
+;;; NO ORACLE exists for this function - the fixture pins six report functions and
+;;; this is not one of them. It therefore asserts the properties the code PROMISES,
+;;; on a hostile input, rather than comparing a stored string:
+;;;
+;;;   - a complete document: doctype, body, closing tag;
+;;;   - the element ids the SCRIPT looks up by name;
+;;;   - a literal `</script>` inside the payload is unicode-escaped, so it cannot
+;;;     close the data tag early (the one real injection risk here);
+;;;   - the page title and URL are HTML-escaped;
+;;;   - both constant blocks rendered.
+;;; ---------------------------------------------------------------------------
+
+(defun gate-has (needle haystack)
+  "Whether NEEDLE occurs in HAYSTACK, as a boolean.
+
+A named helper rather than an `flet`, so a scope slip shows up as a missing
+function instead of a mysteriously unbound variable."
+  (and (search needle haystack) t))
+
+(defun gate-investigation-fixture ()
+  "An investigation carrying every hostile shape the template must survive."
+  (let* ((page (ht "title" "T <x> & \"q\"" "url" "https://demo.test/a?b=1&c=2"))
+         (inv (ht "page" page "note" "</script><img src=x onerror=alert(1)>")))
+    inv))
+
+(defun run-report-investigation-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (inv (gate-investigation-fixture))
+         (doc (vovas.engine.panel.report:generate-investigation-index-html inv))
+         (empty (vovas.engine.panel.report:generate-investigation-index-html nil)))
+
+    (incf count)
+    (check result "investigation/doctype" "prefix"
+           (subseq doc 0 15) "<!DOCTYPE html>")
+
+    (incf count)
+    (check result "investigation/closes" "suffix"
+           (subseq doc (- (length doc) 7)) "</html>")
+
+    (incf count)
+    (check result "investigation/body" "element"
+           (gate-has "<body>" doc) t)
+
+    (dolist (id '("workspaceNav" "journeyNav" "view" "summaryCards" "investigation-data"))
+      (incf count)
+      (check result (format nil "investigation/id/~a" id) "present"
+             (gate-has (format nil "id=\"~a\"" id) doc) t))
+
+    (incf count)
+    (check result "investigation/script-escaped" "escaped"
+           (gate-has "\\u003c/script\\u003e" doc) t)
+
+    ;; The document legitimately carries TWO script blocks - the embedded data and
+    ;; the console script - so `</script>` appears twice. The property that
+    ;; actually matters is that closings never OUTNUMBER openings: an unescaped
+    ;; `</script>` inside the payload would add a third close and end the data
+    ;; block mid-JSON. Asserting a fixed count would have been wrong, and it was:
+    ;; my first version expected 1 and failed on a correct document.
+    (incf count)
+    (check result "investigation/script-close-count" "closes <= opens"
+           (labels ((count-of (needle)
+                      (let ((n 0) (pos 0))
+                        (loop for hit = (search needle doc :start2 pos)
+                              while hit do (incf n) (setf pos (+ hit (length needle))))
+                        n)))
+             (<= (count-of "</script>") (count-of "<script")))
+           t)
+
+    (incf count)
+    (check result "investigation/title-escaped" "escaped"
+           (gate-has "&lt;x&gt;" doc) t)
+
+    (incf count)
+    (check result "investigation/url-escaped" "escaped"
+           (gate-has "b=1&amp;c=2" doc) t)
+
+    (incf count)
+    (check result "investigation/styles" "rules"
+           (gate-has "*{box-sizing:border-box}" doc) t)
+
+    (incf count)
+    (check result "investigation/script-block" "fragments"
+           (gate-has "function esc(" doc) t)
+
+    (incf count)
+    (check result "investigation/null-title" "fallback"
+           (gate-has ">Investigation Console<br>" empty) t)
+
+    (incf count)
+    (check result "investigation/null-json" "payload"
+           (gate-has "application/json\">{}</script>" empty) t)
+
+    (when verbose
+      (format t "~&report investigation gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

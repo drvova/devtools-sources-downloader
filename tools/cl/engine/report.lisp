@@ -481,3 +481,49 @@ the oracle pins as the empty case."
                          (coerce sorted 'vector))
                         out)
           (write-string *wf-37* out))))))
+
+;;; ---------------------------------------------------------------------------
+;;; generateInvestigationIndexHtml
+;;;
+;;; The console page: a static shell with the analysis embedded as JSON in a
+;;; script tag and the SCRIPT fragment driving it client-side. Both the STYLES
+;;; and SCRIPT arrays are loaded from inv-consts.lisp, extracted mechanically.
+;;; ---------------------------------------------------------------------------
+
+(defparameter *investigation-doc*
+  "~a<html lang=\"en\">~%<head>~%<meta charset=\"UTF-8\">~%<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">~%<title>Investigation Console</title>~%<style>~a</style>~%</head>~%<body>~%<div class=\"shell\">~%<aside class=\"sidebar\">~%<h1 class=\"title\">Investigation Console</h1>~%<div class=\"sub\">~a<br>~a</div>~%<div class=\"section-title\">Workspaces</div><div id=\"workspaceNav\" class=\"nav\"></div>~%<div class=\"section-title\">Journeys</div><div id=\"journeyNav\" class=\"nav\"></div>~%</aside>~%<main class=\"main\">~%<div id=\"summaryCards\" class=\"cards\"></div>~%<div id=\"view\"></div>~%</main>~%</div>~%<script id=\"investigation-data\" type=\"application/json\">~a</script>~%<script>~a</script>~%</body>~%</html>")
+
+(defparameter *investigation-doctype* "<!DOCTYPE html>")
+
+(defun generate-investigation-index-html (investigation)
+  "`generateInvestigationIndexHtml`: the analysis rendered as a console page.
+
+The TITLE in `<title>` is the constant \"Investigation Console\"; the `<h1>` is
+too. Only the sidebar subtitle varies - it shows the page title, falling back to
+the page URL and then to \"Investigation Console\".
+
+The embedded data is `investigation` itself, with a non-truthy argument
+serialised as `{}` so the page always parses. `<`, `>` and `&` inside it are
+unicode-escaped by `serialize-inline-json`, which is what keeps a `</script>`
+string from closing the tag early."
+  (let* ((truthy (vovas.engine.panel.model:js-truthy investigation))
+         (page (if truthy
+                   (let ((v (vovas.engine.panel.assets:field investigation "page")))
+                     (if (vovas.engine.panel.model:js-truthy v) v
+                         (make-hash-table :test #'equal)))
+                   (make-hash-table :test #'equal)))
+         (title (let ((t1 (vovas.engine.panel.assets:field-str page "title")))
+                  (if (plusp (length t1))
+                      t1
+                      (let ((u (vovas.engine.panel.assets:field-str page "url")))
+                        (if (plusp (length u)) u "Investigation Console")))))
+         (page-url (vovas.engine.panel.assets:field-str page "url"))
+         (data (vovas.engine.panel.artifacts:serialize-inline-json
+                (if truthy investigation (make-hash-table :test #'equal)))))
+    (format nil *investigation-doc*
+            *investigation-doctype*
+            (format nil "~{~a~}" *styles*)
+            (escape-html title)
+            (escape-html page-url)
+            data
+            (format nil "~{~a~^~%~}" *script*))))
