@@ -1,0 +1,656 @@
+{
+ "toString": [
+  {
+   "bits": "0x0000000000000000",
+   "expected": "0"
+  },
+  {
+   "bits": "0x3ff0000000000000",
+   "expected": "1"
+  },
+  {
+   "bits": "0x4000000000000000",
+   "expected": "2"
+  },
+  {
+   "bits": "0x4008000000000000",
+   "expected": "3"
+  },
+  {
+   "bits": "0x4024000000000000",
+   "expected": "10"
+  },
+  {
+   "bits": "0x4059000000000000",
+   "expected": "100"
+  },
+  {
+   "bits": "0x408f400000000000",
+   "expected": "1000"
+  },
+  {
+   "bits": "0x40c81c8000000000",
+   "expected": "12345"
+  },
+  {
+   "bits": "0x405edccccccccccd",
+   "expected": "123.45"
+  },
+  {
+   "bits": "0x3fb999999999999a",
+   "expected": "0.1"
+  },
+  {
+   "bits": "0x3fe0000000000000",
+   "expected": "0.5"
+  },
+  {
+   "bits": "0x3ff8000000000000",
+   "expected": "1.5"
+  },
+  {
+   "bits": "0x4004000000000000",
+   "expected": "2.5"
+  },
+  {
+   "bits": "0x3ff4000000000000",
+   "expected": "1.25"
+  },
+  {
+   "bits": "0x3ff0147ae147ae14",
+   "expected": "1.005"
+  },
+  {
+   "bits": "0x408f3f999999999a",
+   "expected": "999.95"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "expected": "1e-7"
+  },
+  {
+   "bits": "0x3eb0c6f7a0b5ed8d",
+   "expected": "0.000001"
+  },
+  {
+   "bits": "0x3ee4f8b588e368f1",
+   "expected": "0.00001"
+  },
+  {
+   "bits": "0x3e8421f5f40d8376",
+   "expected": "1.5e-7"
+  },
+  {
+   "bits": "0x4415af1d78b58c40",
+   "expected": "100000000000000000000"
+  },
+  {
+   "bits": "0x444b1ae4d6e2ef50",
+   "expected": "1e+21"
+  },
+  {
+   "bits": "0x4480f0cf064dd592",
+   "expected": "1e+22"
+  },
+  {
+   "bits": "0x00000000000007e8",
+   "expected": "1e-320"
+  },
+  {
+   "bits": "0x0000000000000001",
+   "expected": "5e-324"
+  },
+  {
+   "bits": "0x7fefffffffffffff",
+   "expected": "1.7976931348623157e+308"
+  },
+  {
+   "bits": "0x433fffffffffffff",
+   "expected": "9007199254740991"
+  },
+  {
+   "bits": "0x4340000000000000",
+   "expected": "9007199254740992"
+  },
+  {
+   "bits": "0x4340000000000000",
+   "expected": "9007199254740992"
+  },
+  {
+   "bits": "0x8000000000000000",
+   "expected": "0"
+  },
+  {
+   "bits": "0xbff0000000000000",
+   "expected": "-1"
+  },
+  {
+   "bits": "0xbff8000000000000",
+   "expected": "-1.5"
+  },
+  {
+   "bits": "0xc05edccccccccccd",
+   "expected": "-123.45"
+  },
+  {
+   "bits": "0xbe7ad7f29abcaf48",
+   "expected": "-1e-7"
+  },
+  {
+   "bits": "0xc44b1ae4d6e2ef50",
+   "expected": "-1e+21"
+  },
+  {
+   "bits": "0x3eb0c6f7a0b5ed8d",
+   "expected": "0.000001"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "expected": "1e-7"
+  },
+  {
+   "bits": "0x441ac53a7e04bcda",
+   "expected": "123456789012345680000"
+  },
+  {
+   "bits": "0x3fd5555555555555",
+   "expected": "0.3333333333333333"
+  },
+  {
+   "bits": "0x3fe5555555555555",
+   "expected": "0.6666666666666666"
+  },
+  {
+   "bits": "0x3f1a36e2eb1c432d",
+   "expected": "0.0001"
+  },
+  {
+   "bits": "0x3ff199999999999a",
+   "expected": "1.1"
+  },
+  {
+   "bits": "0x400199999999999a",
+   "expected": "2.2"
+  },
+  {
+   "bits": "0x400a666666666666",
+   "expected": "3.3"
+  },
+  {
+   "bits": "0x3fd3333333333334",
+   "expected": "0.30000000000000004"
+  },
+  {
+   "bits": "0x4040aa3d70a3d70a",
+   "expected": "33.33"
+  },
+  {
+   "bits": "0x3ec92a737110e454",
+   "expected": "0.000003"
+  },
+  {
+   "bits": "0x7ff0000000000000",
+   "expected": "Infinity"
+  },
+  {
+   "bits": "0xfff0000000000000",
+   "expected": "-Infinity"
+  },
+  {
+   "bits": "0x7ff8000000000000",
+   "expected": "NaN"
+  }
+ ],
+ "toFixed": [
+  {
+   "bits": "0x0000000000000000",
+   "d": 0,
+   "expected": "0"
+  },
+  {
+   "bits": "0x0000000000000000",
+   "d": 1,
+   "expected": "0.0"
+  },
+  {
+   "bits": "0x0000000000000000",
+   "d": 2,
+   "expected": "0.00"
+  },
+  {
+   "bits": "0x0000000000000000",
+   "d": 3,
+   "expected": "0.000"
+  },
+  {
+   "bits": "0x0000000000000000",
+   "d": 6,
+   "expected": "0.000000"
+  },
+  {
+   "bits": "0x3ff0000000000000",
+   "d": 0,
+   "expected": "1"
+  },
+  {
+   "bits": "0x3ff0000000000000",
+   "d": 1,
+   "expected": "1.0"
+  },
+  {
+   "bits": "0x3ff0000000000000",
+   "d": 2,
+   "expected": "1.00"
+  },
+  {
+   "bits": "0x3ff0000000000000",
+   "d": 3,
+   "expected": "1.000"
+  },
+  {
+   "bits": "0x3ff0000000000000",
+   "d": 6,
+   "expected": "1.000000"
+  },
+  {
+   "bits": "0x3ff4000000000000",
+   "d": 0,
+   "expected": "1"
+  },
+  {
+   "bits": "0x3ff4000000000000",
+   "d": 1,
+   "expected": "1.3"
+  },
+  {
+   "bits": "0x3ff4000000000000",
+   "d": 2,
+   "expected": "1.25"
+  },
+  {
+   "bits": "0x3ff4000000000000",
+   "d": 3,
+   "expected": "1.250"
+  },
+  {
+   "bits": "0x3ff4000000000000",
+   "d": 6,
+   "expected": "1.250000"
+  },
+  {
+   "bits": "0x3ff0147ae147ae14",
+   "d": 0,
+   "expected": "1"
+  },
+  {
+   "bits": "0x3ff0147ae147ae14",
+   "d": 1,
+   "expected": "1.0"
+  },
+  {
+   "bits": "0x3ff0147ae147ae14",
+   "d": 2,
+   "expected": "1.00"
+  },
+  {
+   "bits": "0x3ff0147ae147ae14",
+   "d": 3,
+   "expected": "1.005"
+  },
+  {
+   "bits": "0x3ff0147ae147ae14",
+   "d": 6,
+   "expected": "1.005000"
+  },
+  {
+   "bits": "0x3ff8000000000000",
+   "d": 0,
+   "expected": "2"
+  },
+  {
+   "bits": "0x3ff8000000000000",
+   "d": 1,
+   "expected": "1.5"
+  },
+  {
+   "bits": "0x3ff8000000000000",
+   "d": 2,
+   "expected": "1.50"
+  },
+  {
+   "bits": "0x3ff8000000000000",
+   "d": 3,
+   "expected": "1.500"
+  },
+  {
+   "bits": "0x3ff8000000000000",
+   "d": 6,
+   "expected": "1.500000"
+  },
+  {
+   "bits": "0x4004000000000000",
+   "d": 0,
+   "expected": "3"
+  },
+  {
+   "bits": "0x4004000000000000",
+   "d": 1,
+   "expected": "2.5"
+  },
+  {
+   "bits": "0x4004000000000000",
+   "d": 2,
+   "expected": "2.50"
+  },
+  {
+   "bits": "0x4004000000000000",
+   "d": 3,
+   "expected": "2.500"
+  },
+  {
+   "bits": "0x4004000000000000",
+   "d": 6,
+   "expected": "2.500000"
+  },
+  {
+   "bits": "0x400921f9f01b866e",
+   "d": 0,
+   "expected": "3"
+  },
+  {
+   "bits": "0x400921f9f01b866e",
+   "d": 1,
+   "expected": "3.1"
+  },
+  {
+   "bits": "0x400921f9f01b866e",
+   "d": 2,
+   "expected": "3.14"
+  },
+  {
+   "bits": "0x400921f9f01b866e",
+   "d": 3,
+   "expected": "3.142"
+  },
+  {
+   "bits": "0x400921f9f01b866e",
+   "d": 6,
+   "expected": "3.141590"
+  },
+  {
+   "bits": "0x408f3f999999999a",
+   "d": 0,
+   "expected": "1000"
+  },
+  {
+   "bits": "0x408f3f999999999a",
+   "d": 1,
+   "expected": "1000.0"
+  },
+  {
+   "bits": "0x408f3f999999999a",
+   "d": 2,
+   "expected": "999.95"
+  },
+  {
+   "bits": "0x408f3f999999999a",
+   "d": 3,
+   "expected": "999.950"
+  },
+  {
+   "bits": "0x408f3f999999999a",
+   "d": 6,
+   "expected": "999.950000"
+  },
+  {
+   "bits": "0x3fa999999999999a",
+   "d": 0,
+   "expected": "0"
+  },
+  {
+   "bits": "0x3fa999999999999a",
+   "d": 1,
+   "expected": "0.1"
+  },
+  {
+   "bits": "0x3fa999999999999a",
+   "d": 2,
+   "expected": "0.05"
+  },
+  {
+   "bits": "0x3fa999999999999a",
+   "d": 3,
+   "expected": "0.050"
+  },
+  {
+   "bits": "0x3fa999999999999a",
+   "d": 6,
+   "expected": "0.050000"
+  },
+  {
+   "bits": "0x3fc3333333333333",
+   "d": 0,
+   "expected": "0"
+  },
+  {
+   "bits": "0x3fc3333333333333",
+   "d": 1,
+   "expected": "0.1"
+  },
+  {
+   "bits": "0x3fc3333333333333",
+   "d": 2,
+   "expected": "0.15"
+  },
+  {
+   "bits": "0x3fc3333333333333",
+   "d": 3,
+   "expected": "0.150"
+  },
+  {
+   "bits": "0x3fc3333333333333",
+   "d": 6,
+   "expected": "0.150000"
+  },
+  {
+   "bits": "0x40934a456d5cfaad",
+   "d": 0,
+   "expected": "1235"
+  },
+  {
+   "bits": "0x40934a456d5cfaad",
+   "d": 1,
+   "expected": "1234.6"
+  },
+  {
+   "bits": "0x40934a456d5cfaad",
+   "d": 2,
+   "expected": "1234.57"
+  },
+  {
+   "bits": "0x40934a456d5cfaad",
+   "d": 3,
+   "expected": "1234.568"
+  },
+  {
+   "bits": "0x40934a456d5cfaad",
+   "d": 6,
+   "expected": "1234.567800"
+  },
+  {
+   "bits": "0xbff4000000000000",
+   "d": 0,
+   "expected": "-1"
+  },
+  {
+   "bits": "0xbff4000000000000",
+   "d": 1,
+   "expected": "-1.3"
+  },
+  {
+   "bits": "0xbff4000000000000",
+   "d": 2,
+   "expected": "-1.25"
+  },
+  {
+   "bits": "0xbff4000000000000",
+   "d": 3,
+   "expected": "-1.250"
+  },
+  {
+   "bits": "0xbff4000000000000",
+   "d": 6,
+   "expected": "-1.250000"
+  },
+  {
+   "bits": "0xbfa999999999999a",
+   "d": 0,
+   "expected": "-0"
+  },
+  {
+   "bits": "0xbfa999999999999a",
+   "d": 1,
+   "expected": "-0.1"
+  },
+  {
+   "bits": "0xbfa999999999999a",
+   "d": 2,
+   "expected": "-0.05"
+  },
+  {
+   "bits": "0xbfa999999999999a",
+   "d": 3,
+   "expected": "-0.050"
+  },
+  {
+   "bits": "0xbfa999999999999a",
+   "d": 6,
+   "expected": "-0.050000"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "d": 0,
+   "expected": "0"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "d": 1,
+   "expected": "0.0"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "d": 2,
+   "expected": "0.00"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "d": 3,
+   "expected": "0.000"
+  },
+  {
+   "bits": "0x3e7ad7f29abcaf48",
+   "d": 6,
+   "expected": "0.000000"
+  },
+  {
+   "bits": "0x444b1ae4d6e2ef50",
+   "d": 0,
+   "expected": "1e+21"
+  },
+  {
+   "bits": "0x444b1ae4d6e2ef50",
+   "d": 1,
+   "expected": "1e+21"
+  },
+  {
+   "bits": "0x444b1ae4d6e2ef50",
+   "d": 2,
+   "expected": "1e+21"
+  },
+  {
+   "bits": "0x444b1ae4d6e2ef50",
+   "d": 3,
+   "expected": "1e+21"
+  },
+  {
+   "bits": "0x444b1ae4d6e2ef50",
+   "d": 6,
+   "expected": "1e+21"
+  },
+  {
+   "bits": "0x3f40624dd2f1a9fc",
+   "d": 0,
+   "expected": "0"
+  },
+  {
+   "bits": "0x3f40624dd2f1a9fc",
+   "d": 1,
+   "expected": "0.0"
+  },
+  {
+   "bits": "0x3f40624dd2f1a9fc",
+   "d": 2,
+   "expected": "0.00"
+  },
+  {
+   "bits": "0x3f40624dd2f1a9fc",
+   "d": 3,
+   "expected": "0.001"
+  },
+  {
+   "bits": "0x3f40624dd2f1a9fc",
+   "d": 6,
+   "expected": "0.000500"
+  },
+  {
+   "bits": "0x4000010624dd2f1b",
+   "d": 0,
+   "expected": "2"
+  },
+  {
+   "bits": "0x4000010624dd2f1b",
+   "d": 1,
+   "expected": "2.0"
+  },
+  {
+   "bits": "0x4000010624dd2f1b",
+   "d": 2,
+   "expected": "2.00"
+  },
+  {
+   "bits": "0x4000010624dd2f1b",
+   "d": 3,
+   "expected": "2.001"
+  },
+  {
+   "bits": "0x4000010624dd2f1b",
+   "d": 6,
+   "expected": "2.000500"
+  },
+  {
+   "bits": "0x3ff7333333333333",
+   "d": 0,
+   "expected": "1"
+  },
+  {
+   "bits": "0x3ff7333333333333",
+   "d": 1,
+   "expected": "1.4"
+  },
+  {
+   "bits": "0x3ff7333333333333",
+   "d": 2,
+   "expected": "1.45"
+  },
+  {
+   "bits": "0x3ff7333333333333",
+   "d": 3,
+   "expected": "1.450"
+  },
+  {
+   "bits": "0x3ff7333333333333",
+   "d": 6,
+   "expected": "1.450000"
+  }
+ ]
+}

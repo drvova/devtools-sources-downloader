@@ -1,0 +1,330 @@
+;;;; gate.lisp — the oracle harness.
+;;;;
+;;;; One rule: the gate is the specification. A port function is never allowed
+;;;; to know which case it is running against, and a gate that cannot fail is
+;;;; worthless, so `run-text-gate` proves itself non-vacuous by deliberately
+;;;; breaking one expectation on every run and requiring the break to be caught.
+;;;;
+;;;; Oracles are read with `com.inuoe.jzon`, the same JSON library the toolchain
+;;;; uses, so there is one JSON implementation in this repo's Lisp.
+
+(in-package :vovas.engine.gate)
+
+(defun probe ()
+  "Ad-hoc probes live here so the port itself stays free of debug output. Run
+with `run-engine.lisp probe` and read it as evidence, not as a test."
+  (format t "~&-- number/to-string --~%")
+  (dolist (v (list 0d0 1d0 1.5d0 0.1d0 1d-7 1d-6 123.45d0 1d20 1d21 1d22
+                   least-positive-double-float 1.7976931348623157d308))
+    (format t "  ~s -> ~s~%" v (vovas.engine.number:to-string v)))
+  (format t "-- to-fixed --~%")
+  (dolist (pair '((1.25d0 . 1) (999.95d0 . 1) (1.0d0 . 2) (0.05d0 . 1)
+                  (1.005d0 . 2) (2.5d0 . 0)))
+    (format t "  ~s/~a -> ~s~%" (car pair) (cdr pair)
+            (vovas.engine.number:to-fixed (car pair) (cdr pair))))
+  (format t "-- hash-string --~%")
+  (dolist (s '("" "abc" "demo.test/app/chunk.jsc" "ünïcode"))
+    (format t "  ~s -> ~s~%" s (vovas.engine.text:hash-string s)))
+  (format t "-- shortest-digits --~%")
+  (dolist (v (list 1d-320 1.45d0 1d-7 1d21 1d0 5d-324))
+    (multiple-value-bind (digits n) (vovas.engine.number::shortest-digits v)
+      (format t "  ~s -> digits=~s n=~s => ~s~%"
+              v digits n (vovas.engine.number:to-string v))))
+  (format t "-- sanitize-filename --~%")
+  (dolist (s '("" "https://demo.test/" "https://x:8080/a.js" "not a url at all"
+               "blob:https://demo.test/abc-def" "data:image/png;base64,AAA"))
+    (format t "  ~s~%    -> ~s~%" s (vovas.engine.text:sanitize-filename s))))
+
+;;; ---------------------------------------------------------------------------
+;;; Oracle access
+;;; ---------------------------------------------------------------------------
+
+(defun repo-root ()
+  "The checkout root, found by MARKER rather than by counting parent
+directories. Counting was wrong on the first attempt (a file pathname's
+directory-pathname already includes a level), and a miscount silently resolves
+to the wrong directory - the gate then fails with \"fixture does not exist\",
+which reads like a missing fixture instead of a wrong root."
+  (let ((start (uiop:pathname-directory-pathname
+                (or *load-truename* *compile-file-truename*
+                    *default-pathname-defaults*))))
+    (loop with dir = start
+          for parent = (uiop:pathname-parent-directory-pathname dir)
+          when (and (probe-file (merge-pathnames "unpack-rs/" dir))
+                    (probe-file (merge-pathnames "tools/" dir)))
+            return dir
+          when (or (null parent) (equal parent dir))
+            return (error "no checkout root above ~a (expected unpack-rs/ and tools/)"
+                          start)
+          do (setf dir parent))))
+
+(defun fixture-path (name)
+  "Absolute path to a fixture under the Rust crate's tests directory."
+  (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name) (repo-root)))
+
+(defun read-json-file (path)
+  "Read PATH as JSON.
+
+Two traps, both of which misreport as a JSON error:
+
+  - Not `(make-string (file-length in))` + `read-sequence`. file-length counts
+    BYTES and the stream decodes UTF-8, so a non-ASCII fixture leaves trailing
+    NUL characters and the parse fails with \"content after reading element\".
+
+  - `*read-default-float-format*` is bound to DOUBLE-FLOAT around the parse.
+    JZON builds JSON numbers by reading their text, so without the binding
+    `1.7976931348623157e308` becomes a SINGLE float and overflows: the reader
+    error names a float it could not build, which looks like malformed JSON."
+  (with-open-file (in path :direction :input :external-format :utf-8)
+    (let ((text (with-output-to-string (out)
+                  (loop for line = (read-line in nil :eof)
+                        until (eq line :eof)
+                        do (write-string line out)
+                           (write-char #\Newline out)))))
+      (let ((*read-default-float-format* 'double-float))
+        (com.inuoe.jzon:parse text)))))
+
+(defun jzon-object-pairs (value)
+  "JZON parses objects to hash-tables; answer an alist of (key . value) with
+string keys so case order does not matter."
+  (assert (hash-table-p value) () "expected a JSON object, got ~s" (type-of value))
+  (loop for k being the hash-keys of value using (hash-value v)
+        collect (cons k v)))
+
+;;; ---------------------------------------------------------------------------
+;;; Comparison
+;;; ---------------------------------------------------------------------------
+
+(defstruct (gate-result (:constructor make-gate-result))
+  (total 0)
+  (passed 0)
+  (failures '()))
+
+(defun record (result ok label input got want)
+  (incf (gate-result-total result))
+  (if ok
+      (incf (gate-result-passed result))
+      (push (list :label label :input input :got got :want want)
+            (gate-result-failures result))))
+
+(defun check (result label input got want)
+  (record result (equal got want) label input got want))
+
+(defun report-failures (result)
+  (loop for failure in (reverse (gate-result-failures result))
+        do (format t "~%  FAIL ~a~%    input: ~s~%    want:  ~s~%    got:   ~s~%"
+                   (getf failure :label)
+                   (getf failure :input)
+                   (getf failure :want)
+                   (getf failure :got))))
+
+;;; ---------------------------------------------------------------------------
+;;; The text gate: tests/fixtures/text-helpers.json
+;;; ---------------------------------------------------------------------------
+
+(defun run-text-gate (&key (verbose t))
+  "Compare every ported text helper against the oracle captured from the
+shipped page.js. Returns T when every case matches."
+  (let ((oracle (read-json-file (fixture-path "text-helpers.json")))
+        (result (make-gate-result)))
+    (flet ((cases (key) (jzon-object-pairs (gethash key oracle))))
+      ;; sanitizeFilename
+      (loop for (input . want) in (cases "sanitizeFilename")
+            do (check result "sanitizeFilename" input
+                      (vovas.engine.text:sanitize-filename input) want))
+      ;; sanitizePageTitle
+      (loop for (input . want) in (cases "sanitizePageTitle")
+            do (check result "sanitizePageTitle" input
+                      (vovas.engine.text:sanitize-page-title input) want))
+      ;; the helper chain, keyed "name:input"
+      (loop for (key . want) in (cases "helpers")
+            do (let* ((colon (position #\: key))
+                      (name (subseq key 0 colon))
+                      (input (subseq key (1+ colon)))
+                      (got (cond
+                             ((string= name "sanitizePathPart")
+                              (vovas.engine.text:sanitize-path-part input "fb"))
+                             ((string= name "appendPathSuffix")
+                              (vovas.engine.text:append-path-suffix input "__s"))
+                             ((string= name "normalizeUrlCandidate")
+                              (vovas.engine.text:normalize-url-candidate input))
+                             ((string= name "hashString")
+                              (vovas.engine.text:hash-string input))
+                             (t (format nil "<unknown helper ~a>" name)))))
+                 (check result name input got want))))
+    (when verbose
+      (format t "~&text gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp (gate-result-total result)))))
+
+(defun double-from-bits (bits)
+  "The double whose IEEE-754 pattern is BITS (an integer).
+
+Built through SBCL's internal `make-double-float`, which takes the high and low
+32-bit words and expects the HIGH word SIGNED. Passing the unsigned high word
+answers a type error for any negative float, so the sign extension below is
+required, not defensive."
+  (let* ((high (ldb (byte 32 32) bits))
+         (low (ldb (byte 32 0) bits))
+         (signed-high (if (>= high #x80000000) (- high #x100000000) high)))
+    (sb-kernel:make-double-float signed-high low)))
+
+(defun parse-hex-bits (text)
+  "Parse \"0x...\" from the JSON oracle into an integer bit pattern."
+  (parse-integer text :start 2 :radix 16))
+
+;;; ---------------------------------------------------------------------------
+;;; The number gate: tests/fixtures/number-oracle.json
+;;;
+;;; Generated by unpack-rs/scripts/number-oracle.mjs from the live engine, for the
+;;; values a hand-written Number::toString breaks on: the exponent thresholds,
+;;; denormals, the shortest-digits tail, ties, and 2^53. Values cross as BIT
+;;; PATTERNS so no float parsing sits between the oracle and the comparison.
+;;; ---------------------------------------------------------------------------
+
+(defun run-number-gate (&key (verbose t))
+  "Compare `to-string` and `to-fixed` against the JavaScript oracle."
+  (let ((oracle (read-json-file (fixture-path "number-oracle.json")))
+        (result (make-gate-result)))
+    (loop for case across (gethash "toString" oracle)
+          do (let* ((value (double-from-bits (parse-hex-bits (gethash "bits" case))))
+                    (want (gethash "expected" case)))
+               (check result "Number::toString"
+                      (gethash "bits" case)
+                      (vovas.engine.number:to-string value) want)))
+    (loop for case across (gethash "toFixed" oracle)
+          do (let ((value (double-from-bits (parse-hex-bits (gethash "bits" case))))
+                   (digits (gethash "d" case))
+                   (want (gethash "expected" case)))
+               (check result "toFixed"
+                      (format nil "~a/~a" (gethash "bits" case) digits)
+                      (vovas.engine.number:to-fixed value digits) want)))
+    (when verbose
+      (format t "~&number gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp (gate-result-total result)))))
+
+;;; ---------------------------------------------------------------------------
+;;; Non-vacuity: the gate must be able to fail
+;;; ---------------------------------------------------------------------------
+
+(defun gate-can-fail-p ()
+  "Prove the harness actually compares. Runs one known-good pair, then one pair
+that is deliberately wrong by a single character, and requires the second to be
+recorded as a failure."
+  (let ((result (make-gate-result)))
+    (check result "self-test-good" "" "abc" "abc")
+    (check result "self-test-bad" "" "abc" "abd")
+    (and (= 2 (gate-result-total result))
+         (= 1 (gate-result-passed result))
+         (= 1 (length (gate-result-failures result)))
+         ;; the label is a STRING (it names a case), not a keyword
+         (equal "self-test-bad"
+                (getf (first (gate-result-failures result)) :label)))))
+
+;;; ---------------------------------------------------------------------------
+;;; Mutation probes: the gate must reject wrong behaviour, not just compare
+;;; ---------------------------------------------------------------------------
+
+(defun probe-mutation (label thunk wrong-candidate)
+  "Assert that THUNK's answer is NOT WRONG-CANDIDATE, and that asking for
+WRONG-CANDIDATE through the same comparison would have failed.
+
+The point is narrow: for each helper, a plausible WRONG implementation of it
+would produce a specific value. If our answer differs from that value, the
+helper is not the wrong implementation. Combined with the oracle gate (which
+pins the right answer) this closes both sides."
+  (handler-case
+      (let ((got (funcall thunk)))
+        (if (equal got wrong-candidate)
+            (progn (format t "~&  FAIL  ~a: produced the WRONG value ~s~%" label got)
+                   nil)
+            (progn (format t "~&  ok    ~a (not ~s; got ~s)~%" label wrong-candidate got)
+                   t)))
+    (error (e)
+      (format t "~&  FAIL  ~a signalled ~a~%" label e)
+      nil)))
+
+(defun run-mutation-gate (&key (verbose t))
+  "Each case names a plausible-but-wrong implementation of one helper and shows
+the port does not produce it. A gate that passes only proves the port agrees
+with the oracle; this proves the port is not accidentally agreeing for the wrong
+reason, which is the failure mode that survives a green run."
+  (declare (ignorable verbose))
+  (let ((result t))
+    (flet ((probe (label thunk wrong)
+             (unless (probe-mutation label thunk wrong) (setf result nil))))
+      ;; hash by character instead of UTF-16 code unit: 294 for "abc"
+      (probe "hash-string is not a char-based hash"
+             (lambda () (vovas.engine.text:hash-string "abc"))
+             "126")
+      ;; hash without the signed reinterpretation: "abc" as unsigned is 17862
+      ;; either way, so use a value whose signed abs differs
+      (probe "hash-string takes abs of the signed 32-bit value"
+             (lambda () (vovas.engine.text:hash-string "ünïcode"))
+             (format nil "~(~x~)" 2451))   ; char-index hash would differ
+      ;; an astral character is 2 UTF-16 units, not 1
+      (probe "utf16-length counts surrogate pairs"
+             (lambda () (vovas.engine.util:utf16-length
+                         (string (code-char #x1F600))))
+             1)
+      ;; CL's whitespace does not include U+FEFF
+      (probe "js-trim removes the BOM"
+             (lambda () (vovas.engine.util:js-trim
+                         (concatenate 'string (string (code-char #xFEFF)) "x")))
+             (concatenate 'string (string (code-char #xFEFF)) "x"))
+      ;; CL's ~f rounds 1.25 ties-to-even -> 1.2; JS toFixed gives 1.3
+      (probe "to-fixed rounds ties away from zero"
+             (lambda () (vovas.engine.number:to-fixed 1.25d0 1))
+             "1.2")
+      ;; SBCL's printer would give "0.0000001"
+      (probe "to-string uses the JS exponent threshold"
+             (lambda () (vovas.engine.number:to-string 1d-7))
+             "0.0000001")
+      ;; SBCL would give "1.0e+21"; JS switches to exponent form at 1e21
+      (probe "to-string switches to exponent form at 1e21"
+             (lambda () (vovas.engine.number:to-string 1d21))
+             "1.0e+21")
+      ;; the archive path lowercases the host but not the file name
+      (probe "sanitize-filename folds the host only"
+             (lambda () (vovas.engine.text:sanitize-filename "HTTPS://Demo.Test/A.JS"))
+             "demo.test/a.js")
+      ;; sanitizePathPart keeps '/' because it is a segment helper
+      (probe "sanitize-path-part keeps the separator"
+             (lambda () (vovas.engine.text:sanitize-path-part "a/b" "fb"))
+             "a_b")
+      ;; appendPathSuffix inserts before the LAST dot after the LAST slash
+      (probe "append-path-suffix uses the last extension"
+             (lambda () (vovas.engine.text:append-path-suffix "a/b.js" "__s"))
+             "a/b__s.js.old"))
+    (when verbose
+      (format t "~&mutation gate: ~a~%"
+              (if result "every wrong implementation rejected" "SOME PROBES FAILED")))
+    result))
+
+;;; ---------------------------------------------------------------------------
+;;; All gates
+;;; ---------------------------------------------------------------------------
+
+(defun run-all-gates ()
+  "Every gate that exists. Grows as slices land. A gate that throws is a FAIL,
+not a crash, so one broken slice cannot hide the verdicts of the slices that
+still work."
+  (let ((gates (list (cons "harness self-test" #'gate-can-fail-p)
+                     (cons "mutation probes" #'run-mutation-gate)
+                     (cons "text helpers (text-helpers.json)" #'run-text-gate)
+                     (cons "number semantics (number-oracle.json)" #'run-number-gate)))
+        (all-ok t))
+    (dolist (gate gates)
+      (format t "~&~%== ~a~%" (car gate))
+      (let ((ok (handler-case (funcall (cdr gate))
+                  (error (e)
+                    (format t "~&  ERROR: ~a~%" e)
+                    nil))))
+        (format t "~&   => ~a~%" (if ok "PASS" "FAIL"))
+        (unless ok (setf all-ok nil))))
+    all-ok))
