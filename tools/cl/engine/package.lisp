@@ -128,6 +128,9 @@
    ;; DEFPACKAGE variance warning whose text can interleave with a runner's
    ;; output - which reads as a nondeterministic gate failure.
    #:decode-base64-to-bytes
+   ;; the inverse, added for the dispatch layer: the export writer handles
+   ;; `&[u8]` and answers base64 for anything that is not valid UTF-8.
+   #:encode-base64
    #:bytes-to-text
    #:ascii-js-space-p))
 

@@ -697,7 +697,11 @@ ERROR verdict when that gate finally runs."
         (cons "finalize export (structural)" #'run-finalize-gate)
         (cons "finalize parity (wasm engine)" #'run-finalize-parity-gate)
         (cons "report waterfall (panel oracle)" #'run-report-waterfall-gate)
-        (cons "report investigation page (structural)" #'run-report-investigation-gate)))
+        (cons "report investigation page (structural)" #'run-report-investigation-gate)
+        ;; The dispatch layer LAST: it is the only gate that calls THROUGH the
+        ;; public surface, so it depends on every module being loaded and on the
+        ;; export being correct underneath it.
+        (cons "dispatch surface (wasm_api.rs)" #'run-api-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

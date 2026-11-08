@@ -242,6 +242,53 @@ all; padding unconditionally is what makes an over-padded payload fail."
     (decode-canonical-base64 normalized)))
 
 ;;; ---------------------------------------------------------------------------
+;;; encodeBase64 — the inverse of decode-base64-to-bytes
+;;;
+;;; ADDED for the dispatch layer: `finalize-zip-with-recon`'s writer receives
+;;; BYTES and the wasm arm decides text-or-base64 per file with
+;;; `str::from_utf8`. Without an encoder the port could only ever answer text,
+;;; so every binary payload in an export would have crossed as mangled text.
+;;;
+;;; STANDARD alphabet with `=` padding — what the decoder above reads back and
+;;; what `base64 0.22`'s default engine writes. Hand-written for the same two
+;;; reasons the decoder is: the crate is not a dependency of this system, and a
+;;; second engine is how two spellings drift apart.
+;;; ---------------------------------------------------------------------------
+
+(defun encode-base64 (bytes)
+  "BYTES as standard base64 with `=` padding, or \"\" for no bytes."
+  (let* ((n (length bytes))
+         (full (floor n 3))
+         (rem (mod n 3))
+         (out (make-string (+ (* full 4) (if (zerop rem) 0 4))))
+         (o 0)
+         (alphabet *base64-alphabet*))
+    (flet ((b (i) (aref bytes i)))
+      (loop for i below full
+            for base = (* i 3)
+            for v = (logior (ash (b base) 16)
+                            (ash (b (+ base 1)) 8)
+                            (b (+ base 2)))
+            do (setf (char out o) (char alphabet (ldb (byte 6 18) v))
+                     (char out (+ o 1)) (char alphabet (ldb (byte 6 12) v))
+                     (char out (+ o 2)) (char alphabet (ldb (byte 6 6) v))
+                     (char out (+ o 3)) (char alphabet (ldb (byte 6 0) v)))
+               (incf o 4))
+      (let ((base (* full 3)))
+        (case rem
+          (1 (let ((v (ash (b base) 16)))
+               (setf (char out o) (char alphabet (ldb (byte 6 18) v))
+                     (char out (+ o 1)) (char alphabet (ldb (byte 6 12) v))
+                     (char out (+ o 2)) #\=
+                     (char out (+ o 3)) #\=)))
+          (2 (let ((v (logior (ash (b base) 16) (ash (b (+ base 1)) 8))))
+               (setf (char out o) (char alphabet (ldb (byte 6 18) v))
+                     (char out (+ o 1)) (char alphabet (ldb (byte 6 12) v))
+                     (char out (+ o 2)) (char alphabet (ldb (byte 6 6) v))
+                     (char out (+ o 3)) #\=))))))
+    out))
+
+;;; ---------------------------------------------------------------------------
 ;;; bytesToText — UTF-8 with replacement characters
 ;;; ---------------------------------------------------------------------------
 

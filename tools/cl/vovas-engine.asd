@@ -92,6 +92,12 @@
                              ;; is a real dependency, not a preference.
                              (:file "view")
                              (:file "artifacts")
+                             ;; api.lisp is the PUBLIC SURFACE: wasm_api.rs's
+                             ;; dispatch table. It goes after EVERY module it can
+                             ;; name, because it is the one file that references all
+                             ;; of them - and before gate.lisp, which asserts its
+                             ;; key set against the Rust source.
+                             (:file "api")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -123,4 +129,5 @@
                              (:file "gate-graph")
                              (:file "gate-stackprofile")
                              (:file "gate-view")
-                             (:file "gate-artifacts")))))
+                             (:file "gate-artifacts")
+                             (:file "gate-api")))))
