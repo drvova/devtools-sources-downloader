@@ -330,6 +330,45 @@ which reads as a wrong index rather than a null."
             (concatenate 'string "a(" (string (code-char 11)) "/)/ g)") 1)
            9)
 
+    ;; --- decodeEscapes --------------------------------------------------
+    ;;
+    ;; THIS SECTION EXISTS BECAUSE A MUTATION SURVIVED. A harness applied two
+    ;; wrong implementations to decoders.lisp - a trailing backslash emitting
+    ;; nothing instead of "undefined", and an octal escape capped at two digits -
+    ;; and the suite passed both times. The cause was not a weak assertion but a
+    ;; MISSING one: no gate referenced decode-escapes at all, even though the
+    ;; module is wired into scanner and sourcemaps and its oracle has had a
+    ;; trailing-backslash case sitting unused since the fixture was captured.
+    ;;
+    ;; Expected values below were read out of the shipped engine, not reasoned
+    ;; about: "\101\102" -> "AB", "\7" -> BEL, "\377" -> U+00FF, "\1011" -> "A1"
+    ;; (three digits then a literal 1), "trailing\" -> "trailingundefined".
+    (let ((cases (gethash "decodeEscapes" oracle)))
+      (loop for text being the hash-keys of cases using (hash-value want)
+            do (incf count)
+               (check result "decode-escapes" text
+                      (vovas.engine.decoders:decode-escapes text) want)))
+    ;; the oracle stops at eleven cases; these cover the octal ladder it does not.
+    ;;
+    ;; Expected values are built with CODE-CHAR rather than written as string
+    ;; literals, because `\u{7}` is not a Lisp escape - it reads as the literal
+    ;; text "u{7}" - and a NUL or BEL character inside a literal prints as nothing,
+    ;; which made two correct answers look like empty strings when compared.
+    (dolist (case (list (cons "\\101\\102" "AB")
+                        (cons "\\7" (string (code-char 7)))
+                        (cons "\\377" (string (code-char 255)))
+                        (cons "\\1011" "A1")
+                        (cons "\\0" (string (code-char 0)))
+                        (cons "\\u{1F600}" (string (code-char #x1F600)))
+                        (cons "\\x41" "A")))
+      (incf count)
+      (check result "decode-escapes-octal" (car case)
+             (vovas.engine.decoders:decode-escapes (car case)) (cdr case)))
+    ;; a lone non-escape backslash at the END is the documented quirk
+    (incf count)
+    (check result "decode-escapes-trailing-backslash" "trailing\\"
+           (vovas.engine.decoders:decode-escapes "trailing\\") "trailingundefined")
+
     (when verbose
       (format t "~&scanner gate: ~a/~a cases match~%"
               (gate-result-passed result) (gate-result-total result))
