@@ -59,20 +59,41 @@ which reads like a missing fixture instead of a wrong root."
           do (setf dir parent))))
 
 (defun fixture-path (name)
-  "Absolute path to a fixture under the Rust crate's tests/fixtures directory
-(the JSON oracles)."
-  (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name) (repo-root)))
+  "Absolute path to a JSON fixture.
+
+The crate keeps TWO fixture directories and they are not interchangeable:
+`tests/fixtures/` (plural) holds the JSON oracles and a `panel/` subdirectory,
+while `test/fixtures/` (singular) holds the binary blobs (.jsc, .wasm, .bin)
+that unpack_test.rs reads. They are DISJOINT - 13 files versus 6, zero filename
+overlap, verified - so trying one then the other cannot serve the wrong file and
+needs no preference rule. Subpaths such as `panel/parity-oracle.json` work
+because the name is appended verbatim."
+  (let ((in-tests (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name)
+                                   (repo-root))))
+    (if (probe-file in-tests)
+        in-tests
+        (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name)
+                         (repo-root)))))
 
 (defun binary-fixture-path (name)
-  "Absolute path to a BINARY fixture under unpack-rs/test/fixtures.
+  "Absolute path to a BINARY fixture, checking `test/fixtures/` first.
 
-The crate keeps two fixture directories and they are not interchangeable:
-`tests/fixtures/` holds the JSON oracles this harness reads, while
-`test/fixtures/` holds the binary blobs (.jsc, .wasm, .bin) that
-unpack_test.rs reads. Three binary-tier gates each grew their own resolver for
-the second directory; this is the one definition they should share, so a future
-move of that directory breaks in one place instead of three."
-  (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name) (repo-root)))
+Kept separate from `fixture-path` on purpose: a reader that opened a .jsc with a
+character external-format and decoded it would corrupt the bytes, and no JSON
+oracle would notice. Callers of this function then use `binary-fixture-bytes`."
+  (let ((in-test (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name)
+                                  (repo-root))))
+    (if (probe-file in-test)
+        in-test
+        (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name)
+                         (repo-root)))))
+
+(defun binary-fixture-bytes (name)
+  "A binary fixture as an (unsigned-byte 8) vector, read with no decoding."
+  (with-open-file (in (binary-fixture-path name) :element-type '(unsigned-byte 8))
+    (let ((buf (make-array (file-length in) :element-type '(unsigned-byte 8))))
+      (read-sequence buf in)
+      buf)))
 
 (defun read-json-file (path)
   "Read PATH as JSON.
