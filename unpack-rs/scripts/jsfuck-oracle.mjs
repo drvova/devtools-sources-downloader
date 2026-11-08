@@ -77,6 +77,11 @@ if (!JSFuck || typeof JSFuck.encode !== 'function') {
 /// A whole PROGRAM, encoded the way jsfuck.com's "eval" checkbox does it:
 /// Function(<source>)() with this bound to the global object.
 const program = (source) => JSFuck.encode(source, true, false);
+/// A whole program encoded the way jsfuck.com's "eval" + "run in parent
+/// scope" checkboxes do it: `Function("return eval")()(<body>)`. The extra
+/// hop CALLS eval instead of merely returning it, which is the only encoder
+/// mode that produces a capture of the empty string.
+const programScoped = (source) => JSFuck.encode(source, true, true);
 /// A literal FRAGMENT, encoded as a bare value expression.
 const fragment = (text) => JSFuck.encode(text, false, false);
 
@@ -113,15 +118,29 @@ const programs = {
     bareQuoted: '"abc"',
     // A single identifier.
     bareIdent: 'a',
-    // The same seam with NO argument: eval(undefined) captures the empty
-    // string, not null. A port using `unwrap_or_default()` semantics passes;
-    // one that treated a missing argument as "no capture" fails.
-    evalNoArgs: 'return eval',
     // `return "hi"` — call_from_source RECOGNISES this shape and answers the
     // unescaped VALUE ("hi") instead of capturing. Same Function seam as
     // retOne, opposite branch, so a port that always captured at the seam
     // would answer `return "hi"` here and fail.
     retQuoted: 'return "hi"',
+};
+
+// Programs in RUN-IN-PARENT-SCOPE mode: the encoder wraps the body in
+// `Function("return eval")()(body)`, which CALLS eval rather than merely
+// returning it. Without this family the empty payload is unpinnable — encoding
+// `return eval` the plain way answers {"value":null,"captured":false}, because
+// the seam is reached but never invoked.
+const scopedPrograms = {
+    // A one-character payload. The narrowest real capture, and the case that
+    // proves `captured` does not depend on the payload being long.
+    evalOne: 'x',
+    // eval("alert(1)") — the canonical payload through the eval seam rather
+    // than the Function seam, so a port that special-cased the encoder's
+    // wrapWithEval shape fails here.
+    evalAlert: 'alert(1)',
+    // A payload that is only whitespace: no `return`, no identifier, no
+    // quotes, so it reaches the raw-payload arm and captures verbatim.
+    evalBlank: '  ',
 };
 
 // --- expressions -----------------------------------------------------------
@@ -214,6 +233,18 @@ const expressions = {
     // wrapper: same payload, different surrounding syntax.
     fnDirect:
         '[][' + f.at + '][' + f.constructor + '](' + fragment('return 7') + ')()',
+    // `Function("")()` — an EMPTY body. The seam is reached and captures the
+    // empty string, so the wire answer is {"value":"","captured":true}. A port
+    // that used plain NIL for "no capture" collapses this with a refusal and
+    // answers null; this is the only case in the fixture that separates them.
+    emptyFunctionBody:
+        '[][' + f.at + '][' + f.constructor + '](' + fragment('') + ')()',
+    // `Function("return eval")()("")` — the same empty payload through the eval
+    // seam. Two independent spellings of "captured nothing", so a port that
+    // got one right by accident still has to get the other right.
+    emptyEvalArg:
+        '[][' + f.at + '][' + f.constructor + '](' + fragment('return eval') +
+        ')()(' + fragment('') + ')',
     // --- refusal cases. Each must answer value:null, captured:false, and each
     // --- refuses for a DIFFERENT reason, so a port that returned null
     // --- unconditionally would pass these but fail every case above.
@@ -295,7 +326,7 @@ const oracle = {
         'JSFuck 0.5.0 encoder (test/fixtures/jsfuck-encoder.js) with wrapWithEval, ' +
         'which emits Function(body)() — the seam `captured` reports on.',
     capturedAt: 'fixed-input set; regenerate with node unpack-rs/scripts/jsfuck-oracle.mjs',
-    families: { programs: {}, expressions: {}, detection: {} },
+    families: { programs: {}, scoped: {}, expressions: {}, detection: {} },
 };
 
 const rows = [];
@@ -318,6 +349,9 @@ async function capture(family, name, source, origin) {
 
 for (const [name, source] of Object.entries(programs)) {
     await capture('programs', name, program(source), 'program ' + JSON.stringify(source));
+}
+for (const [name, source] of Object.entries(scopedPrograms)) {
+    await capture('scoped', name, programScoped(source), 'scoped program ' + JSON.stringify(source));
 }
 for (const [name, source] of Object.entries(expressions)) {
     await capture('expressions', name, source, 'expression');
@@ -358,6 +392,7 @@ console.log('');
 console.log('wrote tests/fixtures/jsfuck-oracle.json');
 console.log('cases:                 ' + counted.length);
 console.log('  programs:            ' + rows.filter((r) => r.family === 'programs' && !r.trap).length);
+console.log('  scoped:              ' + rows.filter((r) => r.family === 'scoped' && !r.trap).length);
 console.log('  expressions:         ' + rows.filter((r) => r.family === 'expressions' && !r.trap).length);
 console.log('  detection:           ' + rows.filter((r) => r.family === 'detection' && !r.trap).length);
 console.log('trapped (excluded):    ' + (rows.length - counted.length));
