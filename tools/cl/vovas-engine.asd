@@ -78,6 +78,9 @@
                              ;; panel-tier dependency.
                              (:file "boundary")
                              (:file "workspace")
+                             ;; analysis LAST of the panel modules: it calls every
+                             ;; one of them, so it must load after them.
+                             (:file "analysis")
                              (:file "paths")
                              (:file "graph")
                              ;; view BEFORE artifacts: artifacts escapes XML and
@@ -108,6 +111,8 @@
                              (:file "gate-boundary")
                              (:file "gate-workspace")
                              (:file "gate-workspace-builders")
+                             (:file "gate-analysis")
+                             (:file "gate-transforms")
                              (:file "gate-paths")
                              (:file "gate-graph")
                              (:file "gate-stackprofile")

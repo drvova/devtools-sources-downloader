@@ -682,7 +682,13 @@ ERROR verdict when that gate finally runs."
         (cons "cross-boundary flows (panel oracle)" #'run-boundary-flows-gate)
                 (cons "framework runtime (panel oracle)" #'run-framework-runtime-gate)
         (cons "workspace profiles (panel oracle)" #'run-workspace-gate)
-        (cons "workspace builders (panel oracle)" #'run-workspace-builders-gate)))
+        (cons "workspace builders (panel oracle)" #'run-workspace-builders-gate)
+        (cons "investigation workspace (panel oracle)" #'run-investigation-workspace-gate)
+        (cons "semantic analysis (panel oracle)" #'run-analysis-gate)
+        ;; `run-transforms-gate` was defined in gate-transforms.lisp but never
+        ;; registered, so it had never run in the full suite. A gate outside
+        ;; gate-list is invisible to CI and can regress silently.
+        (cons "transforms (engine gate)" #'run-transforms-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

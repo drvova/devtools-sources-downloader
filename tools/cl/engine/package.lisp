@@ -385,6 +385,39 @@
    #:build-framework-state-workspace
    #:build-journey-view #:build-journey-views
    #:build-investigation-workspace))
+(defpackage :vovas.engine.panel.analysis
+  (:use :cl)
+  ;; The capstone consumes every tier below it. It depends on NOTHING that loads
+  ;; later, which is why it sits last in the .asd.
+  (:import-from :vovas.engine.panel.assets
+                #:prepare-script-assets #:build-runtime-origins
+                #:build-chunk-summary #:build-runtime-summary
+                #:strip-runtime-entry #:field
+                #:script-asset-id #:script-asset-url #:script-asset-file
+                #:script-asset-size #:script-asset-transfer-size
+                #:script-asset-start-time #:script-asset-duration
+                #:script-asset-classification #:script-asset-bundler
+                #:script-asset-framework-hints #:script-asset-route-hints
+                #:script-asset-startup-signals #:script-asset-imports
+                #:script-asset-module-signals #:script-asset-source-map-embedded
+                #:script-asset-content #:script-asset-score
+                #:script-asset-boundary-details #:script-asset-boundary-labels
+                #:script-asset-primary-boundary #:script-asset-boundary-reasons
+                #:module-signals-import-count #:module-signals-dynamic-imports
+                #:module-signals-requires #:module-signals-exports
+                #:boundary-detail-label #:boundary-detail-score
+                #:boundary-detail-reasons)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:json-null-symbol)
+  (:import-from :vovas.engine.panel.boundary
+                #:build-boundary-labels #:build-cross-boundary-flows
+                #:collect-interesting-entrypoints
+                #:build-framework-state-summary
+                #:build-framework-runtime-summary)
+  (:export
+   #:build-semantic-analysis
+   #:script-asset-wire #:boundary-details-wire #:module-signals-wire-table
+   #:analysis-js-number #:analysis-wire #:analysis-wire-key
+   #:analysis-alist-p #:analysis-proper-list-p))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)
