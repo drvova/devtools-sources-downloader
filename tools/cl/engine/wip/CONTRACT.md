@@ -120,3 +120,53 @@ Where the Rust and the oracle disagree, the oracle wins and the disagreement is
 worth reporting.
 
 Regenerate (do not edit by hand): `node unpack-rs/scripts/text-oracle.mjs`
+
+## Verifying a change: the working tree is not the committed tree
+
+A passing suite proves the WORKING TREE and nothing else. Three separate defects
+in one session were only visible by extracting `git archive HEAD` and running from
+that:
+
+- a module wired into `vovas-engine.asd` but never committed (jsfuck.lisp), so a
+  clean clone could not load the system at all
+- a fixture committed one generation stale: 56 cases / 11 captured in git versus
+  60 / 16 on disk, with the gate's floors raised to the newer numbers, so only the
+  working tree could pass
+- a FALSE GREEN: the first clone test reported 16 PASS because `cd` into the
+  extracted directory had silently failed and the run executed against the
+  original checkout
+
+**The `cd` fault is real and must be proven, not assumed.** `cd` into a
+subdirectory of this repo fails intermittently in the bash layer — absolute path,
+relative path, trailing slash, `pushd` all have been observed to fail while
+`stat`/`ls`/PowerShell report the directory fine and `Get-Location` works. When it
+fails, the shell stays where it was and the next command runs against the WRONG
+tree, silently.
+
+So any test whose meaning depends on the cwd must PROVE the cwd:
+
+    pwd; printf 'files here: %s\n' "$(ls tools/cl/engine/*.lisp | wc -l)"
+
+and if `cd` refuses, use the other layer:
+
+    powershell -NoProfile -Command "Set-Location '<abs>'; ... ; Write-Host \$LASTEXITCODE"
+
+A run that reports success from an unverified cwd is not evidence, and it is the
+same shape as the `/dev/null` zero: a failed operation that yields a plausible
+result.
+
+## A zero from a probe that can fail to run is not evidence
+
+Four instances this session, all producing a confident wrong answer:
+
+| probe | what it reported | reality |
+| --- | --- | --- |
+| `cmd 2>/dev/null \| wc -l` | 0 fasls | 12 — `/dev/null` does not exist here |
+| `find ... \| wc -l` after a failed purge | clean cache | stale fasls served old code |
+| a gate whose only assertion cannot fail | PASS | asserts nothing |
+| `rmdir` on a directory that would not delete | silence | residue left behind |
+
+The pattern: a command that fails LOUDLY is fine. A command that fails and
+returns a plausible value is indistinguishable from success until something
+downstream disagrees. Measure with the error stream attached, and prefer three
+independent methods over one.
