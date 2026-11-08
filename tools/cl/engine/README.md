@@ -93,11 +93,32 @@ Ported so far — every module below has a gate that passes:
 | `v8codecache` | `v8codecache.rs` | 135/135 |
 | `zip` | `zip.rs` | 129/129 |
 
-**Still queued:** `jsfuck.rs` (920) and `pipeline.rs` (713) — the two that
-consume everything above, plus `wasm_api.rs` (806), which is the browser seam and
-has no native counterpart to port. The 10,102-line `panel/*` tree is out of scope
-for now: it is the extension's own UI logic, not the unpack engine.
-| `packers.rs`, `jsfuck.rs`, `transforms.rs`, `pipeline.rs` | the peel engine | queued |
+**Still queued:**
+
+- `transforms.rs` — the peel chain (`peel_text`, `apply_transform`,
+  `collect_refusals`, the unwrap ladder). Being ported; `decode-uri-component`
+  and the sourceURL pattern are already done. This is the real hinge: `pipeline`
+  calls `peel_text`, and `peel_text` calls detectors, packers and jsfuck.
+- `jsfuck.rs` (920) — being ported, and the reason it took a dedicated pass is
+  that its oracle is **vacuous for decode**: all 17 inputs answer
+  `{"value":null,"captured":false}`, so a port returning that constant would pass.
+  Real JSFuck encodes need to be generated with the shipped encoder first.
+- `pipeline.rs` (713) — needs `transforms`, then it is mostly orchestration plus
+  the archive assembly.
+- `wasm_api.rs` (806) — the browser seam (`xu_call`, `xu_alloc`, the JSON
+  envelope). No native counterpart to port: an SBCL build calls functions
+  directly, so this file *disappears* rather than being translated.
+
+The 10,102-line `panel/*` tree is out of scope: it is the extension's own UI
+logic, not the unpack engine.
+
+### A correction worth recording
+
+An earlier version of this file claimed `pipeline` depends on `jsfuck`. It does
+not — `pipeline.rs` contains zero jsfuck references. `transforms.rs` is what
+imports jsfuck, and `pipeline` imports `transforms`. The dependency direction
+matters because it changes which module is the blocker, and I had it backwards
+for two turns because I read a summary instead of grepping the source.
 | `jscbytecode.rs`, `v8codecache.rs`, `wasm.rs`, `zip.rs` | binary tier | queued |
 | `panel/*` | the panel | out of scope for now |
 
