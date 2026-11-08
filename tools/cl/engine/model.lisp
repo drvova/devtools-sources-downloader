@@ -258,3 +258,49 @@ compares strings. Split out as its own function because the comparator inside
   (if (or (member current types :test #'string=) (string= current "all"))
       current
       "all"))
+
+;;; ---------------------------------------------------------------------------
+;;; Numeric output coercion
+;;;
+;;; These live here, beside `js-number`/`js-truthy`, because they are JS
+;;; NUMBER semantics rather than anything about artifacts. They were in
+;;; `artifacts.lisp` and `boundary` needed them - but `artifacts` loads AFTER
+;;; `boundary`, so importing them from there is a package-order dependency on
+;;; a file that has not been read yet. `model` is the leaf every panel module
+;;; already imports, which is where a shared coercion belongs.
+;;; ---------------------------------------------------------------------------
+
+(defconstant +max-safe-integer+ 9007199254740992d0)
+
+(defun finite-float-p (value)
+  "Whether VALUE is finite. An INTEGER is always finite, so it answers T rather
+than calling `float-nan-p` on it - SBCL's float predicates require a FLOAT
+argument and signal a TYPE-ERROR on 0, which is how this surfaced.
+
+`(= nan 0d0)` and `(/= nan 0d0)` both SIGNAL on SBCL, so finiteness has to be
+asked before any comparison of a value that might be NaN."
+  (cond
+    ((integerp value) t)
+    ((rationalp value) t)
+    ((floatp value) (and (not (sb-ext:float-nan-p value))
+                         (not (sb-ext:float-infinity-p value))))
+    (t nil)))
+
+(defun js-number-value (value)
+  "`js_number_value`: VALUE as the JSON number it should print as.
+
+A non-finite value becomes NIL, which the writer renders as `null`; an integral
+value inside the safe range becomes an integer; anything else stays a double.
+
+The order of the tests matters: the finiteness check must come FIRST, because
+`(= nan 0d0)` and `(/= nan 0d0)` both SIGNAL on SBCL rather than answering, so a
+NaN reaching `zerop` would raise instead of falling through to `null`."
+  (cond
+    ((not (realp value)) nil)
+    ((and (floatp value) (not (finite-float-p value))) nil)
+    ((integerp value) value)
+    ((and (zerop (nth-value 1 (truncate value)))
+          (< (abs value) +max-safe-integer+))
+     (truncate value))
+    (t value)))
+

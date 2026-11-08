@@ -184,6 +184,7 @@
   (:export
    #:counts #:make-counts #:counts-add #:counts-alist
    #:js-string #:js-number #:js-truthy #:json-null-p
+   #:+max-safe-integer+ #:finite-float-p #:js-number-value
    #:resource #:make-resource
    #:resource-status #:resource-kind #:resource-source #:resource-url
    #:resource-size #:resource-time #:resource-order
@@ -241,13 +242,25 @@
   ;; re-exported from `model` - imported from its OWNER rather than through
   ;; `assets`, so this module does not inherit a transitive dependency it never
   ;; asked for.
-  (:import-from :vovas.engine.panel.assets #:field #:field-str)
+  (:import-from :vovas.engine.panel.assets
+                #:field #:field-str #:field-number #:unique-strings
+                #:get-bare-file-name)
   (:import-from :vovas.engine.panel.model #:js-truthy)
+  ;; `js-number-value` is what turns a score into the integer the JSON shows.
+  ;; It lives in `model`, beside the other JS number coercions - `artifacts`
+  ;; loads AFTER this file, so importing it from there would be a dependency
+  ;; on a package that does not exist yet when this one is read.
+  (:import-from :vovas.engine.panel.model #:js-number-value)
+  (:import-from :vovas.engine.util #:utf16-prefix)
   (:export
    #:*boundary-labels*
    #:array-contains-any #:matches-boundary-entry
    #:flow-touches-boundary #:chain-touches-boundary
-   #:flow-touches-any-boundary #:matches-any-boundary))
+   #:flow-touches-any-boundary #:matches-any-boundary
+   #:string-list #:build-boundary-sample
+   #:push-boundary-label #:infer-boundary-labels
+   #:boundary-outcome #:apply-boundary-labels
+   #:strip-boundary-entry))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
   (:export
@@ -296,11 +309,11 @@
   (:import-from :vovas.engine.util #:js-trim)
   (:import-from :vovas.engine.number #:to-string)
   (:import-from :vovas.engine.text #:format-size #:format-ms)
-  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:js-number #:json-null-p
+                #:js-number-value #:finite-float-p)
   (:import-from :vovas.engine.panel.assets #:field #:field-str)
   (:import-from :vovas.engine.panel.view #:escape-html)
   (:export
-   #:js-number-value #:finite-float-p
    #:runtime-folder-name #:runtime-extension #:build-runtime-path
    #:build-runtime-unpack-assets #:merge-unpack-reports
    #:parse-cookies #:split-on-char

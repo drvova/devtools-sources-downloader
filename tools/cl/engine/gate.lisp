@@ -677,6 +677,7 @@ ERROR verdict when that gate finally runs."
         (cons "stack profile (panel oracle)" #'run-stackprofile-gate)
         (cons "artifact helpers (panel oracle)" #'run-artifacts-gate)
         (cons "boundary predicates (panel oracle)" #'run-boundary-gate)
+        (cons "boundary labels (panel oracle)" #'run-boundary-label-gate)
         (cons "workspace profiles (panel oracle)" #'run-workspace-gate)))
 
 (defun run-all-gates ()

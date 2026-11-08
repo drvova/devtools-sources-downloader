@@ -154,3 +154,146 @@
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; The label-inference tier
+;;;
+;;; Unlike the predicate tier, THIS one has reproducible inputs: the Rust test
+;;; spells out all thirteen probe entries, the three runtime probes and the apply
+;;; target. So the oracle values are usable as oracles here, and this section is
+;;; the real proof of the labeling rules.
+;;; ---------------------------------------------------------------------------
+
+(defun gate-json= (got want)
+  "Deep equality between a port value and a JZON oracle value.
+
+JZON gives vectors for JSON arrays and a symbol for null, while the port builds
+vectors and hash tables. Scalars compare through `equal`; numbers compare by
+VALUE across the integer/double boundary, because a score of 24 arrives as a JSON
+integer and is produced as an integer, but a fixture may carry 24.0."
+  (cond
+    ((and (or (vectorp got) (listp got)) (or (vectorp want) (listp want)))
+     (let ((g (coerce got 'list)) (w (coerce want 'list)))
+       (and (= (length g) (length w))
+            (every #'gate-json= g w))))
+    ((and (hash-table-p got) (hash-table-p want))
+     (and (= (hash-table-count got) (hash-table-count want))
+          (loop for k being the hash-keys of want
+                always (and (nth-value 1 (gethash k got))
+                            (gate-json= (gethash k got) (gethash k want))))))
+    ((and (numberp got) (numberp want)) (= got want))
+    ((and (stringp got) (stringp want)) (string= got want))
+    ((and (null got) (hash-table-p want) (zerop (hash-table-count want))) t)
+    (t (equal got want))))
+
+(defun run-boundary-label-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/boundary-oracle.json")))
+         (exp (gethash "expected" fx))
+         (empty-map (make-hash-table :test #'equal)))
+
+    ;; ---- buildBoundarySample -------------------------------------------
+    ;;
+    ;; Sample 0 is a LENGTH, not a string: the Rust asserts utf16_len. Sample 1
+    ;; is the empty sample, which is twelve newlines - thirteen empty fields and
+    ;; twelve separators. Both are pinned because a naive "join the non-empty
+    ;; parts" would give "" and silently change every pattern's chances.
+    (let* ((sample-entry (ht "url" "https://demo.test/A.JS" "file" "F.js"
+                             "kind" "eval" "source" "Src" "originType" "ot"
+                             "classification" "app"
+                             "frameworkHints" (vector "React")
+                             "routeHints" (vector "app")
+                             "startupSignals" (vector "hydration")
+                             "imports" (vector "react")
+                             "note" "N" "mimeType" "M" "stack" "S"
+                             "content" "CONTENT" "text" "TEXT"))
+           (sample-want (gethash "buildBoundarySample" exp)))
+      (incf count)
+      (check result "buildBoundarySample/length" "utf16 length"
+             (vovas.engine.util:utf16-length
+              (vovas.engine.panel.boundary:build-boundary-sample sample-entry))
+             (aref sample-want 0))
+      (incf count)
+      (check result "buildBoundarySample/empty" "sample"
+             (vovas.engine.panel.boundary:build-boundary-sample nil)
+             (coerce (aref sample-want 1) 'string)))
+
+    ;; ---- the thirteen label probes --------------------------------------
+    (let ((entries (list
+                     (ht)
+                     (ht "classification" "runtime" "url" "https://x/runtime.js")
+                     (ht "classification" "vendor" "url" "https://x/vendor.js")
+                     (ht "classification" "framework" "url" "https://x/app.js")
+                     (ht "url" "https://x/a.js" "routeHints" (vector "app"))
+                     (ht "url" "https://x/a.js" "startupSignals" (vector "chunk-loader"))
+                     (ht "url" "https://x/a.js" "content" "redux createStore dispatch(x)")
+                     (ht "url" "https://x/a.js" "content" "axios.get(\"/api/x\")")
+                     (ht "url" "https://x/a.js" "content" "localStorage token signin()")
+                     (ht "url" "https://x/a.js" "content" "gtag(\"event\")")
+                     (ht "url" "https://x/a.js" "content" "monaco.editor.create()")
+                     (ht "url" "https://x/a.js" "content" "node_modules/core-js polyfill")
+                     (ht "kind" "worker" "url" "blob:https://x/w")))
+          (want (gethash "inferBoundaryLabels" exp)))
+      (loop for entry in entries
+            for index from 0
+            do (incf count)
+               (check result (format nil "inferBoundaryLabels/~a" index) "matches"
+                      (and (gate-json=
+                            (vovas.engine.panel.boundary:infer-boundary-labels
+                             entry :is-runtime nil :classifications empty-map)
+                            (aref want index))
+                           t)
+                      t)))
+
+    ;; ---- the three runtime probes ---------------------------------------
+    ;;
+    ;; These prove the is-runtime branches: a worker kind bootstraps, a runtime
+    ;; spawned from a vendor chunk is vendor-by-parentage at score 16, and one
+    ;; spawned from an app chunk earns nothing.
+    (let ((entries (list
+                     (ht "kind" "worker" "url" "blob:https://x/w")
+                     (ht "kind" "eval" "relatedChunks" (vector "vendor-1"))
+                     (ht "kind" "eval" "relatedChunks" (vector "app-1"))))
+          (map (let ((m (make-hash-table :test #'equal)))
+                 (setf (gethash "vendor-1" m) "vendor"
+                       (gethash "app-1" m) "app")
+                 m))
+          (want (gethash "inferBoundaryLabelsRuntime" exp)))
+      (loop for entry in entries
+            for index from 0
+            do (incf count)
+               (check result (format nil "inferBoundaryLabels/runtime/~a" index) "matches"
+                      (and (gate-json=
+                            (vovas.engine.panel.boundary:infer-boundary-labels
+                             entry :is-runtime t :classifications map)
+                            (aref want index))
+                           t)
+                      t)))
+
+    ;; ---- applyBoundaryLabels --------------------------------------------
+    ;;
+    ;; The pinned case has BOTH state and data at 24, and primaryBoundary is
+    ;; "state" - which only holds if the sort is stable and the insertion order
+    ;; survives. That makes this case a stability test, not just a merge test.
+    (let ((target (ht "url" "https://x/a.js"
+                      "content" "axios.get(\"/api/x\") redux dispatch(x)")))
+      (vovas.engine.panel.boundary:apply-boundary-labels
+       target
+       (vovas.engine.panel.boundary:infer-boundary-labels
+        target :is-runtime nil :classifications empty-map))
+      (let ((want (gethash "applyBoundaryLabels" exp)))
+        (dolist (key '("url" "content" "boundaryLabels" "primaryBoundary"
+                       "boundaryReasons" "boundaryDetails"))
+          (incf count)
+          (check result (format nil "applyBoundaryLabels/~a" key) "field"
+                 (gate-json= (gethash key target) (gethash key want))
+                 t))))
+
+    (when verbose
+      (format t "~&boundary label gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))
