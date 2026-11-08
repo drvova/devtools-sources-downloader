@@ -703,7 +703,14 @@ implementation at all. Neither is this port's failure, and both are printed."
     ;; scores 0.525, so an implementation that returned push order (base64
     ;; first) or ascending order fails here.
     (let* ((literal (make-string 100 :initial-element #\A))
-           (text (format nil "var a = \"~a\"; eval(String.fromCharCode(65,66,67,68,69));"
+           ;; NO `eval(` HERE, deliberately. This assertion pins score ORDERING, so
+           ;; it wants exactly two candidates. The original text wrapped the call in
+           ;; `eval(...)`, which was harmless while transforms was unported - and
+           ;; started producing a THIRD finding (eval-unwrap, score 1.0) the moment
+           ;; it landed, because the detector was right and the expectation was
+           ;; stale. A scoring assertion must not carry incidental structure that
+           ;; another detector can legitimately claim.
+           (text (format nil "var a = \"~a\"; x = String.fromCharCode(65,66,67,68,69);"
                          literal)))
       (check result "WRONG-IMPL: findings come out by descending score"
              "charcode + base64"

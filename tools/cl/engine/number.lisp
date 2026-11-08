@@ -161,27 +161,106 @@ is the range the decoder recipes use."
        (if negative (concatenate 'string "-" digits) digits)))))
 
 (defun to-number (text)
-  "JS `Number(string)` for the grammar the engine exercises. Answers a
-double-float; NAN for the shapes JavaScript answers NaN."
-  (let ((s (string-trim '(#\Space #\Tab #\Newline #\Return #\Page) text)))
-    (cond
-      ((string= s "") 0d0)
-      ((string= s "Infinity") sb-ext:double-float-positive-infinity)
-      ((string= s "+Infinity") sb-ext:double-float-positive-infinity)
-      ((string= s "-Infinity") sb-ext:double-float-negative-infinity)
-      ((and (>= (length s) 3)
-            (char= (char s 0) #\0)
-            (member (char s 1) '(#\x #\X)))
-       (let ((v (ignore-errors (parse-integer s :start 2 :radix 16))))
-         (if v (coerce v 'double-float) 0d0)))
-      (t
-       (handler-case
-           (let ((*read-default-float-format* 'double-float))
-             (let ((v (read-from-string s)))
-               ;; `read` accepts symbols and ratios; only a real number counts,
-               ;; and a ratio has to be converted rather than rejected
-               (if (numberp v) (coerce v 'double-float) (coerce 0 'double-float))))
-         (error () 0d0))))))
+  "JS `Number(string)` / Rust `js_string_to_number`.
+
+Answers a double-float, and NAN for every shape JavaScript rejects. The strict
+grammar is the point: a permissive reader that accepted a PREFIX would answer 1
+for \"1,2\" and \"1 2\", and a handler that turned every failure into 0 would
+answer 0 for \"false\", \"abc\" and \"0xzz\" where the engine answers NaN. Both
+of those were real defects in an earlier version of this function.
+
+Order matters and follows jsnumber.rs: trim with the FULL ECMAScript whitespace
+set (not the ASCII-only one the scanners use), then accept the empty string as 0,
+then a sign, then the three named values, then hex, then a strictly validated
+decimal or exponent form."
+  (let* ((s (js-trim-for-number text))
+         (n (length s)))
+    (when (zerop n)
+      (return-from to-number 0d0))
+    ;; a leading sign is stripped here and applied at the end, so every branch
+    ;; below sees the unsigned remainder
+    (let ((sign 1d0)
+          (i 0)
+          (rest nil))
+      (when (member (char s 0) '(#\- #\+))
+        (when (char= (char s 0) #\-)
+          (setf sign -1d0))
+        (incf i))
+      (setf rest (subseq s i))
+      (let ((m (length rest)))
+        ;; the named values are matched on the UNSIGNED remainder
+        (cond
+          ((string= rest "Infinity")
+           (return-from to-number (* sign sb-ext:double-float-positive-infinity)))
+          ((string= rest "NaN")
+           (return-from to-number (nan))))
+        ;; hex: the body must be non-empty and entirely hex digits, so "0x" and
+        ;; "0xzz" are NaN rather than 0
+        (when (and (>= m 2)
+                   (char= (char rest 0) #\0)
+                   (member (char rest 1) '(#\x #\X)))
+          (let ((body (subseq rest 2)))
+            (when (or (zerop (length body))
+                      (not (every #'hex-digit-p body)))
+              (return-from to-number (nan)))
+            (let ((v (parse-integer body :radix 16)))
+              (return-from to-number (* sign (coerce v 'double-float))))))
+        ;; decimal or exponent: consume the WHOLE string or answer NaN
+        (let ((int-digits 0)
+              (frac-digits 0)
+              (j 0))
+          (loop while (and (< j m) (digit-char-p (char rest j)))
+                do (incf int-digits) (incf j))
+          (when (and (< j m) (char= (char rest j) #\.))
+            (incf j)
+            (loop while (and (< j m) (digit-char-p (char rest j)))
+                  do (incf frac-digits) (incf j)))
+          (when (and (< j m) (member (char rest j) '(#\e #\E)))
+            (let ((k (1+ j)))
+              (when (and (< k m) (member (char rest k) '(#\+ #\-)))
+                (incf k))
+              (let ((exp-digits 0))
+                (loop while (and (< k m) (digit-char-p (char rest k)))
+                      do (incf exp-digits) (incf k))
+                ;; the exponent group only advances the cursor when it actually
+                ;; carried digits, so "1e" leaves j at the "e" and fails
+                (when (plusp exp-digits)
+                  (setf j k)))))
+          (unless (and (= j m) (plusp (+ int-digits frac-digits)))
+            (return-from to-number (nan)))
+          ;; The shape is now strictly valid, so a reader cannot mis-accept it.
+          ;; Magnitude is the remaining question: Rust's parse answers +/-infinity
+          ;; for "1e1000", and SBCL's reader answers READER-IMPOSSIBLE-NUMBER-ERROR
+          ;; instead - NOT floating-point-overflow, which is what a handler on the
+          ;; obvious condition class would expect and miss. Since the grammar has
+          ;; already been validated, any failure here is a magnitude failure, and
+          ;; infinity is the right answer.
+          (handler-case
+              (let ((*read-default-float-format* 'double-float))
+                (* sign (coerce (read-from-string rest) 'double-float)))
+            (error ()
+              (* sign sb-ext:double-float-positive-infinity))))))))
+
+(defun hex-digit-p (c)
+  "Whether C is an ASCII hex digit. Used only by `to-number`."
+  (digit-char-p c 16))
+
+(defun js-trim-for-number (text)
+  "`String.prototype.trim` with the FULL ECMAScript whitespace set.
+
+Deliberately not the ASCII-only set the scanners use: `Number(string)` trims
+`\\s`, which includes NBSP and the BOM. util.lisp keeps both sets because the
+scanners must not widen theirs, so this reads the full one explicitly."
+  (let ((start 0)
+        (end (length text)))
+    (loop while (and (< start end)
+                     (vovas.engine.util:js-whitespace-p (char text start)))
+          do (incf start))
+    (loop while (and (> end start)
+                     (vovas.engine.util:js-whitespace-p (char text (1- end))))
+          do (decf end))
+    (subseq text start end)))
+
 
 (defun parse-int (text &optional (radix 10))
   "JS `parseInt`: leading whitespace, optional sign, optional 0x for radix 16,

@@ -234,6 +234,31 @@ required, not defensive."
                (check result "toFixed"
                       (format nil "~a/~a" (gethash "bits" case) digits)
                       (vovas.engine.number:to-fixed value digits) want)))
+    ;; to-number: no oracle key exists, so these are the Rust's own answers read
+    ;; out of jsnumber.rs's js_string_to_number. The function had NO caller when
+    ;; this was written, so the defect it carried - answering 0 where the engine
+    ;; answers NaN for 19 of these 36 shapes - was invisible until a consumer
+    ;; arrived. Every decimal is written as a DOUBLE: a plain numeral like 0.001 is
+    ;; a SINGLE-FLOAT in Lisp and widens to a different value than the parser
+    ;; produces, which made a correct case report as wrong.
+    (dolist (case '(("" . 0d0) ("   " . 0d0)
+                    ("0" . 0d0) ("1" . 1d0) ("-1" . -1d0) ("+1" . 1d0)
+                    ("12.5" . 12.5d0) (".5" . 0.5d0) ("5." . 5d0)
+                    ("1e3" . 1000d0) ("1E3" . 1000d0) ("1e+3" . 1000d0)
+                    ("1e-3" . 0.001d0)
+                    ("0x1f" . 31d0) ("0X1F" . 31d0) ("-0x10" . -16d0)
+                    ("Infinity" . :inf) ("+Infinity" . :inf) ("-Infinity" . :-inf)
+                    ("NaN" . :nan) ("1e1000" . :inf)
+                    ("false" . :nan) ("true" . :nan) ("undefined" . :nan)
+                    ("null" . :nan) ("abc" . :nan) ("1,2" . :nan) ("1 2" . :nan)
+                    ("0xzz" . :nan) ("0x" . :nan) ("1e" . :nan) ("1e+" . :nan)
+                    ("- 1" . :nan) ("--1" . :nan) ("." . :nan)))
+      (let ((got (vovas.engine.number:to-number (car case))))
+        (check result "Number(string)" (car case)
+               (cond ((sb-ext:float-nan-p got) :nan)
+                     ((sb-ext:float-infinity-p got) (if (plusp got) :inf :-inf))
+                     (t (coerce got 'double-float)))
+               (cdr case))))
     (when verbose
       (format t "~&number gate: ~a/~a cases match~%"
               (gate-result-passed result) (gate-result-total result))
