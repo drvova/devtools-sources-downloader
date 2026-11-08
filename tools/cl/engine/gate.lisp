@@ -679,6 +679,7 @@ ERROR verdict when that gate finally runs."
         (cons "boundary report (panel oracle)" #'run-boundary-report-gate)
         (cons "boundary entrypoints (panel oracle)" #'run-boundary-entrypoints-gate)
         (cons "framework state (panel oracle)" #'run-framework-state-gate)
+        (cons "cross-boundary flows (panel oracle)" #'run-boundary-flows-gate)
         (cons "workspace profiles (panel oracle)" #'run-workspace-gate)))
 
 (defun run-all-gates ()

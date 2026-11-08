@@ -254,7 +254,8 @@
                 #:script-asset-boundary-details #:script-asset-boundary-labels
                 #:script-asset-primary-boundary #:script-asset-boundary-reasons
                 #:make-boundary-detail #:boundary-detail-score
-                #:count-boundary-labels #:count-tagged-entries)
+                #:count-boundary-labels #:count-tagged-entries
+                #:script-asset-duration #:find-asset-by-reference #:value-text)
   (:import-from :vovas.engine.panel.model
                 #:make-counts #:counts-add #:counts-alist)
   (:import-from :vovas.engine.panel.model #:js-truthy #:json-null-symbol)
@@ -284,6 +285,12 @@
    #:infer-flow-relation #:score-flow-transition #:add-boundary-flow
    #:build-network-boundary-sample #:infer-network-boundary-labels
    #:build-network-flow-events #:collect-flow-events
+   #:count-property #:describe-flow-transition #:strip-flow-transition
+   #:summarize-boundary-transitions #:build-boundary-chains
+   #:*chain-window-ms* #:*chain-lookahead* #:*chain-limit*
+   #:*flow-transition-window-ms* #:*flow-lookahead* #:*flow-score-threshold*
+   #:*flow-events-limit* #:*flow-transitions-limit*
+   #:build-cross-boundary-flows
    #:build-framework-state-summary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)

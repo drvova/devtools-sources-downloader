@@ -545,3 +545,82 @@ the engine saw."
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildCrossBoundaryFlows + collectFlowEvents
+;;;
+;;; The largest section: the oracle pins the flow report, the raw event table and
+;;; the event-map keys. It runs the fixture's own inputs through the same pipeline
+;;; the Rust test uses - prepare, build-runtime-origins, label, then flows.
+;;;
+;;; `generatedAt` is a CLOCK, so it is dropped from both sides rather than faked.
+;;; ---------------------------------------------------------------------------
+
+(defun gate-without-generated-at (table)
+  "TABLE with `generatedAt` removed, for comparing against a clock-free oracle."
+  (let ((out (make-hash-table :test #'equal)))
+    (when (hash-table-p table)
+      (maphash (lambda (k v)
+                 (unless (string= k "generatedAt")
+                   (setf (gethash k out) v)))
+               table))
+    out))
+
+(defun run-boundary-flows-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/boundary-oracle.json")))
+         (input (gethash "input" fx))
+         (exp (gethash "expected" fx))
+         (scripts (coerce (gethash "scriptFixture" input) 'list))
+         (recon-fixture (gethash "reconFixture" input))
+         (assets (vovas.engine.panel.assets:prepare-script-assets scripts recon-fixture))
+         (origins (vovas.engine.panel.assets:build-runtime-origins
+                   (coerce (gethash "runtimeEntries" input) 'list)
+                   (coerce (gethash "runtimeManifest" input) 'list)
+                   assets))
+         ;; labeling first, exactly as the Rust test does
+         (_labels (vovas.engine.panel.boundary:build-boundary-labels assets origins))
+         (got (vovas.engine.panel.boundary:build-cross-boundary-flows
+               recon-fixture assets origins))
+         (want (gethash "buildCrossBoundaryFlows" exp)))
+
+    (declare (ignore _labels))
+
+    ;; ---- the report skeleton --------------------------------------------
+    (dolist (key '("topTransitions" "chains" "events" "transitions"))
+      (incf count)
+      (check result (format nil "flows/~a" key) "section"
+             (and (gate-json= (gethash key got) (gethash key want)) t)
+             t))
+
+    ;; ---- the summary -----------------------------------------------------
+    (let ((gs (gethash "summary" got))
+          (ws (gethash "summary" want)))
+      (dolist (key '("totalFlows" "crossBoundaryFlows" "structuralFlows"
+                     "labeledEvents"))
+        (incf count)
+        (check result (format nil "flows/summary/~a" key) "count"
+               (gethash key gs) (gethash key ws)))
+      (dolist (key '("eventKinds" "relations"))
+        (incf count)
+        (check result (format nil "flows/summary/~a" key) "counts"
+               ;; `counts-alist` gives an insertion-ordered ALIST; the oracle has
+               ;; a JSON object. Convert instead of comparing across shapes, so a
+               ;; missing or extra key shows up as a diff.
+               (and (gate-json=
+                     (let ((h (make-hash-table :test #'equal)))
+                       (dolist (pair (gethash key gs))
+                         (setf (gethash (car pair) h) (cdr pair)))
+                       h)
+                     (gethash key ws))
+                    t)
+               t)))
+
+    (when verbose
+      (format t "~&boundary flows gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

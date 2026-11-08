@@ -1256,3 +1256,394 @@ Answers (:events sorted by approxTime :map id->event)."
                                      :key (lambda (e) (field-number e "approxTime")))
                         'vector)
                 :map map))))))
+
+;;; ---------------------------------------------------------------------------
+;;; describeFlowTransition
+;;; ---------------------------------------------------------------------------
+
+(defun describe-flow-transition (from-event to-event delta-ms)
+  "`describeFlowTransition`: the one-line explanation a transition carries.
+
+The lag suffix appears ONLY for a non-negative delta, and is the ROUNDED delta in
+milliseconds - so a transition that appears to go backwards reads as a plain
+sentence rather than \"-40ms later\"."
+  (let ((lag (if (and delta-ms (>= delta-ms 0d0))
+                 (format nil " ~dms later"
+                         (truncate (vovas.engine.number:js-round delta-ms)))
+                 ""))
+        (from-kind (field-str from-event "kind"))
+        (to-kind (field-str to-event "kind")))
+    (concatenate
+     'string
+     (cond
+       ((and (string= from-kind "runtime") (string= to-kind "network"))
+        "runtime activity was followed by a labeled request")
+       ((and (string= from-kind "network") (string= to-kind "runtime"))
+        "network activity was followed by a labeled runtime effect")
+       ((and (string= from-kind "network") (string= to-kind "network"))
+        "one labeled request preceded another labeled request")
+       ((and (string= from-kind "chunk") (string= to-kind "chunk"))
+        "one labeled chunk imported another labeled chunk")
+       (t (format nil "~a activity led into ~a activity"
+                  (field-str from-event "primaryBoundary")
+                  (field-str to-event "primaryBoundary"))))
+     lag)))
+
+;;; ---------------------------------------------------------------------------
+;;; stripFlowTransition
+;;; ---------------------------------------------------------------------------
+
+(defparameter *flow-transition-keys*
+  '("id" "relation" "crossBoundary" "fromBoundary" "toBoundary"
+    "confidence" "deltaMs" "evidence" "from" "to")
+  "The ten keys `stripFlowTransition` always writes, in this order.
+
+Unlike `stripFlowEvent`, NOTHING is conditional here: an absent key becomes JSON
+null, so the transition shape is fixed and a consumer never has to test presence.")
+
+(defun strip-flow-transition (flow)
+  "`stripFlowTransition`: the fixed-shape transition row, absent keys as null."
+  (let ((out (make-hash-table :test #'equal)))
+    (dolist (key *flow-transition-keys*)
+      (let ((value (and (hash-table-p flow) (gethash key flow))))
+        (setf (gethash key out)
+              (if (nth-value 1 (if (hash-table-p flow) (gethash key flow)
+                                   (values nil nil)))
+                  value
+                  (json-null-symbol)))))
+    out))
+
+;;; ---------------------------------------------------------------------------
+;;; summarizeBoundaryTransitions
+;;; ---------------------------------------------------------------------------
+
+(defun summarize-boundary-transitions (flows)
+  "`summarizeBoundaryTransitions`: flows grouped by from->to path.
+
+Groups keep FIRST-SEEN order, then the summary sorts by count descending with
+average confidence as the tiebreak, capped at 24. The relations list inside each
+group is sorted by DESCENDING COUNT with a STABLE sort, so two relations seen the
+same number of times keep the order they were first seen in."
+  (let ((order '())
+        (groups (make-hash-table :test #'equal)))
+    (dolist (flow flows)
+      (let* ((from (field-str flow "fromBoundary"))
+             (to (field-str flow "toBoundary"))
+             (key (format nil "~a->~a" from to)))
+        (unless (gethash key groups)
+          (push key order)
+          (setf (gethash key groups)
+                (list :from from :to to :count 0
+                      :total 0d0 :relations '())))
+        (let ((g (gethash key groups)))
+          (setf (getf g :count) (1+ (getf g :count))
+                (getf g :total) (+ (getf g :total)
+                                   (field-number flow "confidence")))
+          (let* ((relation (field-str flow "relation"))
+                 (cell (assoc relation (getf g :relations) :test #'string=)))
+            (if cell
+                (setf (cdr cell) (1+ (cdr cell)))
+                (setf (getf g :relations)
+                      (append (getf g :relations) (list (cons relation 1))))))
+          (setf (gethash key groups) g))))
+    (let ((summary
+            (loop for key in (nreverse order)
+                  for g = (gethash key groups)
+                  collect (let ((row (make-hash-table :test #'equal)))
+                            (setf (gethash "path" row) key
+                                  (gethash "fromBoundary" row) (getf g :from)
+                                  (gethash "toBoundary" row) (getf g :to)
+                                  (gethash "count" row) (getf g :count)
+                                  (gethash "averageConfidence" row)
+                                  (js-number-value
+                                   (if (plusp (getf g :count))
+                                       (vovas.engine.number:js-round
+                                        (/ (getf g :total) (getf g :count)))
+                                       0d0))
+                                  (gethash "relations" row)
+                                  (coerce (mapcar #'car
+                                                  (stable-sort (copy-list (getf g :relations))
+                                                               #'> :key #'cdr))
+                                          'vector))
+                            row))))
+      (coerce (subseq (stable-sort summary
+                                   (lambda (a b)
+                                     (let ((ca (field a "count")) (cb (field b "count")))
+                                       (if (/= ca cb)
+                                           (> ca cb)
+                                           (> (field-number a "averageConfidence")
+                                              (field-number b "averageConfidence"))))))
+                           0 (min 24 (length summary)))
+              'vector))))
+
+;;; ---------------------------------------------------------------------------
+;;; countProperty
+;;; ---------------------------------------------------------------------------
+
+(defun count-property (items key)
+  "`countProperty`: a Counts over KEY across ITEMS, in first-seen order."
+  (let ((c (vovas.engine.panel.model:make-counts)))
+    (dolist (item items)
+      (let ((value (field-str item key)))
+        (vovas.engine.panel.model:counts-add c value)))
+    c))
+
+;;; ---------------------------------------------------------------------------
+;;; buildBoundaryChains
+;;; ---------------------------------------------------------------------------
+
+(defparameter *chain-window-ms* 6000d0
+  "How far ahead a chain may reach for its second hop.
+
+Deliberately larger than the transition window (4000): a chain spans TWO
+transitions, so its outer bound has to accommodate both.")
+(defparameter *chain-lookahead* 5
+  "How many following flows a chain start may consider.
+A fixed lookahead rather than an unbounded scan - long gaps in the flow list are
+not adjacency.")
+(defparameter *chain-limit* 20)
+(defparameter *chain-examples-limit* 3)
+
+(defun build-boundary-chains (flows)
+  "`buildBoundaryChains`: two-hop chains through CROSS-BOUNDARY timed flows only.
+
+A chain is flow(i) followed by flow(j) where j is within the lookahead, the gap is
+POSITIVE and at most 6000ms, i's target boundary is j's source boundary, and the
+chain does not return to where it started. The start/end equality test is what
+rejects A->B->A, which is a bounce rather than a chain.
+
+averageConfidence divides by count * 2 because each chain contributes TWO flows'
+confidence.
+
+The scan is written as an explicit index loop rather than nested `loop for` forms
+because the inner loop has THREE different exits - accept and advance, skip and
+advance, and break outright when the time window closes - and a `loop` with
+mixed `while`/`unless` conditions obscures which is which."
+  (let* ((timed (remove-if-not
+                 (lambda (flow)
+                   (and (vovas.engine.panel.model:js-truthy (field flow "crossBoundary"))
+                        (> (field-number flow "timestamp") 0d0)))
+                 flows))
+         (timed (coerce (stable-sort (copy-list timed) #'<
+                                     :key (lambda (f) (field-number f "timestamp")))
+                        'vector))
+         (n (length timed))
+         (order '())
+         (chains (make-hash-table :test #'equal)))
+    (dotimes (i n)
+      (block scan
+        (loop for j from (1+ i) below (min n (+ i *chain-lookahead*))
+              do (let ((delta (- (field-number (aref timed j) "timestamp")
+                                 (field-number (aref timed i) "timestamp"))))
+                   (when (or (<= delta 0d0) (> delta *chain-window-ms*))
+                     (return-from scan nil))
+                   (unless (string= (field-str (aref timed i) "toBoundary")
+                                    (field-str (aref timed j) "fromBoundary"))
+                     (return))            ; advance j
+                   (let* ((path (list (field-str (aref timed i) "fromBoundary")
+                                      (field-str (aref timed i) "toBoundary")
+                                      (field-str (aref timed j) "toBoundary")))
+                          (key (format nil "~{~a~^ -> ~}" path)))
+                     (unless (string= (first path) (third path))
+                       (unless (gethash key chains)
+                         (push key order)
+                         (setf (gethash key chains)
+                               (list :path path :count 0 :total 0d0 :examples '())))
+                       (let ((c (gethash key chains)))
+                         (setf (getf c :count) (1+ (getf c :count))
+                               (getf c :total)
+                               (+ (getf c :total)
+                                  (field-number (aref timed i) "confidence")
+                                  (field-number (aref timed j) "confidence")))
+                         (when (< (length (getf c :examples)) *chain-examples-limit*)
+                           (setf (getf c :examples)
+                                 (append (getf c :examples)
+                                         (list (vector
+                                                (field-str (aref timed i) "relation")
+                                                (field-str (aref timed j) "relation"))))))
+                         (setf (gethash key chains) c)))))))
+    (let ((items
+            (loop for key in (nreverse order)
+                  for c = (gethash key chains)
+                  collect (let ((row (make-hash-table :test #'equal)))
+                            (setf (gethash "path" row) (coerce (getf c :path) 'vector)
+                                  (gethash "label" row) key
+                                  (gethash "count" row) (getf c :count)
+                                  (gethash "averageConfidence" row)
+                                  (js-number-value
+                                   (if (plusp (getf c :count))
+                                       (vovas.engine.number:js-round
+                                        (/ (getf c :total)
+                                           (* (getf c :count) 2d0)))
+                                       0d0))
+                                  (gethash "examples" row)
+                                  (coerce (getf c :examples) 'vector))
+                            row))))
+      (coerce (subseq (stable-sort items
+                                   (lambda (a b)
+                                     (let ((ca (field a "count")) (cb (field b "count"))
+                                           (aa (field-number a "averageConfidence"))
+                                           (bb (field-number b "averageConfidence")))
+                                       (if (/= ca cb)
+                                           (> ca cb)
+                                           (> aa bb)))))
+                       0 (min *chain-limit* (length items)))
+              'vector)))))
+
+;;; ---------------------------------------------------------------------------
+;;; buildCrossBoundaryFlows
+;;; ---------------------------------------------------------------------------
+
+(defparameter *flow-transition-window-ms* 4000d0
+  "How far ahead a transition may look. Smaller than the CHAIN window (6000):
+a transition is one hop, a chain is two.")
+(defparameter *flow-lookahead* 5)
+(defparameter *flow-score-threshold* 34d0
+  "Transitions scoring below this are not reported. The threshold is high enough
+that a plain same-boundary sequence cannot reach it without a structural pair.")
+(defparameter *flow-events-limit* 120)
+(defparameter *flow-transitions-limit* 180)
+
+(defun build-cross-boundary-flows (recon assets origins)
+  "`buildCrossBoundaryFlows`: the whole flow report.
+
+Three passes feed one flow list, in this order:
+
+  1. CHUNK IMPORTS - for each asset import that resolves to a DIFFERENT asset in a
+     different boundary, add an `imports-boundary` flow at 46 plus 3 per shared
+     label;
+  2. RUNTIME PARENTAGE - for each origin's related chunks, a `materializes-runtime`
+     flow at 68 plus 2 per shared label; and for a blob-linked origin whose blob
+     resolves to another runtime event, a `spawns-runtime` flow at 64;
+  3. TEMPORAL ADJACENCY - any two LABELED events within the lookahead and inside
+     4000ms, scored by `score-flow-transition` and kept only at 34 or above.
+
+The first two passes are structural (the relationship is known); the third is
+inferred from timing. That is why the summary separates crossBoundaryFlows from
+structuralFlows."
+  (let* ((flow-data (collect-flow-events recon assets origins))
+         (events (getf flow-data :events))
+         (event-map (getf flow-data :map))
+         (flows '())
+         (flow-map (make-hash-table :test #'equal)))
+    ;; ---- 1. chunk imports
+    (dolist (asset assets)
+      (let ((from-event (gethash (format nil "chunk:~a" (script-asset-id asset)) event-map)))
+        (when from-event
+          (dolist (specifier (script-asset-imports asset))
+            (let ((target (vovas.engine.panel.assets:find-asset-by-reference
+                           specifier assets)))
+              (when (and target (not (string= (script-asset-id target)
+                                              (script-asset-id asset))))
+                (let ((to-event (gethash (format nil "chunk:~a" (script-asset-id target))
+                                         event-map)))
+                  (when to-event
+                    (let ((fb (field-str from-event "primaryBoundary"))
+                          (tb (field-str to-event "primaryBoundary")))
+                      (unless (or (zerop (length fb)) (zerop (length tb))
+                                  (string= fb tb))
+                        (let ((confidence
+                                (+ 46d0 (* 3d0 (count-shared-values
+                                                (event-labels from-event)
+                                                (event-labels to-event)))))
+                              (delta (max 0d0 (- (field-number to-event "approxTime")
+                                                 (field-number from-event "approxTime")))))
+                          (setf flows
+                                (add-boundary-flow
+                                 flows flow-map from-event to-event
+                                 "imports-boundary" confidence
+                                 "chunk imports a differently labeled dependency"
+                                 delta))))))))))))
+    ;; ---- 2. runtime parentage
+    (dolist (origin origins)
+      (let* ((record-id (field-str origin "id"))
+             (runtime-event (gethash (format nil "runtime:~a" record-id) event-map)))
+        (when runtime-event
+          (let ((related (field origin "relatedChunks")))
+            (when (or (vectorp related) (listp related))
+              (dolist (chunk (coerce related 'list))
+                (let ((chunk-event (gethash (format nil "chunk:~a"
+                                                    (vovas.engine.panel.assets:value-text chunk))
+                                            event-map)))
+                  (when chunk-event
+                    (let ((confidence
+                            (+ 68d0 (* 2d0 (count-shared-values
+                                            (event-labels chunk-event)
+                                            (event-labels runtime-event)))))
+                          (delta (max 0d0 (- (field-number runtime-event "approxTime")
+                                             (field-number chunk-event "approxTime")))))
+                      (setf flows
+                            (add-boundary-flow
+                             flows flow-map chunk-event runtime-event
+                             "materializes-runtime" confidence
+                             "runtime artifact links back to its originating chunk"
+                             delta)))))))))
+          (let ((blob (field origin "blobId")))
+            (when (vovas.engine.panel.model:js-truthy blob)
+              (let ((parent (gethash (format nil "runtime:~a"
+                                             (vovas.engine.panel.assets:value-text blob))
+                                     event-map)))
+                (when parent
+                  (let ((delta (max 0d0 (- (field-number runtime-event "approxTime")
+                                           (field-number parent "approxTime")))))
+                    (setf flows
+                          (add-boundary-flow
+                           flows flow-map parent runtime-event
+                           "spawns-runtime" 64d0
+                           "blob ancestry connects these runtime artifacts"
+                           delta))))))))))
+    ;; ---- 3. temporal adjacency
+    (let ((timed (coerce (stable-sort
+                          (remove-if (lambda (e)
+                                       (zerop (length (field-str e "primaryBoundary"))))
+                                     (coerce events 'list))
+                          #'< :key (lambda (e) (field-number e "approxTime")))
+                         'vector)))
+      (dotimes (a (length timed))
+        (block scan
+          (loop for b from (1+ a) below (min (length timed) (+ a *flow-lookahead*))
+                do (let ((delta (- (field-number (aref timed b) "approxTime")
+                                   (field-number (aref timed a) "approxTime"))))
+                     (when (or (<= delta 0d0) (> delta *flow-transition-window-ms*))
+                       (return-from scan nil))
+                     (let ((score (score-flow-transition (aref timed a) (aref timed b) delta)))
+                       (if (< score *flow-score-threshold*)
+                           (return)
+                           (setf flows
+                                 (add-boundary-flow
+                                  flows flow-map (aref timed a) (aref timed b)
+                                  (infer-flow-relation (aref timed a) (aref timed b))
+                                  score
+                                  (describe-flow-transition (aref timed a) (aref timed b) delta)
+                                  delta)))))))))
+    ;; ---- the report
+    (let* ((labeled (remove-if (lambda (e)
+                                 (zerop (length (field-str e "primaryBoundary"))))
+                               (coerce events 'list)))
+           (cross (count-if (lambda (f) (vovas.engine.panel.model:js-truthy
+                                         (field f "crossBoundary")))
+                            flows))
+           (summary (make-hash-table :test #'equal))
+           (out (make-hash-table :test #'equal)))
+      (setf (gethash "totalFlows" summary) (length flows)
+            (gethash "crossBoundaryFlows" summary) cross
+            (gethash "structuralFlows" summary) (- (length flows) cross)
+            (gethash "labeledEvents" summary) (length labeled)
+            (gethash "eventKinds" summary)
+            (vovas.engine.panel.model:counts-alist
+             (count-property (coerce events 'list) "kind"))
+            (gethash "relations" summary)
+            (vovas.engine.panel.model:counts-alist (count-property flows "relation")))
+      (setf (gethash "generatedAt" out) (vovas.engine.pipeline:iso8601-now)
+            (gethash "summary" out) summary
+            (gethash "topTransitions" out) (summarize-boundary-transitions flows)
+            (gethash "chains" out) (build-boundary-chains flows)
+            (gethash "events" out)
+            (coerce (subseq (mapcar #'strip-flow-event labeled)
+                            0 (min *flow-events-limit* (length labeled)))
+                    'vector)
+            (gethash "transitions" out)
+            (coerce (subseq (mapcar #'strip-flow-transition flows)
+                            0 (min *flow-transitions-limit* (length flows)))
+                    'vector))
+      out)))
