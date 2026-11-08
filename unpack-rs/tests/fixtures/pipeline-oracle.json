@@ -1,0 +1,518 @@
+{
+ "note": "Captured from the shipped wasm engine (.cache/engine.wasm) via src/js/unpack-bridge.js",
+ "capturedAt": "fixed input set; regenerate with node unpack-rs/scripts/pipeline-oracle.mjs",
+ "cases": {
+  "plain": {
+   "url": "https://demo.test/app.js",
+   "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/app.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 106,
+     "digest": "088c6c49487b8d4f7bf5d95125a2341fe7644e302bb6047347e05c24bd6df40e",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__app.js/10-source.js",
+      "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);"
+     }
+    ]
+   }
+  },
+  "plainIndexed": {
+   "url": "https://demo.test/app.js",
+   "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);",
+   "options": {
+    "index": 3
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/app.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 106,
+     "digest": "088c6c49487b8d4f7bf5d95125a2341fe7644e302bb6047347e05c24bd6df40e",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0003-demo.test__app.js/10-source.js",
+      "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);"
+     }
+    ]
+   }
+  },
+  "evalWrapped": {
+   "url": "https://demo.test/e.js",
+   "content": "eval(function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0));",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/e.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 65,
+     "digest": "e7be4ee5c96f73e51e99f4b8b116b5adeb1afa0c44edb4b46589e808cf4233fb",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "eval-unwrap",
+       "inputBytes": 65,
+       "outputBytes": 58,
+       "digest": "7f0b366f907ed7946ef38e7ead2a84ce418aa41ef7dd777ad93f007cdec01a6b",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": true,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__e.js/layers/01-eval-unwrap.js",
+      "content": "function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0)"
+     },
+     {
+      "path": "_unpack/0000-demo.test__e.js/00-original.js",
+      "content": "eval(function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0));"
+     },
+     {
+      "path": "_unpack/0000-demo.test__e.js/10-beautified.js",
+      "content": "function(p,a,c,k,e,d) {\n  return p\n}\n(\"payload here\",62,1,0,0,0)\n"
+     }
+    ]
+   }
+  },
+  "packed": {
+   "url": "https://demo.test/p.js",
+   "content": "eval(function(p,a,c,k,e,d){e=function(c){return c};if(!''.replace(/^/,String)){while(c--){d[c]=k[c]||c}k=[function(e){return d[e]}];e=function(){return'\\\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c])}}return p}('0 1(\"2 3\");',4,4,'console|log|packed|ok'.split('|'),0,{}))",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/p.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 305,
+     "digest": "857fdf469b640a15c2b2c2eaea7a76e6416387b319d8fd63df1181b9c7cc8739",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "packer",
+       "inputBytes": 305,
+       "outputBytes": 25,
+       "digest": "86838aafd68060c2fb92a8166975cb07e180ef0c3a053e1e1815073481ffdcfc",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__p.js/layers/01-packer.js",
+      "content": "console log(\"packed ok\");"
+     },
+     {
+      "path": "_unpack/0000-demo.test__p.js/00-original.js",
+      "content": "eval(function(p,a,c,k,e,d){e=function(c){return c};if(!''.replace(/^/,String)){while(c--){d[c]=k[c]||c}k=[function(e){return d[e]}];e=function(){return'\\\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c])}}return p}('0 1(\"2 3\");',4,4,'console|log|packed|ok'.split('|'),0,{}))"
+     },
+     {
+      "path": "_unpack/0000-demo.test__p.js/10-source.js",
+      "content": "console log(\"packed ok\");"
+     }
+    ]
+   }
+  },
+  "withSourceMap": {
+   "url": "https://demo.test/m.js",
+   "content": "var a = 1;\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFwcC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJjb25zdCBhOiBudW1iZXIgPSAxOyJdLCJtYXBwaW5ncyI6IkFBQUEifQ==",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/m.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 189,
+     "digest": "0d97cbb67fcfee9010c54bbdcce2310ad1a1095f6a3044e48c7ec26f743289e8",
+     "stages": [],
+     "modules": 0,
+     "sources": 1,
+     "beautified": true,
+     "sourceMap": {
+      "kind": "inline",
+      "ref": "inline data URI"
+     },
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__m.js/10-beautified.js",
+      "content": "var a = 1;\n\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFwcC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJjb25zdCBhOiBudW1iZXIgPSAxOyJdLCJtYXBwaW5ncyI6IkFBQUEifQ==\n"
+     },
+     {
+      "path": "_unpack/0000-demo.test__m.js/source-map.json",
+      "content": "{\"version\":3,\"sources\":[\"app.ts\"],\"sourcesContent\":[\"const a: number = 1;\"],\"mappings\":\"AAAA\"}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__m.js/sources/app.ts",
+      "content": "const a: number = 1;"
+     }
+    ]
+   }
+  },
+  "bundle": {
+   "url": "https://demo.test/b.js",
+   "content": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n  7: (a, b) => {\n    return a + b;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/b.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 197,
+     "digest": "1c1e5ac88a01dd0323a139266697e9bae9b095057a40363cda66b632bebc2057",
+     "stages": [],
+     "modules": 2,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__b.js/modules/module-42.js",
+      "content": "42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  }"
+     },
+     {
+      "path": "_unpack/0000-demo.test__b.js/modules/module-7.js",
+      "content": "7: (a, b) => {\n    return a + b;\n  }"
+     },
+     {
+      "path": "_unpack/0000-demo.test__b.js/10-source.js",
+      "content": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n  7: (a, b) => {\n    return a + b;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js"
+     }
+    ]
+   }
+  },
+  "stringArray": {
+   "url": "https://demo.test/s.js",
+   "content": "var _0x5e6f = [\"4|1|0|2|3\", \"log\", \"Hello\", \"world\", \"console\"];\n(function(_0x2d3e, _0x4c5d) {\n  var _0x1f8a = function(_0x5a1b) {\n    while (true) {\n      if (parseInt(_0x2d3e[0], 16) === _0x4c5d) break;\n      _0x2d3e[\"push\"](_0x2d3e[\"shift\"]());\n    }\n  };\n  _0x1f8a(++_0x4c5d);\n}(_0x5e6f, 0x4));\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/s.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 426,
+     "digest": "268f90daa46ff39a45e0e1a05c8ece7a92428eb019c3b5469484c6565fb54389",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "string-array",
+       "inputBytes": 426,
+       "outputBytes": 193,
+       "digest": "8c18d7145f3e04cfa6b40976b48fb27812250bb4e5fc1edce8bcc95196b5621c",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__s.js/layers/01-string-array.js",
+      "content": "var _0x5e6f = ['4|1|0|2|3', 'log', 'Hello', 'world', 'console'];\n\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));"
+     },
+     {
+      "path": "_unpack/0000-demo.test__s.js/00-original.js",
+      "content": "var _0x5e6f = [\"4|1|0|2|3\", \"log\", \"Hello\", \"world\", \"console\"];\n(function(_0x2d3e, _0x4c5d) {\n  var _0x1f8a = function(_0x5a1b) {\n    while (true) {\n      if (parseInt(_0x2d3e[0], 16) === _0x4c5d) break;\n      _0x2d3e[\"push\"](_0x2d3e[\"shift\"]());\n    }\n  };\n  _0x1f8a(++_0x4c5d);\n}(_0x5e6f, 0x4));\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));"
+     },
+     {
+      "path": "_unpack/0000-demo.test__s.js/10-source.js",
+      "content": "var _0x5e6f = ['4|1|0|2|3', 'log', 'Hello', 'world', 'console'];\n\nvar _0x7b9c = function(i, n) {\n  i = i - 0x0;\n  return _0x5e6f[i];\n};\nconsole[_0x7b9c(\"0x1\")](_0x7b9c(\"0x2\") + _0x7b9c(\"0x3\"));"
+     }
+    ]
+   }
+  },
+  "empty": {
+   "url": "https://demo.test/empty.js",
+   "content": "",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/empty.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 0,
+     "digest": null,
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    },
+    "files": []
+   }
+  },
+  "doubleDepthOne": {
+   "url": "https://demo.test/d.js",
+   "content": "eval(\"eval(function(p,a,c,k,e,d){return p}(\\\"0 1('x');\\\",4,4,\\\"console|log\\\".split(\\\"|\\\"),0,{}))\")",
+   "options": {
+    "maxDepth": 1
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/d.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 98,
+     "digest": "5c61d825771da24bd1d91d499f1b3a8aee3b196f0008319bfd123c297ad0f6e0",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "eval-unwrap",
+       "inputBytes": 98,
+       "outputBytes": 84,
+       "digest": "fe206d0a8857676cd0ef61f1cf8e138a0d85a29d934d44b629bc7074c6119a75",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": true,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__d.js/layers/01-eval-unwrap.js",
+      "content": "eval(function(p,a,c,k,e,d){return p}(\"0 1('x');\",4,4,\"console|log\".split(\"|\"),0,{}))"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/00-original.js",
+      "content": "eval(\"eval(function(p,a,c,k,e,d){return p}(\\\"0 1('x');\\\",4,4,\\\"console|log\\\".split(\\\"|\\\"),0,{}))\")"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/10-beautified.js",
+      "content": "eval(function(p,a,c,k,e,d){return p}(\"0 1('x');\",4,4,\"console|log\".split(\"|\"),0,{}))\n"
+     }
+    ]
+   }
+  },
+  "doubleDepthTwo": {
+   "url": "https://demo.test/d.js",
+   "content": "eval(\"eval(function(p,a,c,k,e,d){return p}(\\\"0 1('x');\\\",4,4,\\\"console|log\\\".split(\\\"|\\\"),0,{}))\")",
+   "options": {
+    "maxDepth": 2
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/d.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 98,
+     "digest": "5c61d825771da24bd1d91d499f1b3a8aee3b196f0008319bfd123c297ad0f6e0",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "eval-unwrap",
+       "inputBytes": 98,
+       "outputBytes": 84,
+       "digest": "fe206d0a8857676cd0ef61f1cf8e138a0d85a29d934d44b629bc7074c6119a75",
+       "sourceUrl": null
+      },
+      {
+       "depth": 2,
+       "tool": "packer",
+       "inputBytes": 84,
+       "outputBytes": 17,
+       "digest": "2c9567653be6202225c15e452d8fb929ecd77a65850afaed49443b8f442c980a",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__d.js/layers/01-eval-unwrap.js",
+      "content": "eval(function(p,a,c,k,e,d){return p}(\"0 1('x');\",4,4,\"console|log\".split(\"|\"),0,{}))"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/layers/02-packer.js",
+      "content": "console log('x');"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/00-original.js",
+      "content": "eval(\"eval(function(p,a,c,k,e,d){return p}(\\\"0 1('x');\\\",4,4,\\\"console|log\\\".split(\\\"|\\\"),0,{}))\")"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/10-source.js",
+      "content": "console log('x');"
+     }
+    ]
+   }
+  },
+  "doubleUnlimited": {
+   "url": "https://demo.test/d.js",
+   "content": "eval(\"eval(function(p,a,c,k,e,d){return p}(\\\"0 1('x');\\\",4,4,\\\"console|log\\\".split(\\\"|\\\"),0,{}))\")",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/d.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 98,
+     "digest": "5c61d825771da24bd1d91d499f1b3a8aee3b196f0008319bfd123c297ad0f6e0",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "eval-unwrap",
+       "inputBytes": 98,
+       "outputBytes": 84,
+       "digest": "fe206d0a8857676cd0ef61f1cf8e138a0d85a29d934d44b629bc7074c6119a75",
+       "sourceUrl": null
+      },
+      {
+       "depth": 2,
+       "tool": "packer",
+       "inputBytes": 84,
+       "outputBytes": 17,
+       "digest": "2c9567653be6202225c15e452d8fb929ecd77a65850afaed49443b8f442c980a",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__d.js/layers/01-eval-unwrap.js",
+      "content": "eval(function(p,a,c,k,e,d){return p}(\"0 1('x');\",4,4,\"console|log\".split(\"|\"),0,{}))"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/layers/02-packer.js",
+      "content": "console log('x');"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/00-original.js",
+      "content": "eval(\"eval(function(p,a,c,k,e,d){return p}(\\\"0 1('x');\\\",4,4,\\\"console|log\\\".split(\\\"|\\\"),0,{}))\")"
+     },
+     {
+      "path": "_unpack/0000-demo.test__d.js/10-source.js",
+      "content": "console log('x');"
+     }
+    ]
+   }
+  },
+  "customPrefix": {
+   "url": "https://demo.test/app.js",
+   "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);",
+   "options": {
+    "pathPrefix": "raw"
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/app.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 106,
+     "digest": "088c6c49487b8d4f7bf5d95125a2341fe7644e302bb6047347e05c24bd6df40e",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "raw/0000-demo.test__app.js/10-source.js",
+      "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);"
+     }
+    ]
+   }
+  },
+  "zipPath": {
+   "url": "https://demo.test/app.js",
+   "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);",
+   "options": {
+    "zipPath": "site/sources.zip"
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/app.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 106,
+     "digest": "088c6c49487b8d4f7bf5d95125a2341fe7644e302bb6047347e05c24bd6df40e",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__app.js/10-source.js",
+      "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nvar t = 'another one';\nconsole.log(a, s, t);"
+     }
+    ]
+   }
+  }
+ },
+ "overBudget": {
+  "note": "not captured through the bridge (9 MiB payload would dominate gate runtime); the branch returns one entry with the budget note and zero files",
+  "budgetBytes": 8388608
+ }
+}
