@@ -170,3 +170,18 @@ The pattern: a command that fails LOUDLY is fine. A command that fails and
 returns a plausible value is indistinguishable from success until something
 downstream disagrees. Measure with the error stream attached, and prefer three
 independent methods over one.
+
+## Writing prose with backticks: use a file
+
+An inline heredoc lets the SHELL interpret backticks as command substitution. A
+commit message containing `packed` had that word silently removed and replaced
+with the empty output of a nonexistent command, and the commit succeeded - so the
+loss was invisible unless the message was re-read.
+
+    cat > /tmp/msg.txt <<'MSGEOF'
+    ... prose with `backticks` ...
+    MSGEOF
+    git commit -F /tmp/msg.txt
+
+The quoted heredoc delimiter (`<<'MSGEOF'`) is what stops expansion. Verify by
+re-reading: `git log -1 --format=%B | grep <a phrase that was backticked>`.

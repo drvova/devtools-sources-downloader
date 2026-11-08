@@ -103,8 +103,9 @@ Ported so far — every module below has a gate that passes:
   that its oracle is **vacuous for decode**: all 17 inputs answer
   `{"value":null,"captured":false}`, so a port returning that constant would pass.
   Real JSFuck encodes need to be generated with the shipped encoder first.
-- `pipeline.rs` (713) — needs `transforms`, then it is mostly orchestration plus
-  the archive assembly.
+- `pipeline.rs` (713) — **in flight**. Pure orchestration over the modules above,
+  with a 13-case oracle captured from the shipped engine (`pipeline-oracle.json`:
+  13 cases, 30 output files, entry fields plus every file's path and content).
 - `wasm_api.rs` (806) — the browser seam (`xu_call`, `xu_alloc`, the JSON
   envelope). No native counterpart to port: an SBCL build calls functions
   directly, so this file *disappears* rather than being translated.
