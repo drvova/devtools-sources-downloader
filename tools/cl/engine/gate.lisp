@@ -617,7 +617,9 @@ ERROR verdict when that gate finally runs."
         (cons "asset pipeline (wasm oracle)" #'run-pipeline-gate)
         ;; panel tier
         (cons "capture policy (panel oracle)" #'run-policy-gate)
-        (cons "resource model (panel module tests)" #'run-model-gate)))
+        (cons "resource model (panel module tests)" #'run-model-gate)
+        (cons "asset helpers (paired oracle)" #'run-assets-gate)
+        (cons "archive layout (structural)" #'run-paths-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

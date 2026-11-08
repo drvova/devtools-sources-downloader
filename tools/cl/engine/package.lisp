@@ -202,7 +202,23 @@
    #:clean-stack-reference #:extract-stack-refs #:unique-strings
    #:asset-sample #:detect-bundler-name #:detect-framework-hints
    #:detect-startup-signals #:extract-route-hints-from-url
-   #:extract-import-specifiers #:split-on-slash))
+   #:extract-import-specifiers #:split-on-slash #:keys-len))
+
+(defpackage :vovas.engine.panel.paths
+  (:use :cl)
+  (:export
+   #:*framework-artifacts*
+   #:*analysis-artifacts*
+   #:*analysis-chunk-map*
+   #:*analysis-cross-boundary-flows*
+   #:*analysis-module-graph*
+   #:*analysis-startup-chain*
+   #:*analysis-runtime-origins*
+   #:*analysis-boundary-labels*
+   #:*analysis-framework-runtime*
+   #:*analysis-interesting-entrypoints*
+   #:*analysis-index-html*
+   #:framework-slice-present-p))
 
 (defpackage :vovas.engine.gate
   (:use :cl)

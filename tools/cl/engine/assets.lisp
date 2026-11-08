@@ -255,3 +255,26 @@ survives as text and corrupts the class."
                 (format nil "\\brequire~a*\\(~a*~a(~a+)~a~a*\\)"
                         ws ws quote-chars not-quote quote-chars ws))))
     (unique-strings (nreverse imports))))
+
+;;; ---------------------------------------------------------------------------
+;;; keys-len
+;;;
+;;; `Object.keys(value).length`, which the panel's guards use as one presence
+;;; rule for three different shapes. It lives here because paths.rs needs it and
+;;; assets.rs owns it.
+;;; ---------------------------------------------------------------------------
+
+(defun keys-len (value)
+  "`Object.keys(value).length`: arrays and strings report their LENGTH, objects
+their own-key count, everything else zero.
+
+The string case is the one that matters: a non-empty STRING has non-zero
+`keys_len`, so a slice holding `\"x\"` counts as present. The writer and the
+artifact index used to test presence differently - the writer counted keys, the
+index demanded an object or an array - so a string slice was written to the
+archive and left out of the index pointing at it. One rule, here, is the fix."
+  (cond
+    ((hash-table-p value) (hash-table-count value))
+    ((vectorp value) (length value))
+    ((stringp value) (length value))
+    (t 0)))

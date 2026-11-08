@@ -71,6 +71,8 @@
                              ;; with the panel modules that follow later.
                              (:file "policy")
                              (:file "model")
+                             (:file "assets")
+                             (:file "paths")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -89,4 +91,6 @@
                              (:file "gate-zip")
                              (:file "gate-pipeline")
                              (:file "gate-policy")
-                             (:file "gate-model")))))
+                             (:file "gate-model")
+                             (:file "gate-assets")
+                             (:file "gate-paths")))))
