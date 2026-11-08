@@ -66,6 +66,10 @@
                              ;; of them, so anything after it would be a forward
                              ;; reference at load time.
                              (:file "pipeline")
+                             ;; panel tier: policy is a LEAF (text.rs is already
+                             ;; ported as text.lisp), so it goes here rather than
+                             ;; with the panel modules that follow later.
+                             (:file "policy")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -82,4 +86,5 @@
                              (:file "gate-jscbytecode")
                              (:file "gate-v8codecache")
                              (:file "gate-zip")
-                             (:file "gate-pipeline")))))
+                             (:file "gate-pipeline")
+                             (:file "gate-policy")))))

@@ -159,6 +159,18 @@
    #:bundle-module-params
    #:bundle-module-code))
 
+(defpackage :vovas.engine.panel.policy
+  (:use :cl)
+  (:export
+   #:capture-policy
+   #:default-strategy
+   #:*redact-key-pattern*
+   #:*text-mime-pattern*
+   #:*graphql-url-marker*
+   #:*graphql-body-pattern*
+   #:*graphql-body-keys*
+   #:*limits*))
+
 (defpackage :vovas.engine.gate
   (:use :cl)
   (:export
