@@ -51,6 +51,15 @@
   "Whether VALUE is JZON's null. Not `(null value)`, which is also true of NIL."
   (and (symbolp value) (string= (symbol-name value) "NULL")))
 
+(defun json-null-symbol ()
+  "JZON's null, for code that must WRITE a null rather than test for one.
+
+A CL NIL serialises as `false` or as an absent key depending on the writer, so a
+field the engine emits as `null` needs this symbol. Interning by name rather than
+depending on `com.inuoe.jzon` keeps this usable from modules that never parse
+JSON themselves."
+  (intern "NULL" :com.inuoe.jzon))
+
 (defun js-string (value)
   "`String(value)` for a JSON value."
   (cond

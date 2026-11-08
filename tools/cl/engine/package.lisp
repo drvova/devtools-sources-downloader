@@ -184,6 +184,7 @@
   (:export
    #:counts #:make-counts #:counts-add #:counts-alist
    #:js-string #:js-number #:js-truthy #:json-null-p
+   #:json-null-symbol
    #:+max-safe-integer+ #:finite-float-p #:js-number-value
    #:resource #:make-resource
    #:resource-status #:resource-kind #:resource-source #:resource-url
@@ -256,7 +257,7 @@
                 #:count-boundary-labels #:count-tagged-entries)
   (:import-from :vovas.engine.panel.model
                 #:make-counts #:counts-add #:counts-alist)
-  (:import-from :vovas.engine.panel.model #:js-truthy)
+  (:import-from :vovas.engine.panel.model #:js-truthy #:json-null-symbol)
   ;; `js-number-value` is what turns a score into the integer the JSON shows.
   ;; It lives in `model`, beside the other JS number coercions - `artifacts`
   ;; loads AFTER this file, so importing it from there would be a dependency
@@ -277,6 +278,8 @@
    #:build-boundary-labels
    #:entrypoint-why #:collect-interesting-entrypoints
    #:framework-state-slice #:framework-state-slice-length
+   #:count-shared-values #:truthy-number #:event-labels
+   #:vector-of #:stringify-loose-value #:build-flow-event
    #:build-framework-state-summary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)

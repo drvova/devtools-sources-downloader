@@ -775,3 +775,108 @@ package exists."
                            state)
                   'vector))
     out))
+
+;;; ---------------------------------------------------------------------------
+;;; The flow-event helpers
+;;; ---------------------------------------------------------------------------
+
+(defun count-shared-values (left right)
+  "`countSharedValues`: how many of LEFT appear in RIGHT.
+
+Duplicates in LEFT each count, which is what the Rust does - this is a filter and
+a count, not a set intersection."
+  (count-if (lambda (value) (member value right :test #'string=)) left))
+
+(defun truthy-number (entry key)
+  "`truthyNumber`: KEY as a number when its value is JS-TRUTHY, else NIL.
+
+The truthiness test comes FIRST, so a `0` answers NIL rather than 0 - that is what
+lets `add-boundary-flow` fall through to the next timestamp candidate instead of
+settling on a zero."
+  (when (hash-table-p entry)
+    (multiple-value-bind (value present) (gethash key entry)
+      (when (and present (vovas.engine.panel.model:js-truthy value))
+        (vovas.engine.panel.model:js-number value)))))
+
+(defun event-labels (event)
+  "`eventLabels`: the string members of an event's `boundaryLabels`."
+  (string-list event "boundaryLabels"))
+
+(defun vector-of (value)
+  "VALUE as a vector when it is a list or vector, else an empty vector.
+
+The JSON writers emit `[]` for an absent array, so the absent case must produce an
+empty vector rather than NIL - a NIL would serialise as `null` and change the
+report's shape."
+  (if (or (vectorp value) (listp value)) (coerce value 'vector) #()))
+
+(defun stringify-loose-value (value)
+  "`stringifyLooseValue`: a string as-is, JSON null as \"\", anything else as JSON.
+
+The Rust is `serde_json::to_string(other)`, so a number stringifies as its JSON
+form and an object/array stringifies as compact JSON - NOT as `princ` output,
+which would print a hash table as `#<HASH-TABLE ...>`."
+  (cond
+    ((stringp value) value)
+    ((vovas.engine.panel.model:json-null-p value) "")
+    ((null value) "")
+    ((numberp value)
+     (vovas.engine.number:to-string (coerce value 'double-float)))
+    ((or (vectorp value) (listp value) (hash-table-p value))
+     (funcall (find-symbol "JSON-SERIALIZE-COMPACT" :vovas.engine.panel.artifacts) value))
+    (t "")))
+
+;;; ---------------------------------------------------------------------------
+;;; buildFlowEvent
+;;; ---------------------------------------------------------------------------
+
+(defun build-flow-event (kind record-id entry approx-time)
+  "`buildFlowEvent`: one event row from an asset/origin/operation.
+
+The LABEL is the interesting part: an explicit `label` wins; otherwise the first
+TRUTHY of file/url/objectUrl/id/kind is taken, stringified loosely, reduced to its
+bare file name, and falls back to the record id when that is empty too.
+
+`approxTime` of exactly 0 (or NaN) is normalised to 0, so an unknown time is
+never mistaken for a NaN in the arithmetic downstream."
+  (let* ((explicit (field-str entry "label"))
+         (label
+           (if (plusp (length explicit))
+               explicit
+               (let* ((candidate
+                        (loop for key in '("file" "url" "objectUrl" "id" "kind")
+                              for value = (and (hash-table-p entry)
+                                               (gethash key entry))
+                              when (vovas.engine.panel.model:js-truthy value)
+                                return (stringify-loose-value value)))
+                      (bare (if candidate
+                                (vovas.engine.panel.assets:get-bare-file-name candidate)
+                                "")))
+                 (if (plusp (length bare)) bare record-id))))
+         (url (let ((u (field-str entry "url")))
+                (if (plusp (length u)) u (field-str entry "objectUrl"))))
+         (source (let ((s (field-str entry "source")))
+                   (if (plusp (length s)) s (field-str entry "type"))))
+         (blob (let ((b (and (hash-table-p entry) (gethash "blobId" entry))))
+                 (if (vovas.engine.panel.model:js-truthy b) b nil)))
+         (out (make-hash-table :test #'equal)))
+    (setf (gethash "id" out) (format nil "~a:~a" kind record-id)
+          (gethash "recordId" out) record-id
+          (gethash "kind" out) kind
+          (gethash "label" out) label
+          (gethash "primaryBoundary" out) (field-str entry "primaryBoundary")
+          (gethash "boundaryLabels" out) (vector-of (field entry "boundaryLabels"))
+          (gethash "approxTime" out)
+          (js-number-value (if (or (null approx-time) (zerop approx-time)) 0d0 approx-time))
+          (gethash "timestamp" out) (js-number-value (field-number entry "timestamp"))
+          (gethash "url" out) url
+          (gethash "file" out) (field-str entry "file")
+          (gethash "method" out) (field-str entry "method")
+          (gethash "status" out) (js-number-value (field-number entry "status"))
+          (gethash "classification" out) (field-str entry "classification")
+          (gethash "originType" out) (field-str entry "originType")
+          (gethash "relatedChunks" out) (vector-of (field entry "relatedChunks"))
+          (gethash "blobId" out) (or blob (json-null-symbol))
+          (gethash "source" out) source
+          (gethash "boundaryReasons" out) (vector-of (field entry "boundaryReasons")))
+    out))
