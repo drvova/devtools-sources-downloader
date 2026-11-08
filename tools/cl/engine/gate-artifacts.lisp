@@ -21,24 +21,6 @@ It is NOT a package constant: this JZON reads null as a SYMBOL whose name is
 rather than by identity. Interning that name reproduces it."
   (intern "NULL" :com.inuoe.jzon))
 
-(defun ht (&rest pairs)
-  "A JSON-object hash table from alternating key/value arguments.
-
-The key is a STRING because the engine's `field` looks up JSON keys by string;
-a keyword here would make every lookup miss and answer NIL, which reads as a
-port bug rather than a test-harness one."
-  (let ((table (make-hash-table :test #'equal)))
-    (loop for (key value) on pairs by #'cddr
-          do (setf (gethash key table) value))
-    table))
-
-(defun ht* (pairs)
-  "`ht` over an ALIST, for nested literals where the plist form is unreadable."
-  (let ((table (make-hash-table :test #'equal)))
-    (dolist (pair pairs)
-      (setf (gethash (car pair) table) (cadr pair)))
-    table))
-
 (defun cookie-keys (table order)
   "The keys of TABLE in first-seen ORDER - the order `_recon/cookies.json` gets."
   order)

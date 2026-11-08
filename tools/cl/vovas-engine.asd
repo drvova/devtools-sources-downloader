@@ -73,6 +73,10 @@
                              (:file "policy")
                              (:file "model")
                              (:file "assets")
+                             ;; boundary sits beside assets: it imports the
+                             ;; field accessors, and assets is its only
+                             ;; panel-tier dependency.
+                             (:file "boundary")
                              (:file "paths")
                              (:file "graph")
                              ;; view BEFORE artifacts: artifacts escapes XML and
@@ -100,6 +104,7 @@
                              (:file "gate-policy")
                              (:file "gate-model")
                              (:file "gate-assets")
+                             (:file "gate-boundary")
                              (:file "gate-paths")
                              (:file "gate-graph")
                              (:file "gate-stackprofile")

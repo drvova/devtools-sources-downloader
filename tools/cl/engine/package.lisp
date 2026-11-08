@@ -235,6 +235,19 @@
    #:build-runtime-origins #:build-runtime-summary #:strip-runtime-entry
    #:count-origin-property #:asset-sample #:count-matches))
 
+(defpackage :vovas.engine.panel.boundary
+  (:use :cl)
+  ;; The field accessors and coercion rules live in `assets`, and `js-truthy` is
+  ;; re-exported from `model` - imported from its OWNER rather than through
+  ;; `assets`, so this module does not inherit a transitive dependency it never
+  ;; asked for.
+  (:import-from :vovas.engine.panel.assets #:field #:field-str)
+  (:import-from :vovas.engine.panel.model #:js-truthy)
+  (:export
+   #:*boundary-labels*
+   #:array-contains-any #:matches-boundary-entry
+   #:flow-touches-boundary #:chain-touches-boundary
+   #:flow-touches-any-boundary #:matches-any-boundary))
 (defpackage :vovas.engine.panel.paths
   (:use :cl)
   (:export

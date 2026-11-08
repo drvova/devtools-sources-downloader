@@ -624,7 +624,8 @@ ERROR verdict when that gate finally runs."
         (cons "graphql collection (panel oracle)" #'run-graph-gate)
         (cons "panel view (engine oracle)" #'run-view-gate)
         (cons "stack profile (panel oracle)" #'run-stackprofile-gate)
-        (cons "artifact helpers (panel oracle)" #'run-artifacts-gate)))
+        (cons "artifact helpers (panel oracle)" #'run-artifacts-gate)
+        (cons "boundary predicates (panel oracle)" #'run-boundary-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one
@@ -639,3 +640,22 @@ broken slice cannot hide the verdicts of the slices that still work."
         (format t "~&   => ~a~%" (if ok "PASS" "FAIL"))
         (unless ok (setf all-ok nil))))
     all-ok))
+
+(defun ht (&rest pairs)
+  "A JSON-object hash table from alternating key/value arguments.
+
+The key is a STRING because the engine's `field` looks up JSON keys by string;
+a keyword here would make every lookup miss and answer NIL, which reads as a
+port bug rather than a test-harness one."
+  (let ((table (make-hash-table :test #'equal)))
+    (loop for (key value) on pairs by #'cddr
+          do (setf (gethash key table) value))
+    table))
+
+(defun ht* (pairs)
+  "`ht` over an ALIST, for nested literals where the plist form is unreadable."
+  (let ((table (make-hash-table :test #'equal)))
+    (dolist (pair pairs)
+      (setf (gethash (car pair) table) (cadr pair)))
+    table))
+
