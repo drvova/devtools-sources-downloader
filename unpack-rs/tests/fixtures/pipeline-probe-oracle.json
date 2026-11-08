@@ -1,0 +1,105 @@
+{
+ "note": "Small-predicate and unit probes captured from the shipped wasm engine. The `$`-anchored regexes are the reason this exists: Rust `$` is end-of-haystack ONLY, so a trailing newline defeats them, and a port using PCRE semantics silently strips.",
+ "capturedAt": "fixed input set; regenerate with node scripts/pipeline-oracle-extra.mjs",
+ "assetSlug": {
+  "https://h/a.js?v=1#x #0": "0000-h__a.js",
+  "https://h/a.js#x #0": "0000-h__a.js",
+  "a?b #0": "0000-a.js",
+  "a#b #0": "0000-a.js",
+  "HTTP://h/a.js #0": "0000-h__a.js",
+  "https://h/a.js\n #0": "0000-h__a.js\n.js",
+  "https://h/a.js\nX #0": "0000-h__a.js\nX.js",
+  "https://h/a.b.c #0": "0000-h__a.b.c.js",
+  "https://h/./x #0": "0000-h__.__x.js",
+  "https://h/a b.js #0": "0000-h__a b.js",
+  "https://h/a:b.js #0": "0000-h__a_b.js",
+  " #0": "0000-inline.js",
+  "?x #0": "0000-inline.js",
+  "/ #0": "0000-__.js",
+  "a?b\nc #0": "0000-a_b\nc.js",
+  "a\n?b #0": "0000-a\n.js",
+  "a?b\nc\n #0": "0000-a_b\nc\n.js",
+  "https://h/a/b.js #1234": "1234-h__a__b.js"
+ },
+ "looksBinaryScript": {
+  "https://demo.test/app.js||none": false,
+  "https://demo.test/app.jsc||none": true,
+  "https://demo.test/x.bc||none": true,
+  "https://demo.test/m.wasm||none": true,
+  "https://demo.test/m.wasm?v=2||none": true,
+  "https://demo.test/a.JSC||none": true,
+  "https://demo.test/a.js?x=.jsc||none": true,
+  "https://demo.test/a.json||none": false,
+  "https://demo.test/a||none": false,
+  "jsc||none": false,
+  "x.bc.wasm||none": true,
+  "https://demo.test/a.wasmx||none": false,
+  "a.jsc\n||none": false,
+  "a.wasm?||none": true,
+  "a.bc#x||none": false,
+  "A.Wasm?z=1||none": true,
+  "https://demo.test/blob.bin||wasm-named.wasm": true,
+  "https://demo.test/blob.bin||jsc-chunk.jsc": true,
+  "https://demo.test/blob.bin||v8-codecache.jsc": true,
+  "https://demo.test/blob.bin||garbage": false,
+  "https://demo.test/blob.bin||short": false
+ },
+ "unit": {
+  "latin1": {
+   "url": "https://demo.test/u.js",
+   "content": "é",
+   "result": {
+    "entry": {
+     "url": "https://demo.test/u.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 1,
+     "digest": "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__u.js/10-source.js",
+      "content": "é"
+     }
+    ]
+   }
+  },
+  "astral": {
+   "url": "https://demo.test/u.js",
+   "content": "😀",
+   "result": {
+    "entry": {
+     "url": "https://demo.test/u.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 2,
+     "digest": "f0443a342c5ef54783a111b51ba56c938e474c32324d90c3a60c9c8e3a37e2d9",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__u.js/10-source.js",
+      "content": "😀"
+     }
+    ]
+   }
+  }
+ }
+}

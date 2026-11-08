@@ -573,7 +573,9 @@ ERROR verdict when that gate finally runs."
         (cons "wasm parser (binary fixtures)" #'run-wasm-gate)
         (cons "jsc bytecode (binary fixtures)" #'run-jscbytecode-gate)
         (cons "v8 code cache (binary fixtures)" #'run-v8codecache-gate)
-        (cons "zip writer (round trip)" #'run-zip-gate)))
+        (cons "zip writer (round trip)" #'run-zip-gate)
+        ;; the pipeline is LAST because it exercises every module above
+        (cons "asset pipeline (wasm oracle)" #'run-pipeline-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one

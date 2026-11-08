@@ -62,6 +62,10 @@
                              ;; vovas.engine.zip, so zip must be loaded first - the
                              ;; package-order trap, again, in a file I did not write.
                              (:file "jsfuck")
+                             ;; pipeline LAST of the modules: it calls every one
+                             ;; of them, so anything after it would be a forward
+                             ;; reference at load time.
+                             (:file "pipeline")
                              ;; gate.lisp FIRST: it owns the harness every other
                              ;; gate file calls (read-json-file, fixture-path,
                              ;; binary-fixture-path, check, report-failures).
@@ -77,4 +81,5 @@
                              (:file "gate-wasm")
                              (:file "gate-jscbytecode")
                              (:file "gate-v8codecache")
-                             (:file "gate-zip")))))
+                             (:file "gate-zip")
+                             (:file "gate-pipeline")))))

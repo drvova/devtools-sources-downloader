@@ -201,26 +201,36 @@ decimal or exponent form."
                    (member (char rest 1) '(#\x #\X)))
           (let ((body (subseq rest 2)))
             (when (or (zerop (length body))
-                      (not (every #'hex-digit-p body)))
+                      (not (every #'ascii-hex-digit-p body)))
               (return-from to-number (nan)))
-            (let ((v (parse-integer body :radix 16)))
-              (return-from to-number (* sign (coerce v 'double-float))))))
+            ;; The VALUE must fit in a u64. Rust parses with
+            ;; `u64::from_str_radix`, which FAILS on overflow and the caller then
+            ;; answers NaN; CL's PARSE-INTEGER is unbounded, so "0x10000000000000000"
+            ;; answered 1.8e19 where the engine answers NaN. Leading zeros are
+            ;; trimmed first, because "0x00000000000000000001" is 1 in Rust too.
+            (let ((digits (string-left-trim "0" body)))
+              (when (> (length digits) 16)
+                (return-from to-number (nan)))
+              (let ((v (if (zerop (length digits))
+                           0
+                           (parse-integer digits :radix 16))))
+                (return-from to-number (* sign (coerce v 'double-float)))))))
         ;; decimal or exponent: consume the WHOLE string or answer NaN
         (let ((int-digits 0)
               (frac-digits 0)
               (j 0))
-          (loop while (and (< j m) (digit-char-p (char rest j)))
+          (loop while (and (< j m) (ascii-digit-p (char rest j)))
                 do (incf int-digits) (incf j))
           (when (and (< j m) (char= (char rest j) #\.))
             (incf j)
-            (loop while (and (< j m) (digit-char-p (char rest j)))
+            (loop while (and (< j m) (ascii-digit-p (char rest j)))
                   do (incf frac-digits) (incf j)))
           (when (and (< j m) (member (char rest j) '(#\e #\E)))
             (let ((k (1+ j)))
               (when (and (< k m) (member (char rest k) '(#\+ #\-)))
                 (incf k))
               (let ((exp-digits 0))
-                (loop while (and (< k m) (digit-char-p (char rest k)))
+                (loop while (and (< k m) (ascii-digit-p (char rest k)))
                       do (incf exp-digits) (incf k))
                 ;; the exponent group only advances the cursor when it actually
                 ;; carried digits, so "1e" leaves j at the "e" and fails
@@ -241,9 +251,23 @@ decimal or exponent form."
             (error ()
               (* sign sb-ext:double-float-positive-infinity))))))))
 
-(defun hex-digit-p (c)
-  "Whether C is an ASCII hex digit. Used only by `to-number`."
-  (digit-char-p c 16))
+(defun ascii-digit-p (c)
+  "Whether C is an ASCII `0`-`9`.
+
+NOT `digit-char-p`: that is implementation-defined above ASCII and SBCL answers
+10 for U+FF11 FULLWIDTH DIGIT ONE, so `to-number` accepted "\uFF11" as 1 where
+the Rust's `is_ascii_digit` rejects it and answers NaN. Measured: that one
+character was the last non-hex divergence in the differential probe."
+  (and (char>= c #\0) (char<= c #\9)))
+
+(defun ascii-hex-digit-p (c)
+  "Whether C is an ASCII hex digit, in either case.
+
+Not `(digit-char-p c 16)` for the same reason `ascii-digit-p` exists: SBCL would
+accept non-ASCII digits the Rust's `is_ascii_hexdigit` rejects."
+  (or (ascii-digit-p c)
+      (char<= #\a c #\f)
+      (char<= #\A c #\F)))
 
 (defun js-trim-for-number (text)
   "`String.prototype.trim` with the FULL ECMAScript whitespace set.

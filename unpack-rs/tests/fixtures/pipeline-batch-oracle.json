@@ -1,0 +1,374 @@
+{
+ "note": "Captured from the shipped wasm engine via src/js/unpack-bridge.js. unpackAssets is clock-free; the two unpackAssetsForZip stamps are replaced with <unpackedAt> for the gate to substitute a fixed clock.",
+ "capturedAt": "fixed input set; regenerate with node scripts/pipeline-oracle-extra.mjs",
+ "clockSentinel": "<unpackedAt>",
+ "textAssets": [
+  {
+   "url": "https://demo.test/app.js",
+   "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nconsole.log(a, s);"
+  },
+  {
+   "url": "https://demo.test/e.js",
+   "content": "eval(function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0));",
+   "zipPath": "site/e.js"
+  },
+  {
+   "url": "https://demo.test/m.js",
+   "content": "var a = 1;\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFwcC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJjb25zdCBhOiBudW1iZXIgPSAxOyJdLCJtYXBwaW5ncyI6IkFBQUEifQ=="
+  },
+  {
+   "url": "https://demo.test/b.js",
+   "content": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js"
+  },
+  {
+   "url": "https://demo.test/empty.js",
+   "content": ""
+  }
+ ],
+ "options": {
+  "pathPrefix": "raw"
+ },
+ "unpackAssets": {
+  "report": {
+   "generatedBy": "unpack.js",
+   "assets": [
+    {
+     "url": "https://demo.test/app.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 80,
+     "digest": "4031af485bf08b00acfbeeaf2b67688d0baded4407a8d5f0f9af656ae02ba4cc",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/e.js",
+     "zipPath": "site/e.js",
+     "kind": "text",
+     "bytes": 65,
+     "digest": "e7be4ee5c96f73e51e99f4b8b116b5adeb1afa0c44edb4b46589e808cf4233fb",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "eval-unwrap",
+       "inputBytes": 65,
+       "outputBytes": 58,
+       "digest": "7f0b366f907ed7946ef38e7ead2a84ce418aa41ef7dd777ad93f007cdec01a6b",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": true,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/m.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 189,
+     "digest": "0d97cbb67fcfee9010c54bbdcce2310ad1a1095f6a3044e48c7ec26f743289e8",
+     "stages": [],
+     "modules": 0,
+     "sources": 1,
+     "beautified": true,
+     "sourceMap": {
+      "kind": "inline",
+      "ref": "inline data URI"
+     },
+     "notes": [],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/b.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 157,
+     "digest": "9c805764d3b2565f06a4ab450d796bbb7ed3284722f6e1a6f3f1ec440a0b3c72",
+     "stages": [],
+     "modules": 1,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/empty.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 0,
+     "digest": null,
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    }
+   ],
+   "totals": {
+    "assets": 5,
+    "unpacked": 3,
+    "modules": 1,
+    "sources": 1,
+    "beautified": 2
+   }
+  },
+  "files": [
+   {
+    "path": "raw/0000-demo.test__app.js/10-source.js",
+    "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nconsole.log(a, s);"
+   },
+   {
+    "path": "raw/0001-demo.test__e.js/layers/01-eval-unwrap.js",
+    "content": "function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0)"
+   },
+   {
+    "path": "raw/0001-demo.test__e.js/00-original.js",
+    "content": "eval(function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0));"
+   },
+   {
+    "path": "raw/0001-demo.test__e.js/10-beautified.js",
+    "content": "function(p,a,c,k,e,d) {\n  return p\n}\n(\"payload here\",62,1,0,0,0)\n"
+   },
+   {
+    "path": "raw/0002-demo.test__m.js/10-beautified.js",
+    "content": "var a = 1;\n\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFwcC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJjb25zdCBhOiBudW1iZXIgPSAxOyJdLCJtYXBwaW5ncyI6IkFBQUEifQ==\n"
+   },
+   {
+    "path": "raw/0002-demo.test__m.js/source-map.json",
+    "content": "{\"version\":3,\"sources\":[\"app.ts\"],\"sourcesContent\":[\"const a: number = 1;\"],\"mappings\":\"AAAA\"}"
+   },
+   {
+    "path": "raw/0002-demo.test__m.js/sources/app.ts",
+    "content": "const a: number = 1;"
+   },
+   {
+    "path": "raw/0003-demo.test__b.js/modules/module-42.js",
+    "content": "42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  }"
+   },
+   {
+    "path": "raw/0003-demo.test__b.js/10-source.js",
+    "content": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js"
+   }
+  ]
+ },
+ "binaryFixtures": [
+  "jsc-cjs-chunk.bin",
+  "jsc-cjs-sec.bin"
+ ],
+ "unpackAssetsBinary": {
+  "report": {
+   "generatedBy": "unpack.js",
+   "assets": [
+    {
+     "url": "https://demo.test/cjs.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 4528,
+     "digest": "e33bb01c999e11b27a0fad1a615c7cfe67e4789293461fbdde1ccebc516da5b6",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "jsc-bytecode",
+       "detail": "JSC bytecode v4, 4528B, 17 functions, 17 blocks, 293 ops, 15 names via shared table"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "functions": 17
+    },
+    {
+     "url": "https://demo.test/sec.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 8608,
+     "digest": "bbddd1e1927618f5f2f6a8c7ebaf1b592252c0cf8afacafd1bb9f651c920331e",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "binary asset: no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape recognized"
+     ]
+    }
+   ],
+   "totals": {
+    "assets": 2,
+    "unpacked": 1,
+    "modules": 0,
+    "sources": 0,
+    "beautified": 0
+   }
+  },
+  "files": [
+   {
+    "path": "_unpack/0000-demo.test__cjs.bin.js/cache-header.json",
+    "content": "{\n  \"shape\": \"jsc-bytecode\",\n  \"stamp\": 1693289282,\n  \"format\": 0,\n  \"version\": 4,\n  \"declaredLength\": 4528,\n  \"bodyOffset\": 32\n}"
+   },
+   {
+    "path": "_unpack/0000-demo.test__cjs.bin.js/functions.json",
+    "content": "{\n  \"valid\": true,\n  \"rootName\": null,\n  \"rootParseMode\": 0,\n  \"nodes\": 17,\n  \"blocks\": 17,\n  \"ops\": 293,\n  \"bindFailed\": 0,\n  \"functions\": [\n    {\n      \"name\": null,\n      \"kind\": \"root\",\n      \"record\": 112,\n      \"callBlock\": {\n        \"region\": 92,\n        \"instrAt\": 92,\n        \"instrLength\": 7,\n        \"opCount\": 3,\n        \"gap\": 56\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": null,\n      \"kind\": \"fexprs\",\n      \"record\": 192,\n      \"callBlock\": {\n        \"region\": 211,\n        \"instrAt\": 252,\n        \"instrLength\": 483,\n        \"opCount\": 84,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"__accessProp\",\n      \"kind\": \"fdecls\",\n      \"record\": 1228,\n      \"callBlock\": {\n        \"region\": 1691,\n        \"instrAt\": 1700,\n        \"instrLength\": 14,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"__exportSetter\",\n      \"kind\": \"fdecls\",\n      \"record\": 1280,\n      \"callBlock\": {\n        \"region\": 1745,\n        \"instrAt\": 1772,\n        \"instrLength\": 49,\n        \"opCount\": 10,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"calculateInvoiceTotal\",\n      \"kind\": \"fdecls\",\n      \"record\": 1308,\n      \"callBlock\": {\n        \"region\": 1879,\n        \"instrAt\": 1892,\n        \"instrLength\": 50,\n        \"opCount\": 14,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"validateCustomerRecord\",\n      \"kind\": \"fdecls\",\n      \"record\": 1336,\n      \"callBlock\": {\n        \"region\": 1990,\n        \"instrAt\": 2000,\n        \"instrLength\": 27,\n        \"opCount\": 7,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"internalAuditLogger\",\n      \"kind\": \"fdecls\",\n      \"record\": 1364,\n      \"callBlock\": {\n        \"region\": 2072,\n        \"instrAt\": 2072,\n        \"instrLength\": 9,\n        \"opCount\": 3,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"__toCommonJS\",\n      \"kind\": \"fexprs\",\n      \"record\": 1392,\n      \"callBlock\": {\n        \"region\": 2122,\n        \"instrAt\": 2180,\n        \"instrLength\": 458,\n        \"opCount\": 98,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"__returnValue\",\n      \"kind\": \"fexprs\",\n      \"record\": 1420,\n      \"callBlock\": {\n        \"region\": 2923,\n        \"instrAt\": 2923,\n        \"instrLength\": 3,\n        \"opCount\": 2,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"__export\",\n      \"kind\": \"fexprs\",\n      \"record\": 1448,\n      \"callBlock\": {\n        \"region\": 2955,\n        \"instrAt\": 2988,\n        \"instrLength\": 139,\n        \"opCount\": 29,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"InvoiceWorkflow\",\n      \"kind\": \"fexprs\",\n      \"record\": 1476,\n      \"callBlock\": {\n        \"region\": 3225,\n        \"instrAt\": 3232,\n        \"instrLength\": 15,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"calculateInvoiceTotal\",\n      \"kind\": \"fexprs\",\n      \"record\": 1504,\n      \"callBlock\": {\n        \"region\": 3293,\n        \"instrAt\": 3304,\n        \"instrLength\": 19,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"resolvePreferredGateway\",\n      \"kind\": \"fexprs\",\n      \"record\": 1532,\n      \"callBlock\": {\n        \"region\": 3358,\n        \"instrAt\": 3358,\n        \"instrLength\": 19,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"validateCustomerRecord\",\n      \"kind\": \"fexprs\",\n      \"record\": 1560,\n      \"callBlock\": {\n        \"region\": 3414,\n        \"instrAt\": 3414,\n        \"instrLength\": 19,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"resolvePreferredGateway\",\n      \"kind\": \"fexprs\",\n      \"record\": 1588,\n      \"callBlock\": {\n        \"region\": 3471,\n        \"instrAt\": 3480,\n        \"instrLength\": 24,\n        \"opCount\": 6,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"InvoiceWorkflow\",\n      \"kind\": \"fexprs\",\n      \"record\": 1616,\n      \"callBlock\": null,\n      \"constructBlock\": {\n        \"region\": 3549,\n        \"instrAt\": 3560,\n        \"instrLength\": 14,\n        \"opCount\": 4,\n        \"gap\": 4\n      }\n    },\n    {\n      \"name\": \"computeTotal\",\n      \"kind\": \"fexprs\",\n      \"record\": 1664,\n      \"callBlock\": {\n        \"region\": 3610,\n        \"instrAt\": 3632,\n        \"instrLength\": 68,\n        \"opCount\": 13,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    }\n  ],\n  \"sharedTable\": {\n    \"source\": \"https://demo.test/sec.bin\",\n    \"ordinals\": 53,\n    \"resolvedNames\": 15\n  }\n}"
+   },
+   {
+    "path": "_unpack/0000-demo.test__cjs.bin.js/strings.json",
+    "content": "[\n  \"iterator\"\n]"
+   }
+  ]
+ },
+ "unpackAssetsForZip": {
+  "report": {
+   "generatedBy": "unpack.js",
+   "assets": [
+    {
+     "url": "https://demo.test/app.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 80,
+     "digest": "4031af485bf08b00acfbeeaf2b67688d0baded4407a8d5f0f9af656ae02ba4cc",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/e.js",
+     "zipPath": "site/e.js",
+     "kind": "text",
+     "bytes": 65,
+     "digest": "e7be4ee5c96f73e51e99f4b8b116b5adeb1afa0c44edb4b46589e808cf4233fb",
+     "stages": [
+      {
+       "depth": 1,
+       "tool": "eval-unwrap",
+       "inputBytes": 65,
+       "outputBytes": 58,
+       "digest": "7f0b366f907ed7946ef38e7ead2a84ce418aa41ef7dd777ad93f007cdec01a6b",
+       "sourceUrl": null
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": true,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/m.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 189,
+     "digest": "0d97cbb67fcfee9010c54bbdcce2310ad1a1095f6a3044e48c7ec26f743289e8",
+     "stages": [],
+     "modules": 0,
+     "sources": 1,
+     "beautified": true,
+     "sourceMap": {
+      "kind": "inline",
+      "ref": "inline data URI"
+     },
+     "notes": [],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/b.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 157,
+     "digest": "9c805764d3b2565f06a4ab450d796bbb7ed3284722f6e1a6f3f1ec440a0b3c72",
+     "stages": [],
+     "modules": 1,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "refusals": []
+    },
+    {
+     "url": "https://demo.test/empty.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 0,
+     "digest": null,
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    }
+   ],
+   "totals": {
+    "assets": 5,
+    "unpacked": 3,
+    "modules": 1,
+    "sources": 1,
+    "beautified": 2
+   },
+   "root": "raw",
+   "unpackedAt": "<unpackedAt>"
+  },
+  "files": [
+   {
+    "path": "raw/0000-demo.test__app.js/10-source.js",
+    "content": "var a = 1;\n// a comment\nvar s = \"hello world, a string here\";\nconsole.log(a, s);"
+   },
+   {
+    "path": "raw/0001-demo.test__e.js/layers/01-eval-unwrap.js",
+    "content": "function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0)"
+   },
+   {
+    "path": "raw/0001-demo.test__e.js/00-original.js",
+    "content": "eval(function(p,a,c,k,e,d){return p}(\"payload here\",62,1,0,0,0));"
+   },
+   {
+    "path": "raw/0001-demo.test__e.js/10-beautified.js",
+    "content": "function(p,a,c,k,e,d) {\n  return p\n}\n(\"payload here\",62,1,0,0,0)\n"
+   },
+   {
+    "path": "raw/0002-demo.test__m.js/10-beautified.js",
+    "content": "var a = 1;\n\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFwcC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJjb25zdCBhOiBudW1iZXIgPSAxOyJdLCJtYXBwaW5ncyI6IkFBQUEifQ==\n"
+   },
+   {
+    "path": "raw/0002-demo.test__m.js/source-map.json",
+    "content": "{\"version\":3,\"sources\":[\"app.ts\"],\"sourcesContent\":[\"const a: number = 1;\"],\"mappings\":\"AAAA\"}"
+   },
+   {
+    "path": "raw/0002-demo.test__m.js/sources/app.ts",
+    "content": "const a: number = 1;"
+   },
+   {
+    "path": "raw/0003-demo.test__b.js/modules/module-42.js",
+    "content": "42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  }"
+   },
+   {
+    "path": "raw/0003-demo.test__b.js/10-source.js",
+    "content": "var __webpack_modules__ = {\n  42: function (module, exports, __webpack_require__) {\n    module.exports = 42;\n  },\n};\n//# sourceURL=webpack://app/./src/add.js"
+   },
+   {
+    "path": "raw/index.json",
+    "content": "{\n  \"generatedBy\": \"unpack.js\",\n  \"assets\": [\n    {\n      \"url\": \"https://demo.test/app.js\",\n      \"zipPath\": \"\",\n      \"kind\": \"text\",\n      \"bytes\": 80,\n      \"digest\": \"4031af485bf08b00acfbeeaf2b67688d0baded4407a8d5f0f9af656ae02ba4cc\",\n      \"stages\": [],\n      \"modules\": 0,\n      \"sources\": 0,\n      \"beautified\": false,\n      \"sourceMap\": null,\n      \"notes\": [\n        \"no obfuscation layer, bundle structure, or source map content found\"\n      ],\n      \"refusals\": []\n    },\n    {\n      \"url\": \"https://demo.test/e.js\",\n      \"zipPath\": \"site/e.js\",\n      \"kind\": \"text\",\n      \"bytes\": 65,\n      \"digest\": \"e7be4ee5c96f73e51e99f4b8b116b5adeb1afa0c44edb4b46589e808cf4233fb\",\n      \"stages\": [\n        {\n          \"depth\": 1,\n          \"tool\": \"eval-unwrap\",\n          \"inputBytes\": 65,\n          \"outputBytes\": 58,\n          \"digest\": \"7f0b366f907ed7946ef38e7ead2a84ce418aa41ef7dd777ad93f007cdec01a6b\",\n          \"sourceUrl\": null\n        }\n      ],\n      \"modules\": 0,\n      \"sources\": 0,\n      \"beautified\": true,\n      \"sourceMap\": null,\n      \"notes\": [],\n      \"refusals\": []\n    },\n    {\n      \"url\": \"https://demo.test/m.js\",\n      \"zipPath\": \"\",\n      \"kind\": \"text\",\n      \"bytes\": 189,\n      \"digest\": \"0d97cbb67fcfee9010c54bbdcce2310ad1a1095f6a3044e48c7ec26f743289e8\",\n      \"stages\": [],\n      \"modules\": 0,\n      \"sources\": 1,\n      \"beautified\": true,\n      \"sourceMap\": {\n        \"kind\": \"inline\",\n        \"ref\": \"inline data URI\"\n      },\n      \"notes\": [],\n      \"refusals\": []\n    },\n    {\n      \"url\": \"https://demo.test/b.js\",\n      \"zipPath\": \"\",\n      \"kind\": \"text\",\n      \"bytes\": 157,\n      \"digest\": \"9c805764d3b2565f06a4ab450d796bbb7ed3284722f6e1a6f3f1ec440a0b3c72\",\n      \"stages\": [],\n      \"modules\": 1,\n      \"sources\": 0,\n      \"beautified\": false,\n      \"sourceMap\": null,\n      \"notes\": [],\n      \"refusals\": []\n    },\n    {\n      \"url\": \"https://demo.test/empty.js\",\n      \"zipPath\": \"\",\n      \"kind\": \"text\",\n      \"bytes\": 0,\n      \"digest\": null,\n      \"stages\": [],\n      \"modules\": 0,\n      \"sources\": 0,\n      \"beautified\": false,\n      \"sourceMap\": null,\n      \"notes\": []\n    }\n  ],\n  \"totals\": {\n    \"assets\": 5,\n    \"unpacked\": 3,\n    \"modules\": 1,\n    \"sources\": 1,\n    \"beautified\": 2\n  },\n  \"root\": \"raw\",\n  \"unpackedAt\": \"<unpackedAt>\"\n}"
+   }
+  ]
+ }
+}

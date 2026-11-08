@@ -1,0 +1,97 @@
+{
+ "note": "Budget-branch shapes captured from the shipped wasm engine. Inputs are RECIPES (filler + count), not payloads, so the fixture stays small.",
+ "capturedAt": "fixed input set; regenerate with node scripts/pipeline-oracle-extra.mjs",
+ "budgetBytes": 8388608,
+ "cases": {
+  "textOverBudget": {
+   "url": "https://demo.test/huge.js",
+   "kind": "text",
+   "recipe": {
+    "prefix": "var x = \"",
+    "filler": "A",
+    "count": 8388609,
+    "suffix": "\";",
+    "fillByte": null
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/huge.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 8388620,
+     "digest": "d7c6a643d086b54b7d2f6e8b5a11c2f5974211fb8d7048f562ce29f90182f8a0",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "asset exceeds unpack budget"
+     ]
+    },
+    "files": []
+   }
+  },
+  "bytesOverBudget": {
+   "url": "https://demo.test/huge.bin",
+   "kind": "bytes",
+   "recipe": {
+    "prefix": "",
+    "filler": null,
+    "count": 8388609,
+    "suffix": "",
+    "fillByte": 65
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/huge.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 8388609,
+     "digest": "eb912e422409f119b30302c6a331d2111449d90e7fcb783cbca9f2fd209bf36c",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "asset exceeds unpack budget"
+     ]
+    },
+    "files": []
+   }
+  },
+  "textAtBudget": {
+   "url": "https://demo.test/at.js",
+   "kind": "text",
+   "recipe": {
+    "prefix": "",
+    "filler": "A",
+    "count": 8388608,
+    "suffix": "",
+    "fillByte": null
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/at.js",
+     "zipPath": "",
+     "kind": "text",
+     "bytes": 8388608,
+     "digest": "b16bd32b101132fd0102461bc75ea65442c37293ac881ae953486c8ac26a7388",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "no obfuscation layer, bundle structure, or source map content found"
+     ],
+     "refusals": []
+    },
+    "fileCount": 1,
+    "files": []
+   },
+   "filesOmitted": "one 8 MiB 10-source.js; only the count is asserted"
+  }
+ }
+}

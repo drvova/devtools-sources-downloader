@@ -1,0 +1,296 @@
+{
+ "note": "Captured from the shipped wasm engine (.cache/engine.wasm) via src/js/unpack-bridge.js unpackAsset, binary tier.",
+ "capturedAt": "fixed input set; regenerate with node scripts/pipeline-oracle-extra.mjs",
+ "cases": {
+  "jscChunk": {
+   "url": "https://demo.test/app.jsc",
+   "fixture": "jsc-chunk.jsc",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/app.jsc",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 2104,
+     "digest": "f01e38b1fbc44584c51327a130c1052b13ce111546fea52c81fd9dfb9c6803bb",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "jsc-bytecode",
+       "detail": "JSC bytecode v4, 2104B, 7 functions, 7 blocks, 103 ops"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "functions": 7
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__app.jsc.js/cache-header.json",
+      "content": "{\n  \"shape\": \"jsc-bytecode\",\n  \"stamp\": 1693289282,\n  \"format\": 1,\n  \"version\": 4,\n  \"declaredLength\": 2104,\n  \"bodyOffset\": 32\n}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__app.jsc.js/functions.json",
+      "content": "{\n  \"valid\": true,\n  \"rootName\": \"<ordinal 204781>\",\n  \"rootParseMode\": 0,\n  \"nodes\": 7,\n  \"blocks\": 7,\n  \"ops\": 103,\n  \"bindFailed\": 0,\n  \"functions\": [\n    {\n      \"name\": \"<ordinal 204781>\",\n      \"kind\": \"root\",\n      \"record\": 32,\n      \"callBlock\": null,\n      \"constructBlock\": {\n        \"region\": 92,\n        \"instrAt\": 104,\n        \"instrLength\": 55,\n        \"opCount\": 11,\n        \"gap\": 56\n      }\n    },\n    {\n      \"name\": \"<ordinal 10759>\",\n      \"kind\": \"fdecls\",\n      \"record\": 504,\n      \"callBlock\": {\n        \"region\": 694,\n        \"instrAt\": 694,\n        \"instrLength\": 3,\n        \"opCount\": 2,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 129467>\",\n      \"kind\": \"fdecls\",\n      \"record\": 560,\n      \"callBlock\": {\n        \"region\": 727,\n        \"instrAt\": 748,\n        \"instrLength\": 193,\n        \"opCount\": 38,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 22490>\",\n      \"kind\": \"fdecls\",\n      \"record\": 588,\n      \"callBlock\": {\n        \"region\": 1155,\n        \"instrAt\": 1172,\n        \"instrLength\": 104,\n        \"opCount\": 19,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 10609>\",\n      \"kind\": \"fdecls\",\n      \"record\": 616,\n      \"callBlock\": {\n        \"region\": 1360,\n        \"instrAt\": 1364,\n        \"instrLength\": 16,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 184967>\",\n      \"kind\": \"fdecls\",\n      \"record\": 644,\n      \"callBlock\": {\n        \"region\": 1428,\n        \"instrAt\": 1436,\n        \"instrLength\": 48,\n        \"opCount\": 11,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": null,\n      \"kind\": \"fexprs\",\n      \"record\": 672,\n      \"callBlock\": {\n        \"region\": 1554,\n        \"instrAt\": 1576,\n        \"instrLength\": 90,\n        \"opCount\": 18,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    }\n  ]\n}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__app.jsc.js/strings.json",
+      "content": "[\n  \"moduleLoader\",\n  \"starNamespace\"\n]"
+     }
+    ]
+   }
+  },
+  "jscChunkIndexed": {
+   "url": "https://demo.test/app.jsc",
+   "fixture": "jsc-chunk.jsc",
+   "options": {
+    "index": 5,
+    "pathPrefix": "raw"
+   },
+   "result": {
+    "entry": {
+     "url": "https://demo.test/app.jsc",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 2104,
+     "digest": "f01e38b1fbc44584c51327a130c1052b13ce111546fea52c81fd9dfb9c6803bb",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "jsc-bytecode",
+       "detail": "JSC bytecode v4, 2104B, 7 functions, 7 blocks, 103 ops"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "functions": 7
+    },
+    "files": [
+     {
+      "path": "raw/0005-demo.test__app.jsc.js/cache-header.json",
+      "content": "{\n  \"shape\": \"jsc-bytecode\",\n  \"stamp\": 1693289282,\n  \"format\": 1,\n  \"version\": 4,\n  \"declaredLength\": 2104,\n  \"bodyOffset\": 32\n}"
+     },
+     {
+      "path": "raw/0005-demo.test__app.jsc.js/functions.json",
+      "content": "{\n  \"valid\": true,\n  \"rootName\": \"<ordinal 204781>\",\n  \"rootParseMode\": 0,\n  \"nodes\": 7,\n  \"blocks\": 7,\n  \"ops\": 103,\n  \"bindFailed\": 0,\n  \"functions\": [\n    {\n      \"name\": \"<ordinal 204781>\",\n      \"kind\": \"root\",\n      \"record\": 32,\n      \"callBlock\": null,\n      \"constructBlock\": {\n        \"region\": 92,\n        \"instrAt\": 104,\n        \"instrLength\": 55,\n        \"opCount\": 11,\n        \"gap\": 56\n      }\n    },\n    {\n      \"name\": \"<ordinal 10759>\",\n      \"kind\": \"fdecls\",\n      \"record\": 504,\n      \"callBlock\": {\n        \"region\": 694,\n        \"instrAt\": 694,\n        \"instrLength\": 3,\n        \"opCount\": 2,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 129467>\",\n      \"kind\": \"fdecls\",\n      \"record\": 560,\n      \"callBlock\": {\n        \"region\": 727,\n        \"instrAt\": 748,\n        \"instrLength\": 193,\n        \"opCount\": 38,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 22490>\",\n      \"kind\": \"fdecls\",\n      \"record\": 588,\n      \"callBlock\": {\n        \"region\": 1155,\n        \"instrAt\": 1172,\n        \"instrLength\": 104,\n        \"opCount\": 19,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 10609>\",\n      \"kind\": \"fdecls\",\n      \"record\": 616,\n      \"callBlock\": {\n        \"region\": 1360,\n        \"instrAt\": 1364,\n        \"instrLength\": 16,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 184967>\",\n      \"kind\": \"fdecls\",\n      \"record\": 644,\n      \"callBlock\": {\n        \"region\": 1428,\n        \"instrAt\": 1436,\n        \"instrLength\": 48,\n        \"opCount\": 11,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": null,\n      \"kind\": \"fexprs\",\n      \"record\": 672,\n      \"callBlock\": {\n        \"region\": 1554,\n        \"instrAt\": 1576,\n        \"instrLength\": 90,\n        \"opCount\": 18,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    }\n  ]\n}"
+     },
+     {
+      "path": "raw/0005-demo.test__app.jsc.js/strings.json",
+      "content": "[\n  \"moduleLoader\",\n  \"starNamespace\"\n]"
+     }
+    ]
+   }
+  },
+  "jscCjsProgram": {
+   "url": "https://demo.test/cjs.bin",
+   "fixture": "jsc-cjs-chunk.bin",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/cjs.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 4528,
+     "digest": "e33bb01c999e11b27a0fad1a615c7cfe67e4789293461fbdde1ccebc516da5b6",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "jsc-bytecode",
+       "detail": "JSC bytecode v4, 4528B, 17 functions, 17 blocks, 293 ops"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [],
+     "functions": 17
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__cjs.bin.js/cache-header.json",
+      "content": "{\n  \"shape\": \"jsc-bytecode\",\n  \"stamp\": 1693289282,\n  \"format\": 0,\n  \"version\": 4,\n  \"declaredLength\": 4528,\n  \"bodyOffset\": 32\n}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__cjs.bin.js/functions.json",
+      "content": "{\n  \"valid\": true,\n  \"rootName\": null,\n  \"rootParseMode\": 0,\n  \"nodes\": 17,\n  \"blocks\": 17,\n  \"ops\": 293,\n  \"bindFailed\": 0,\n  \"functions\": [\n    {\n      \"name\": null,\n      \"kind\": \"root\",\n      \"record\": 112,\n      \"callBlock\": {\n        \"region\": 92,\n        \"instrAt\": 92,\n        \"instrLength\": 7,\n        \"opCount\": 3,\n        \"gap\": 56\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": null,\n      \"kind\": \"fexprs\",\n      \"record\": 192,\n      \"callBlock\": {\n        \"region\": 211,\n        \"instrAt\": 252,\n        \"instrLength\": 483,\n        \"opCount\": 84,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 1>\",\n      \"kind\": \"fdecls\",\n      \"record\": 1228,\n      \"callBlock\": {\n        \"region\": 1691,\n        \"instrAt\": 1700,\n        \"instrLength\": 14,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 5>\",\n      \"kind\": \"fdecls\",\n      \"record\": 1280,\n      \"callBlock\": {\n        \"region\": 1745,\n        \"instrAt\": 1772,\n        \"instrLength\": 49,\n        \"opCount\": 10,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 13>\",\n      \"kind\": \"fdecls\",\n      \"record\": 1308,\n      \"callBlock\": {\n        \"region\": 1879,\n        \"instrAt\": 1892,\n        \"instrLength\": 50,\n        \"opCount\": 14,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 20>\",\n      \"kind\": \"fdecls\",\n      \"record\": 1336,\n      \"callBlock\": {\n        \"region\": 1990,\n        \"instrAt\": 2000,\n        \"instrLength\": 27,\n        \"opCount\": 7,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 16>\",\n      \"kind\": \"fdecls\",\n      \"record\": 1364,\n      \"callBlock\": {\n        \"region\": 2072,\n        \"instrAt\": 2072,\n        \"instrLength\": 9,\n        \"opCount\": 3,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 12>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1392,\n      \"callBlock\": {\n        \"region\": 2122,\n        \"instrAt\": 2180,\n        \"instrLength\": 458,\n        \"opCount\": 98,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 11>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1420,\n      \"callBlock\": {\n        \"region\": 2923,\n        \"instrAt\": 2923,\n        \"instrLength\": 3,\n        \"opCount\": 2,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 4>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1448,\n      \"callBlock\": {\n        \"region\": 2955,\n        \"instrAt\": 2988,\n        \"instrLength\": 139,\n        \"opCount\": 29,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 21>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1476,\n      \"callBlock\": {\n        \"region\": 3225,\n        \"instrAt\": 3232,\n        \"instrLength\": 15,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 13>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1504,\n      \"callBlock\": {\n        \"region\": 3293,\n        \"instrAt\": 3304,\n        \"instrLength\": 19,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 19>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1532,\n      \"callBlock\": {\n        \"region\": 3358,\n        \"instrAt\": 3358,\n        \"instrLength\": 19,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 20>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1560,\n      \"callBlock\": {\n        \"region\": 3414,\n        \"instrAt\": 3414,\n        \"instrLength\": 19,\n        \"opCount\": 4,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 19>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1588,\n      \"callBlock\": {\n        \"region\": 3471,\n        \"instrAt\": 3480,\n        \"instrLength\": 24,\n        \"opCount\": 6,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    },\n    {\n      \"name\": \"<ordinal 21>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1616,\n      \"callBlock\": null,\n      \"constructBlock\": {\n        \"region\": 3549,\n        \"instrAt\": 3560,\n        \"instrLength\": 14,\n        \"opCount\": 4,\n        \"gap\": 4\n      }\n    },\n    {\n      \"name\": \"<ordinal 24>\",\n      \"kind\": \"fexprs\",\n      \"record\": 1664,\n      \"callBlock\": {\n        \"region\": 3610,\n        \"instrAt\": 3632,\n        \"instrLength\": 68,\n        \"opCount\": 13,\n        \"gap\": 4\n      },\n      \"constructBlock\": null\n    }\n  ]\n}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__cjs.bin.js/strings.json",
+      "content": "[\n  \"iterator\"\n]"
+     }
+    ]
+   }
+  },
+  "v8CodeCache": {
+   "url": "https://demo.test/cache.bin",
+   "fixture": "v8-codecache.jsc",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/cache.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 424,
+     "digest": "822a5733e6339c41d71a35f54b3251348277617cfa45d467ff2fec1464949083",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "v8-code-cache",
+       "detail": "unknown build (c0de0000 family, 1673 external refs) v12, payload 392B"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__cache.bin.js/cache-header.json",
+      "content": "{\n  \"shape\": \"v8-code-cache\",\n  \"magic\": \"0xc0de0689\",\n  \"runtime\": \"unknown build (c0de0000 family, 1673 external refs)\",\n  \"format\": \"v12\",\n  \"versionHash\": 3694365946,\n  \"sourceHash\": 28,\n  \"flagHash\": 1605443465,\n  \"payloadLength\": 392\n}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__cache.bin.js/strings.json",
+      "content": "[\n  \"hi from cache\",\n  \"evalmachine.<anonymous>\"\n]"
+     }
+    ]
+   }
+  },
+  "v8CodeCacheSealed": {
+   "url": "https://demo.test/sealed.bin",
+   "fixture": "v8-codecache-sealed.jsc",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/sealed.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 264,
+     "digest": "710271307b1e5e11864b6a7ed152ffdcc68f491b5a6b08bf8f204f3a7104fa35",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "jsc-sealed-v8",
+       "detail": "brotli-sealed V8 cache, 424B inflated"
+      },
+      {
+       "depth": 1,
+       "tool": "v8-code-cache",
+       "detail": "unknown build (c0de0000 family, 1673 external refs) v12, payload 392B"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__sealed.bin.js/cache-header.json",
+      "content": "{\n  \"shape\": \"jsc-sealed-v8\",\n  \"inflatedBytes\": 424,\n  \"magic\": \"0xc0de0689\",\n  \"runtime\": \"unknown build (c0de0000 family, 1673 external refs)\",\n  \"format\": \"v12\"\n}"
+     },
+     {
+      "path": "_unpack/0000-demo.test__sealed.bin.js/strings.json",
+      "content": "[\n  \"hi from cache\",\n  \"evalmachine.<anonymous>\"\n]"
+     }
+    ]
+   }
+  },
+  "wasmNamed": {
+   "url": "https://demo.test/mod.wasm",
+   "fixture": "wasm-named.wasm",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/mod.wasm",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 135,
+     "digest": "b948203a52c76d7a00bfae156d1e5ea7ff56c4e1e7b3a289bbf8b5f1810b8cf8",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "wasm-module",
+       "detail": "wasm module, 7 sections, 0 imports, 5 exports, 4 named functions"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__mod.wasm.js/wasm-info.json",
+      "content": "{\n  \"version\": 1,\n  \"moduleName\": null,\n  \"sections\": [\n    {\n      \"id\": 1,\n      \"name\": \"type\",\n      \"offset\": 10,\n      \"size\": 7\n    },\n    {\n      \"id\": 3,\n      \"name\": \"function\",\n      \"offset\": 19,\n      \"size\": 5\n    },\n    {\n      \"id\": 4,\n      \"name\": \"table\",\n      \"offset\": 26,\n      \"size\": 5\n    },\n    {\n      \"id\": 5,\n      \"name\": \"memory\",\n      \"offset\": 33,\n      \"size\": 3\n    },\n    {\n      \"id\": 6,\n      \"name\": \"global\",\n      \"offset\": 38,\n      \"size\": 8\n    },\n    {\n      \"id\": 7,\n      \"name\": \"export\",\n      \"offset\": 48,\n      \"size\": 39\n    },\n    {\n      \"id\": 10,\n      \"name\": \"code\",\n      \"offset\": 89,\n      \"size\": 46\n    }\n  ],\n  \"imports\": [],\n  \"exports\": [\n    {\n      \"name\": \"memory\",\n      \"kind\": \"memory\",\n      \"index\": 0\n    },\n    {\n      \"name\": \"eval0\",\n      \"kind\": \"func\",\n      \"index\": 0\n    },\n    {\n      \"name\": \"eval1\",\n      \"kind\": \"func\",\n      \"index\": 1\n    },\n    {\n      \"name\": \"mix\",\n      \"kind\": \"func\",\n      \"index\": 2\n    },\n    {\n      \"name\": \"hash\",\n      \"kind\": \"func\",\n      \"index\": 3\n    }\n  ],\n  \"functionNames\": {\n    \"0\": \"eval0\",\n    \"1\": \"eval1\",\n    \"2\": \"mix\",\n    \"3\": \"hash\"\n  },\n  \"typeNames\": {},\n  \"dataStrings\": [],\n  \"notes\": []\n}"
+     }
+    ]
+   }
+  },
+  "wasmData": {
+   "url": "https://demo.test/data.wasm",
+   "fixture": "wasm-data.wasm",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/data.wasm",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 141,
+     "digest": "e633e6f98ebddd40b5cb30f6a9daffc4d63e9fb05b01e7a0305acb6410611793",
+     "stages": [
+      {
+       "depth": 0,
+       "tool": "wasm-module",
+       "detail": "wasm module, 7 sections, 0 imports, 2 exports, 1 named functions"
+      }
+     ],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": []
+    },
+    "files": [
+     {
+      "path": "_unpack/0000-demo.test__data.wasm.js/wasm-info.json",
+      "content": "{\n  \"version\": 1,\n  \"moduleName\": \"handcrafted_module\",\n  \"sections\": [\n    {\n      \"id\": 1,\n      \"name\": \"type\",\n      \"offset\": 10,\n      \"size\": 6\n    },\n    {\n      \"id\": 3,\n      \"name\": \"function\",\n      \"offset\": 18,\n      \"size\": 2\n    },\n    {\n      \"id\": 5,\n      \"name\": \"memory\",\n      \"offset\": 22,\n      \"size\": 3\n    },\n    {\n      \"id\": 7,\n      \"name\": \"export\",\n      \"offset\": 27,\n      \"size\": 17\n    },\n    {\n      \"id\": 10,\n      \"name\": \"code\",\n      \"offset\": 46,\n      \"size\": 9\n    },\n    {\n      \"id\": 11,\n      \"name\": \"data\",\n      \"offset\": 57,\n      \"size\": 45\n    },\n    {\n      \"id\": 0,\n      \"name\": \"custom\",\n      \"offset\": 104,\n      \"size\": 37,\n      \"customName\": \"name\"\n    }\n  ],\n  \"imports\": [],\n  \"exports\": [\n    {\n      \"name\": \"compute\",\n      \"kind\": \"func\",\n      \"index\": 0\n    },\n    {\n      \"name\": \"mem\",\n      \"kind\": \"memory\",\n      \"index\": 0\n    }\n  ],\n  \"functionNames\": {\n    \"0\": \"compute\"\n  },\n  \"typeNames\": {},\n  \"dataStrings\": [\n    \"hello from wasm data\",\n    \"second string here\"\n  ],\n  \"notes\": []\n}"
+     }
+    ]
+   }
+  },
+  "unrecognised": {
+   "url": "https://demo.test/blob.bin",
+   "bytesB64": "CzBVep/E6Q4zWH2ix+wRNluApcrvFDleg6jN8hc8YYar0PUaP2SJrtP4HUJnjLHW+yBFao+02f4jSG2St9wBJg==",
+   "options": {},
+   "result": {
+    "entry": {
+     "url": "https://demo.test/blob.bin",
+     "zipPath": "",
+     "kind": "binary",
+     "bytes": 64,
+     "digest": "94eb5de4943613fd048dc93393ab06877405faa39c11f53e9386083339833e7e",
+     "stages": [],
+     "modules": 0,
+     "sources": 0,
+     "beautified": false,
+     "sourceMap": null,
+     "notes": [
+      "binary asset: no V8 code-cache, JSC bytecode, wasm module, or brotli-sealed shape recognized"
+     ]
+    },
+    "files": []
+   }
+  }
+ }
+}
