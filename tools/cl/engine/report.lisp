@@ -121,3 +121,152 @@ negative duration."
             (write-string (phase-cell download) out)
             (write-string "</td></tr>" out)))))
     (write-string "</tbody></table>" out)))
+
+;;; ---------------------------------------------------------------------------
+;;; exportReadableArtifacts
+;;; ---------------------------------------------------------------------------
+
+(defparameter *readable-artifact-limit* 10)
+
+(defun export-readable-artifacts-with (writer analysis looks-minified-fn beautify-fn)
+  "`exportReadableArtifactsWith`: write a readable .js per interesting entrypoint.
+
+Entrypoints are visited in order and the FIRST TEN that resolve take slots 1..10;
+the slot number is part of the filename, so it is assigned AFTER the skips, not
+from the loop index.
+
+Two skips differ by kind, and they are not the same test:
+  - a chunk must carry TRUTHY `content` (an empty string is skipped);
+  - a runtime must carry `text` as a STRING (empty text still qualifies, because
+    the test is on the type, not the contents).
+
+The record lookup is by id in the asset map or the runtime map according to the
+entry's KIND, so an id present in both maps resolves to the right one."
+  (let ((asset-map (make-hash-table :test #'equal))
+        (runtime-map (make-hash-table :test #'equal))
+        (written 0))
+    (dolist (asset (coerce (or (vovas.engine.panel.assets:field analysis "assets") #())
+                           'list))
+      (setf (gethash (vovas.engine.panel.assets:field-str asset "id") asset-map) asset))
+    (dolist (record (coerce (or (vovas.engine.panel.assets:field analysis "runtimeRecords") #())
+                            'list))
+      (setf (gethash (vovas.engine.panel.assets:field-str record "id") runtime-map) record))
+    (dolist (entry (coerce (or (vovas.engine.panel.assets:field
+                                analysis "interestingEntrypoints")
+                              #())
+                           'list))
+      (when (>= written *readable-artifact-limit*)
+        (return))
+      (let* ((id (vovas.engine.panel.assets:field-str entry "id"))
+             (kind (vovas.engine.panel.assets:field-str entry "kind"))
+             (record (if (string= kind "chunk")
+                         (gethash id asset-map)
+                         (gethash id runtime-map))))
+        (when record
+          (let ((eligible
+                  (if (string= kind "chunk")
+                      (vovas.engine.panel.model:js-truthy
+                       (vovas.engine.panel.assets:field record "content"))
+                      (stringp (vovas.engine.panel.assets:field record "text")))))
+            (when eligible
+              (incf written)
+              (let* ((label (let ((l (vovas.engine.panel.assets:field-str entry "label")))
+                              (if (plusp (length l)) l id)))
+                     (file (format nil "_analysis/readable/~4,'0d-~a.js"
+                                   written
+                                   (vovas.engine.text:sanitize-path-part
+                                    label kind))))
+                (funcall writer
+                         file
+                         (vovas.engine.panel.artifacts:build-readable-artifact-with
+                          entry record looks-minified-fn beautify-fn))))))))))
+
+;;; ---------------------------------------------------------------------------
+;;; Pretty JSON
+;;;
+;;; `serde_json::to_string_pretty` writes two-space indents, a newline after each
+;;; brace and bracket, and no trailing newline. JZON's `:pretty` mode produces
+;;; byte-identical output for objects and arrays - verified against the oracle's
+;;; stored strings before relying on it, because the framework export comparisons
+;;; are exact.
+;;; ---------------------------------------------------------------------------
+
+(defun report-pretty-json (value)
+  "VALUE as pretty JSON, the way serde_json prints it."
+  (com.inuoe.jzon:stringify value :pretty t))
+
+;;; ---------------------------------------------------------------------------
+;;; exportFrameworkArtifacts
+;;; ---------------------------------------------------------------------------
+
+(defun export-framework-artifacts (writer framework-state)
+  "`exportFrameworkArtifacts`: write each PRESENT framework slice, pretty-printed.
+
+Walks `*framework-artifacts*` in table order, skipping slices
+`framework-slice-present-p` rejects - so the writer and the artifact index agree
+by construction, which is the whole reason that predicate is shared.
+
+A nil state writes NOTHING: there is no framework state, so there are no files,
+and an empty archive index is the honest answer."
+  (when (null framework-state)
+    (return-from export-framework-artifacts nil))
+  (dolist (pair vovas.engine.panel.paths:*framework-artifacts*)
+    (let ((path (car pair))
+          (key (cdr pair)))
+      (when (vovas.engine.panel.paths:framework-slice-present-p framework-state key)
+        (let ((value (vovas.engine.panel.assets:field framework-state key)))
+          (when value
+            (funcall writer path (report-pretty-json value)))))))
+  nil)
+
+;;; ---------------------------------------------------------------------------
+;;; exportRuntimeArtifacts
+;;; ---------------------------------------------------------------------------
+
+(defparameter *runtime-manifest-omitted-keys*
+  '("index" "text" "base64" "hasText" "hasBase64")
+  "Keys the runtime manifest drops.
+
+The payload itself is written as a file, so the manifest carries a `file` path
+instead. `index` is scratch used while building the path.")
+
+(defun export-runtime-artifacts (writer runtime-entries)
+  "`exportRuntimeArtifacts`: write each runtime payload plus the manifest.
+
+Counters are per-KIND, so the second eval payload is `0001` only if no eval came
+before it - the numbering restarts for each kind rather than running globally.
+
+A payload is written from `text` when present, else decoded from `base64`; a
+base64 payload that fails to decode is SKIPPED but still appears in the manifest
+WITHOUT a `file` key, which is how a consumer tells \"no payload\" from \"payload
+written under this name\".
+
+The manifest is written exactly ONCE, after every entry has been processed."
+  (let ((manifest '())
+        (counters (make-hash-table :test #'equal)))
+    (dolist (entry (coerce runtime-entries 'list))
+      (let ((manifest-entry (make-hash-table :test #'equal)))
+        ;; copy the entry's keys, minus the ones the manifest does not carry
+        (when (hash-table-p entry)
+          (maphash (lambda (k v)
+                     (unless (member k *runtime-manifest-omitted-keys* :test #'string=)
+                       (setf (gethash k manifest-entry) v)))
+                   entry))
+        (let ((text (let ((v (vovas.engine.panel.assets:field entry "text")))
+                      (and (stringp v) v)))
+              (base64 (let ((v (vovas.engine.panel.assets:field entry "base64")))
+                        (and (stringp v) v))))
+          (when (or text base64)
+            (let ((path (vovas.engine.panel.artifacts:build-runtime-path
+                         entry counters)))
+              (cond
+                (text (funcall writer path text))
+                (base64
+                 (let ((bytes (vovas.engine.decoders:decode-base64-to-bytes base64)))
+                   (when bytes (funcall writer path bytes)))))
+              (setf (gethash "file" manifest-entry) path))))
+        (push manifest-entry manifest)))
+    (let ((manifest-vector (coerce (nreverse manifest) 'vector)))
+      (funcall writer "_runtime/runtime-manifest.json"
+               (report-pretty-json manifest-vector))
+      manifest-vector)))

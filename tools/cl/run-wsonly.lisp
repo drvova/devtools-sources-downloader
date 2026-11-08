@@ -1,7 +1,7 @@
 (require :asdf)
 (load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))
 (asdf:load-asd (merge-pathnames "tools/cl/vovas-engine.asd" (uiop:getcwd)))
-(asdf:load-system :vovas-engine)
+(asdf:load-system :vovas-engine :force :all)
 (format t "~&=== loaded ===~%")
 (dolist (spec '((:builders . vovas.engine.gate::run-workspace-builders-gate)
                 (:investigation . vovas.engine.gate::run-investigation-workspace-gate)))

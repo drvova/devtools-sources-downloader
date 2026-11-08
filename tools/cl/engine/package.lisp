@@ -428,7 +428,14 @@
   (:import-from :vovas.engine.text #:format-size #:format-ms)
   (:import-from :vovas.engine.panel.view #:escape-html)
   (:import-from :vovas.engine.panel.artifacts #:escape-attr)
-  (:export #:describe-capture-reason #:generate-table #:report-number-or))
+  (:import-from :vovas.engine.panel.paths
+                #:*framework-artifacts* #:framework-slice-present-p)
+  (:import-from :vovas.engine.decoders #:decode-base64-to-bytes)
+  (:export #:describe-capture-reason #:generate-table #:report-number-or
+   #:report-pretty-json #:export-framework-artifacts
+   #:export-runtime-artifacts
+   #:*runtime-manifest-omitted-keys* #:*readable-artifact-limit*
+   #:export-readable-artifacts-with))
 (defpackage :vovas.engine.panel.stackprofile
   (:use :cl)
   (:import-from :vovas.engine.panel.model #:js-truthy #:js-string)

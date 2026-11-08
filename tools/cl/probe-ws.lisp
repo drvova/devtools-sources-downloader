@@ -2,7 +2,7 @@
 (require :asdf)
 (load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))
 (asdf:load-asd (merge-pathnames "tools/cl/vovas-engine.asd" (uiop:getcwd)))
-(asdf:load-system :vovas-engine)
+(asdf:load-system :vovas-engine :force :all)
 
 (in-package :vovas.engine.gate)
 

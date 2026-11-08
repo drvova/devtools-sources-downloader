@@ -1,8 +1,9 @@
 (require :asdf)
 (load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))
 (asdf:load-asd (merge-pathnames "tools/cl/vovas-engine.asd" (uiop:getcwd)))
-(asdf:load-system :vovas-engine)
+(asdf:load-system :vovas-engine :force :all)
 (dolist (f '(vovas.engine.gate::run-report-gate
-             vovas.engine.gate::run-report-table-gate))
+             vovas.engine.gate::run-report-table-gate
+             vovas.engine.gate::run-report-export-gate))
   (handler-case (format t "~&~a -> ~a~%" f (funcall f))
     (error (e) (format t "~&~a ERROR: ~a~%" f e))))

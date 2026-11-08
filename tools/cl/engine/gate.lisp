@@ -690,7 +690,8 @@ ERROR verdict when that gate finally runs."
         ;; gate-list is invisible to CI and can regress silently.
         (cons "transforms (engine gate)" #'run-transforms-gate)
         (cons "report rendering (panel oracle)" #'run-report-gate)
-        (cons "report table (panel oracle)" #'run-report-table-gate)))
+        (cons "report table (panel oracle)" #'run-report-table-gate)
+        (cons "report exports (panel oracle)" #'run-report-export-gate)))
 
 (defun run-all-gates ()
   "Every gate that exists. A gate that throws is a FAIL, not a crash, so one
@@ -724,3 +725,32 @@ port bug rather than a test-harness one."
       (setf (gethash (car pair) table) (cadr pair)))
     table))
 
+
+(defun probe-json ()
+  "Show JZON's pretty output so it can be compared with serde's."
+  (let ((h (make-hash-table :test #'equal)))
+    (setf (gethash "roots" h) 2 (gethash "stores" h) 1)
+    (format t "~&PJ-OBJ>>>~a<<<" (com.inuoe.jzon:stringify h :pretty t))
+    (let ((a (make-hash-table :test #'equal)))
+      (setf (gethash "id" a) "app")
+      (format t "~&PJ-ARR>>>~a<<<" (com.inuoe.jzon:stringify (vector a) :pretty t)))))
+
+(defun probe-rt ()
+  (let ((entries (vector (let ((h (make-hash-table :test #'equal)))
+                           (setf (gethash "index" h) 0 (gethash "id" h) "r1"
+                                 (gethash "kind" h) "eval" (gethash "url" h) "https://x/a.js"
+                                 (gethash "text" h) "var a = 1" (gethash "size" h) 9)
+                           h)
+                         (let ((h (make-hash-table :test #'equal)))
+                           (setf (gethash "index" h) 1 (gethash "id" h) "r2"
+                                 (gethash "kind" h) "wasm" (gethash "url" h) ""
+                                 (gethash "base64" h) "AGFzbQ==")
+                           h)
+                         (let ((h (make-hash-table :test #'equal)))
+                           (setf (gethash "index" h) 2 (gethash "id" h) "r3"
+                                 (gethash "kind" h) "blob" (gethash "note" h) "not captured")
+                           h)))
+        (files '()))
+    (vovas.engine.panel.report:export-runtime-artifacts
+     (lambda (path content) (push path files)) entries)
+    (format t "~&RT-FILES ~s~%" (nreverse files))))

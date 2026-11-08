@@ -132,3 +132,75 @@
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; exportFrameworkArtifacts / exportRuntimeArtifacts
+;;;
+;;; Both oracles store the EXACT pretty-printed strings serde produces, so these
+;;; are byte comparisons. The input states are the Rust tests' own.
+;;; ---------------------------------------------------------------------------
+
+(defun run-report-export-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/artifacts-oracle.json")))
+         (exp (gethash "expected" fx)))
+
+    ;; ---- exportFrameworkArtifacts ---------------------------------------
+    (let ((state (ht "summary" (ht "roots" 2 "stores" 1)
+                     "router" (ht)
+                     "roots" (vector (ht "id" "app") (ht "id" "root"))
+                     "stores" #()
+                     "queries" (vector (ht "key" "user"))
+                     "hydration" #()
+                     "auth" (vector (ht "token" "x"))))
+          (files '()))
+      (vovas.engine.panel.report:export-framework-artifacts
+       (lambda (path content) (push (vector path content) files))
+       state)
+      (incf count)
+      (check result "exportFrameworkArtifacts" "files"
+             (and (gate-json= (coerce (nreverse files) 'vector)
+                              (coerce (gethash "exportFrameworkArtifacts" exp) 'vector))
+                  t)
+             t))
+
+    ;; ---- exportRuntimeArtifacts -----------------------------------------
+    ;; the Rust test's THREE entries, verbatim - including the third, which has
+    ;; neither text nor base64 and so contributes no file.
+    (let ((entries (vector (ht "index" 0 "id" "r1" "kind" "eval"
+                               "url" "https://x/a.js" "text" "var a = 1"
+                               "hasText" t "hasBase64" nil "size" 9)
+                           (ht "index" 1 "id" "r2" "kind" "wasm" "url" ""
+                               "base64" "AGFzbQ=="
+                               "hasText" nil "hasBase64" t)
+                           (ht "index" 2 "id" "r3" "kind" "blob"
+                               "hasText" nil "hasBase64" nil
+                               "note" "not captured")))
+          (files '()))
+      (vovas.engine.panel.report:export-runtime-artifacts
+       (lambda (path content)
+         (push (vector path (if (stringp content) "text" "base64")
+                       (if (stringp content) content ""))
+               files))
+       entries)
+      ;; the manifest comes last, and its content is compared separately below
+      (let ((want (coerce (gethash "exportRuntimeArtifacts" exp) 'vector))
+            (got (coerce (nreverse files) 'vector)))
+        (incf count)
+        (check result "exportRuntimeArtifacts/shape" "files"
+               (and (gate-json=
+                     (map 'vector (lambda (f) (aref f 0)) got)
+                     (coerce (map 'list (lambda (f) (aref f 0))
+                                  (coerce want 'vector))
+                             'vector))
+                    t)
+               t)))
+
+    (when verbose
+      (format t "~&report export gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

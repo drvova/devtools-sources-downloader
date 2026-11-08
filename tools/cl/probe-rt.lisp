@@ -1,0 +1,18 @@
+(require :asdf)
+(load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))
+(asdf:load-asd (merge-pathnames "tools/cl/vovas-engine.asd" (uiop:getcwd)))
+(asdf:load-system :vovas-engine :force :all)
+(defun mk (pairs)
+  (let ((h (make-hash-table :test #'equal)))
+    (loop for (k v) on pairs by #'cddr do (setf (gethash k h) v))
+    h))
+(let* ((e1 (mk (list "index" 0 "id" "r1" "kind" "eval" "url" "https://x/a.js"
+                     "text" "var a = 1" "size" 9)))
+       (e2 (mk (list "index" 1 "id" "r2" "kind" "wasm" "url" "" "base64" "AGFzbQ==")))
+       (e3 (mk (list "index" 2 "id" "r3" "kind" "blob" "note" "not captured")))
+       (files '()))
+  (vovas.engine.panel.report:export-runtime-artifacts
+   (lambda (p c) (push p files)) (vector e1 e2 e3))
+  (setf files (nreverse files))
+  (format t "~&COUNT ~a~%" (length files))
+  (dolist (f files) (format t "~&FILE ~a~%" f)))
