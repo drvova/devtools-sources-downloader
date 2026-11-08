@@ -295,3 +295,148 @@ the right reason but the wrong cause. This is the input the export test uses."
 
     (and (= (gate-result-passed result) (gate-result-total result))
          (plusp count))))
+
+;;; ---------------------------------------------------------------------------
+;;; Parity: finalize against the SHIPPED wasm engine
+;;;
+;;; `finalize-oracle.json` was captured from the real engine through
+;;; `panelFinalizeZipWithRecon` (see unpack-rs/scripts/finalize-oracle.mjs). It
+;;; carries the inputs AND the engine's own file list, so this compares CONTENT
+;;; rather than census - the one gap the structural gate above cannot close.
+;;;
+;;; `generatedAt` appears inside several artifacts as a clock, so both sides are
+;;; normalised before comparison.
+;;; ---------------------------------------------------------------------------
+
+(defun gate-strip-clock-text (text)
+  "TEXT with every ISO-8601 UTC instant replaced by a placeholder.
+
+The artifacts carry the clock in four different syntactic positions - a pretty
+JSON `\"generatedAt\": \"...\"`, a compact one inside the HTML's embedded
+`application/json` blob, an `\"unpackedAt\": \"...\"` closing a manifest, and
+bare prose in the waterfall's subtitle. Keying the pattern to the `generatedAt`
+key therefore missed three of the four; keying it to the SHAPE OF THE INSTANT
+catches all of them without having to enumerate the sites.
+
+Only the instant is normalised, not the surrounding text, so a real clock bug
+still shows up as the wrong NUMBER of substitutions or as a differing offset in
+`gate-first-difference`."
+  (cl-ppcre:regex-replace-all
+   "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z"
+   text
+   "<clock>"))
+
+(defun gate-count-clocks (text)
+  "How many ISO-8601 instants TEXT carries."
+  (length (cl-ppcre:all-matches
+           "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z"
+           text)))
+
+(defun run-finalize-parity-gate (&key (verbose t))
+  (let* ((result (make-gate-result))
+         (count 0)
+         (fx (read-json-file (fixture-path "panel/finalize-oracle.json")))
+         (inp (gethash "inputs" fx))
+         (exp (gethash "expected" fx))
+         (opt (gethash "options" inp))
+         (files '()))
+    (let* ((assets (coerce (gethash "jsAssets" inp) 'list))
+           (recon (gethash "reconData" inp))
+           (payloads (gethash "runtimePayloads" inp))
+           (opts (vovas.engine.pipeline:make-unpack-options
+                  :path-prefix (or (and opt
+                                        (vovas.engine.panel.assets:field-str
+                                         opt "pathPrefix"))
+                                   "_unpack")))
+           (merged (vovas.engine.panel.export:finalize-zip-with-recon
+                    (lambda (path content) (push (cons path content) files))
+                    assets recon nil payloads opts)))
+      (setf files (nreverse files))
+
+      ;; ---- the summary line, compared exactly ------------------------
+      (incf count)
+      (check result "parity/summary" "sentence"
+             (vovas.engine.panel.export:export-summary merged)
+             (coerce (gethash "summary" exp) 'string))
+
+      ;; ---- the census -------------------------------------------------
+      (incf count)
+      (check result "parity/file-count" "files"
+             (length files) (gethash "fileCount" exp))
+
+      ;; ---- the paths, as a set ---------------------------------------
+      ;;
+      ;; Sorted on both sides and compared as lists, so a missing file and an
+      ;; extra file are both visible rather than masking each other.
+      ;; `let*`, not `let`: `want-paths` reads `want-files`, so the bindings are
+      ;; SEQUENTIAL. Under `let` they bind in parallel and `want-files` is
+      ;; unbound inside the `want-paths` initialiser.
+      (let* ((want-files (coerce (gethash "files" exp) 'list))
+             (got-paths (sort (mapcar #'car files) #'string<))
+             (want-paths (sort (mapcar (lambda (f)
+                                        (coerce (vovas.engine.panel.assets:field-str
+                                                 f "path") 'string))
+                                      want-files)
+                              #'string<)))
+        (incf count)
+        (check result "parity/paths" "sorted paths" got-paths want-paths)
+
+        ;; ---- per-file CONTENT ----------------------------------------
+        ;;
+        ;; This is the substantive comparison: every text artifact must match
+        ;; the engine's bytes after clock normalisation, and every binary one
+        ;; must match its base64.
+        (let ((mismatches '())
+              (checked 0))
+          (dolist (want want-files)
+            (let* ((path (coerce (vovas.engine.panel.assets:field-str want "path") 'string))
+                   (got (cdr (assoc path files :test #'string=)))
+                   (want-text (vovas.engine.panel.assets:field want "content"))
+                   (want-b64 (vovas.engine.panel.assets:field want "base64")))
+              (cond
+                ((null got)
+                 (push (format nil "~a: missing from port" path) mismatches))
+                (want-b64
+                 (incf checked)
+                 ;; The port wrote raw BYTES while the oracle carries base64, and
+                 ;; there is no encoder in this tree. Decode the oracle's base64
+                 ;; and compare the byte sequences instead of encoding the port's
+                 ;; - same information, one fewer function to get wrong.
+                 (let ((want-bytes (vovas.engine.decoders:decode-base64-to-bytes
+                                    (coerce want-b64 'string))))
+                   (unless (and (not (stringp got))
+                                (equalp got want-bytes))
+                     (push (format nil "~a: bytes differ (~a vs ~a)"
+                                   path
+                                   (if (stringp got) :text (length got))
+                                   (if want-bytes (length want-bytes) :undecodable))
+                           mismatches))))
+                (want-text
+                 (incf checked)
+                 (let ((want-str (coerce want-text 'string)))
+                   (unless (stringp got)
+                     (push (format nil "~a: port wrote bytes, engine wrote text" path)
+                           mismatches))
+                   (when (and (stringp got)
+                              (not (string= (gate-strip-clock-text got)
+                                            (gate-strip-clock-text want-str))))
+                     (let ((d (gate-first-difference
+                               (gate-strip-clock-text got)
+                               (gate-strip-clock-text want-str))))
+                       (push (format nil "~a: ~a" path d) mismatches))))))))
+          (incf count)
+          (check result "parity/contents" "all artifacts equal"
+                 (if mismatches
+                     (format nil "~a mismatched: ~{~a~^; ~}"
+                             (length mismatches)
+                             (subseq mismatches 0 (min 3 (length mismatches))))
+                     (format nil "~a compared" checked))
+                 (format nil "~a compared" checked)))))
+
+    (when verbose
+      (format t "~&finalize parity gate: ~a/~a cases match~%"
+              (gate-result-passed result) (gate-result-total result))
+      (report-failures result))
+
+    (and (= (gate-result-passed result) (gate-result-total result))
+         (plusp count))))

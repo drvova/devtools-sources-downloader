@@ -196,8 +196,12 @@ report - the object the panel keeps for its summary line."
      js-assets recon-data (coerce runtime-payloads 'list)
      (coerce manifest 'list))
     ;; ---- 4. the two unpack passes
+    ;; BOTH of these arrive as vectors from the caller and from the manifest
+    ;; builder, and `build-runtime-unpack-assets` walks them with `dolist`. Same
+    ;; vector-vs-list seam as the analysis builder above.
     (let* ((runtime-assets (vovas.engine.panel.artifacts:build-runtime-unpack-assets
-                            runtime-payloads manifest))
+                            (coerce runtime-payloads 'list)
+                            (coerce manifest 'list)))
            (script-assets (vovas.engine.panel.assets:assets-from-inputs js-assets))
            ;; the runtime pass gets its own copy with the hardcoded prefix.
            ;; Options are a PLIST, so this is a copy with one key replaced
