@@ -4,10 +4,15 @@ Two renders of one document: **`../banner.svg`** (what the README embeds) and
 `../banner.png` (a raster twin for places that need one). Both come from
 `banner.json`, authored in `banner.ts` with [Clayzo](https://clayzo.dev).
 
-The SVG is **true vector**: the Bayer screen is `<pattern>` fills of 2 px cells
-(densities measured from the PNG: outer 0.94, middle 0.20, core 0.04) and the
-type is **outlined glyph paths**, so the file carries no font dependency and
-renders identically everywhere, GitHub's sanitiser included.
+The plate is a **cell field**, not a filled ellipse: 132 cells on an indexed
+grid (17 px pitch, 14 px unit), and the ring's SHAPE is the cell's shape —
+bone rounded squares outside, gunmetal diamonds (a square turned 45°) in the
+middle ring, graphite circles at the core, ember squares in the slit. The
+silhouette emerges from the field.
+
+The SVG is one shape per cell plus **outlined glyph paths** for the type, so the
+file carries no font dependency and renders identically everywhere, GitHub's
+sanitiser included.
 
 ## The design language
 
@@ -66,8 +71,9 @@ Both are SIL OFL and self-hosted in `fonts/`:
 | Choice | Why |
 | --- | --- |
 | Obsidian `#101214` ground | dither-ui's page; the print, not a lit screen |
-| Flat rings, then one dither | the dither is the only art; a gradient would only band at 3 levels |
-| Three concentric rings + recess | two rings read as construction; one oval reads as a pebble |
+| Built from cells, not filled | "the cell is the unit": the aperture is assembled, and its edge is a stair-step by design |
+| Shape carries the ring | squares outside, diamonds mid, circles at the core — the layer reads by geometry as well as colour |
+| Cells gather, not sweep | each cell's delay grows with distance from the centre plus a fixed per-cell offset |
 | Ember slit, ~1% | dither-ui's single signal: "the one thing that is live or hot" |
 | Michroma, bone | the extended display face for the few words that lead |
 | Plex Mono spec line | the print's voice; real measured figures only |

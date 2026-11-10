@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="devtools-unpack — a printed plate: an elliptical aperture rendered in Bayer dither cells, bone on obsidian, with one ember optical slit." width="100%">
+  <img src="assets/banner.svg" alt="devtools-unpack — a printed plate: an elliptical aperture built from 132 cells, bone squares outside, gunmetal diamonds, graphite circles and one ember slit, on obsidian." width="100%">
 </p>
 
 # devtools-unpack — the Common Lisp engine

@@ -123,79 +123,127 @@ const base = (id: string, position: Transform25D["position"]) => ({
   blendMode: "normal" as const,
 });
 
-// --- the plate --------------------------------------------------------------
-// Three concentric rings, FLAT fills: the dither quantises them to cells, so a
-// gradient would only band. Centred at (800, 132).
+// --- the plate: a CELL FIELD ------------------------------------------------
+// The aperture is not a filled ellipse: it is BUILT from discrete cells on an
+// indexed grid (pattern-systems.md: "index cells, not pixels"). Each ring is a
+// different cell SHAPE, so the layer reads by geometry as well as colour:
+//   outer ring   rounded squares, bone
+//   middle ring  diamonds (a square turned 45 degrees), gunmetal
+//   core         circles, graphite
+//   the slit     ember squares, the one signal
+// Cells gather in a measured order rather than a sweep: delay grows with the
+// distance from the centre plus a fixed per-cell offset.
 const PX = 800, PY = 100;
+const PITCH = 17;
+const UNIT = 14;
+const COLS = 16;
+const ROWS = 10;
+const R_OUTER = [136, 90];
+const R_MID = [111, 70];
+const R_CORE = [86, 50];
 
-const ring = (id: string, w: number, h: number, hex: string) => ({
-  ...base(id, constant({ x: PX, y: PY, z: 0 })),
-  type: "ellipse" as const,
-  size: constant({ width: w, height: h }),
-  style: { fill: { color: constant(rgba(hex)), opacity: constant(1) } },
-});
+const OX = PX - ((COLS - 1) * PITCH) / 2;
+const OY = PY - ((ROWS - 1) * PITCH) / 2;
 
-const plateNodes: Record<string, unknown> = {
-  "plate-outer": ring("plate-outer", 272, 180, C.bone),
-  "plate-ring":  ring("plate-ring", 222, 140, C.graphite2),
-  "plate-core":  ring("plate-core", 172, 100, C.obsidian),
-  // the one signal: the ember slit
-  "plate-slit": {
-    ...base("plate-slit", constant({ x: PX, y: PY, z: 0 })),
-    type: "rect" as const,
-    size: constant({ width: 92, height: 6 }),
-    cornerRadius: constant(3),
-    style: { fill: { color: constant(rgba(C.ember)), opacity: constant(1) } },
-  },
-};
+// A deterministic per-cell offset, so the gather never looks like a sweep.
+const jitter = (i: number, j: number) => ((i * 7 + j * 13) % 11) * 6;
 
+const cellNodes: Record<string, unknown> = {};
+let cellIndex = 0;
+
+for (let j = 0; j < ROWS; j++) {
+  for (let i = 0; i < COLS; i++) {
+    const cx = OX + i * PITCH;
+    const cy = OY + j * PITCH;
+    const dx = cx - PX;
+    const dy = cy - PY;
+    const inEllipse = ([rx, ry]: number[]) => (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1;
+
+    const inCore = inEllipse(R_CORE);
+    const inMid = inEllipse(R_MID);
+    const inOuter = inEllipse(R_OUTER);
+    if (!inOuter) continue;
+
+    const inSlit = Math.abs(dy) <= UNIT / 2 && Math.abs(dx) <= 46;
+    const id = `cell-${cellIndex++}`;
+    const delay = Math.round(Math.hypot(dx, dy) * 0.9 + jitter(i, j));
+
+    const common = {
+      ...base(id, {
+        kind: "keyframed",
+        keyframes: [
+          kf(0, { x: cx, y: cy, z: 0 }),
+          kf(DURATION, { x: cx, y: cy, z: 0 }, "hold"),
+        ],
+      }),
+      opacity: {
+        kind: "keyframed",
+        keyframes: [
+          kf(0, 0, "hold"),
+          kf(delay, 0),
+          kf(delay + ms(120), 1, "hold"),
+          kf(DURATION, 1, "hold"),
+        ],
+      },
+    };
+
+    if (inSlit) {
+      cellNodes[id] = {
+        ...common,
+        type: "rect" as const,
+        size: constant({ width: UNIT, height: UNIT }),
+        cornerRadius: constant(2),
+        style: { fill: { color: constant(rgba(C.ember)), opacity: constant(1) } },
+      };
+    } else if (inCore) {
+      cellNodes[id] = {
+        ...common,
+        type: "ellipse" as const,
+        size: constant({ width: UNIT, height: UNIT }),
+        style: { fill: { color: constant(rgba(C.graphite2)), opacity: constant(1) } },
+      };
+    } else if (inMid) {
+      // a diamond: the square turned 45 degrees, in the transform
+      cellNodes[id] = {
+        ...common,
+        transform: {
+          position: constant({ x: cx, y: cy, z: 0 }),
+          anchor: constant({ x: 0, y: 0, z: 0 }),
+          scale: constant({ x: 1, y: 1, z: 1 }),
+          rotation: constant({ x: 0, y: 0, z: 45 }),
+          skew: constant({ x: 0, y: 0 }),
+        },
+        type: "rect" as const,
+        size: constant({ width: UNIT * 0.78, height: UNIT * 0.78 }),
+        cornerRadius: constant(1),
+        style: { fill: { color: constant(rgba(C.gunmetal)), opacity: constant(1) } },
+      };
+    } else {
+      cellNodes[id] = {
+        ...common,
+        type: "rect" as const,
+        size: constant({ width: UNIT, height: UNIT }),
+        cornerRadius: constant(2),
+        style: { fill: { color: constant(rgba(C.bone)), opacity: constant(1) } },
+      };
+    }
+  }
+}
+
+// The plate group carries the cells; it is a root node (no effect node now:
+// the cells ARE the dither).
 const plateGroup = {
   ...base("plate", constant({ x: PX, y: PY, z: 0 })),
   transform: {
-    // position == anchor: the children are in canvas space, so the transform
-    // must be identity at rest, and the scale then grows about the part.
     position: constant({ x: PX, y: PY, z: 0 }),
     anchor: constant({ x: PX, y: PY, z: 0 }),
-    scale: {
-      kind: "keyframed",
-      keyframes: [
-        kf(0, { x: 0.94, y: 0.94, z: 1 }),
-        kf(ms(heroMs), { x: 1, y: 1, z: 1 }),
-        kf(DURATION, { x: 1, y: 1, z: 1 }, "hold"),
-      ],
-    },
+    scale: constant({ x: 1, y: 1, z: 1 }),
     rotation: constant({ x: 0, y: 0, z: 0 }),
     skew: constant({ x: 0, y: 0 }),
   },
-  opacity: {
-    kind: "keyframed",
-    keyframes: [
-      kf(0, 0),                    // bezier: the segment LEAVING fades
-      kf(ms(heroMs), 1, "hold"),
-      kf(DURATION, 1, "hold"),
-    ],
-  },
   type: "group" as const,
   isolation: true,
-  children: Object.keys(plateNodes),
-};
-
-// The print: the plate through the kit's ordered screen. This is the only art.
-const ditherNode = {
-  ...base("print", constant({ x: 0, y: 0, z: 0 })),
-  type: "effect" as const,
-  inputId: "plate",
-  effect: "dithering" as const,
-  parameters: [
-    { id: "p-amount", name: "amount", valueType: "number" as const,
-      value: constant(0.35), minimum: 0, maximum: 1 },
-    { id: "p-levels", name: "levels", valueType: "number" as const,
-      value: constant(3), minimum: 2, maximum: 256 },
-    { id: "p-scale", name: "scale", valueType: "number" as const,
-      value: constant(2), minimum: 1, maximum: 8 },
-  ],
-  capability: { requires: ["image-filter" as const], fallback: "passthrough" as const,
-                maxTemporarySurfaces: 1 },
+  children: Object.keys(cellNodes),
 };
 
 // --- the wordmark -----------------------------------------------------------
@@ -287,8 +335,7 @@ const nodes: Record<string, unknown> = {
     style: { fill: { color: constant(rgba(C.obsidian)), opacity: constant(1) } },
   },
   plate: plateGroup,
-  ...plateNodes,
-  print: ditherNode,
+  ...cellNodes,
   title: titleNode,
   spec: specNode,
 };
@@ -297,7 +344,7 @@ const composition = {
   id: "main", name: "banner",
   width: W, height: H, durationTicks: DURATION,
   nodes,
-  rootNodeIds: ["field", "print", "title", "spec"],
+  rootNodeIds: ["field", "plate", "title", "spec"],
 };
 
 const document = withComputedRevision({
