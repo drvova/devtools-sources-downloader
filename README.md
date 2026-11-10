@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="devtools-unpack — a machined titanium member with a bezelled junction and one cyan optical inset, on a carbon field." width="100%">
+</p>
+
 # devtools-unpack — the Common Lisp engine
 
 An unpack engine in SBCL Common Lisp: capture everything a web page loads and
@@ -64,6 +68,19 @@ the live table against that record, so a renamed or lost arm still fails.
 - **The extension-facing toolchain commands** — `vovas build` / `check` /
   `pack` / `smoke` / `panel` / `download` drove npm and cargo for the extension
   and are retired with it. `vovas engine` and `vovas unpack` are the live path.
+
+## Design language
+
+The banner and the visual identity follow **Sculptural Industrial Futurism** —
+the early-2000s industrial design language (machined metal, one optical accent,
+technical metadata), not the products that popularised it. Two reference
+documents live in `docs/design/`:
+
+- **[`sculptural-industrial-futurism.md`](docs/design/sculptural-industrial-futurism.md)** — the primary language: form grammar, materials, palette, typography, the Y2K section, and the evaluation rubric.
+- **[`dither-ui.md`](docs/design/dither-ui.md)** — the print-in-the-dark counterpart: one ink on one ground, the ordered-dither grain, the mono voice.
+
+The banner is authored with Clayzo; the source and the faces are in
+[`assets/banner/`](assets/banner/README.md).
 
 ## Docs
 
