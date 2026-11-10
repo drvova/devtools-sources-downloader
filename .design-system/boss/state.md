@@ -77,4 +77,15 @@ No new writing step after 00:02 (70%).
 Next action: none. The route is closed; the report is below.
 
 ## Report
-(see the final message; every count comes from `.design-system/close.md`)
+The banner no longer looks generic: it is the era's aerodynamic ellipse — three concentric machined rings, a recessed core and one cyan optical slit, on carbon — rendered from a token source instead of eleven hardcoded hexes.
+One surface changed, the banner (`assets/banner.png`), because it is the only surface this repo renders. Nothing else in the repo draws pixels: no app, no routes, no components, no CSS. The README's alt text and `assets/banner/README.md` moved with it.
+Checks: `clayzo review` exit 0 with 0 errors and 0 warnings; `clayzo render-frame` at the settled frame 0 errors and 0 warnings; the poster test passes at 360 px; the token single-source check finds 0 hex values in `assets/banner/banner.ts` against 11 before. Not verified: how the banner reads on a phone-width GitHub page, since a README image scales and no browser capture of the live page was taken.
+Unanswered, so applied as defaults: the composition was replaced with the elliptical aperture (G-01). The token source ships as JSON only (G-02), changed from "both" because the only consumer is TypeScript and a CSS twin would be a file nobody renders.
+Next: merge `main` (already pushed at `8519bd4`). To undo the composition, name it: "put the spar back". Still raw: the banner's geometry — canvas size, ring diameters, text positions — which the design language does not tokenise and which belongs to the composition; and the dither-ui palette, which is not in `tokens.json` because nothing renders it.
+Found, not fixed:
+| ID | Severity | Route | What | Why not fixed | Fix |
+| --- | --- | --- | --- | --- | --- |
+| F-01 | note | shared | The dither-ui palette (obsidian, bone, ember) is not in `tokens.json` | no consumer renders it | Add it when a second surface adopts that language |
+| F-02 | note | shared | No CSS twin of the tokens | no web surface reads one | Generate `tokens.css` when a docs site exists |
+| F-03 | note | shared | The banner's geometry is not tokenised | composition, not system | none needed; it belongs to the piece |
+
