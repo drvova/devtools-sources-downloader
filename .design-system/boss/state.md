@@ -56,8 +56,8 @@ No new writing step after 00:02 (70%).
 ## Steps
 | # | Step | Skill | Status | Record | Verdict | Evidence |
 |---|---|---|---|---|---|---|
-| 1 | Seed: tokens + the banner as the seed component | build-design-system (seed mode), boss holds the seat | doing | `.design-system/run.md` | | |
-| 2 | Check the system | boss | todo | | | |
+| 1 | Seed: tokens + the banner as the seed component | build-design-system (seed mode), boss holds the seat | done | `assets/tokens.json`, `assets/banner/banner.ts` | done | `close.md` (hex 11 -> 0, token files 0 -> 1), commit 6f5e40a |
+| 2 | Check the system | boss | done | `close.md` | done | `clayzo review` 0 errors / 0 warnings; `clayzo render-frame` 0/0; poster test passes at 360 px |
 
 ## Decisions
 | When | Decision | Why | Evidence |
@@ -70,11 +70,11 @@ No new writing step after 00:02 (70%).
 ## Gates
 | ID | Question | Default | Status | Commit | From |
 |---|---|---|---|---|---|
-| G-01 | Keep the current banner composition or replace it with the era's elliptical aperture? | replace | default (unanswered) | | Frame, this run |
-| G-02 | Does the token source ship as CSS custom properties, a JSON token file, or both? | both, CSS as the source and JSON generated | default (unanswered) | | Frame, this run |
+| G-01 | Keep the current banner composition or replace it with the era's elliptical aperture? | replace | default (unanswered) | 6f5e40a | Frame, this run |
+| G-02 | Does the token source ship as CSS custom properties, a JSON token file, or both? | JSON only | default (unanswered) | 6f5e40a | Frame, this run. Changed from "both": the only consumer is TypeScript, so a CSS twin would be a file nobody renders |
 
 ## Resume
-Next action: write `assets/tokens.css` from the design languages and rebuild
-`assets/banner/banner.ts` to read it, then render and check.
+Next action: none. The route is closed; the report is below.
 
 ## Report
+(see the final message; every count comes from `.design-system/close.md`)

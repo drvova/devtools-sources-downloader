@@ -1,0 +1,15 @@
+signal	value	note
+token_files	1	assets/tokens.json (DTCG)
+custom_property_defs	0	no CSS surface yet; the tokens are JSON because the only consumer is TypeScript
+token_refs	0	the banner imports tokens.json rather than var()
+raw_color_lines	0	no style files
+raw_color_occurrences	0	the same
+component_defs	0	no app components; the banner is the seed component
+product_component_defs	0	the same
+families_with_2plus	0	the same
+foundation	raw	unchanged
+routes	0	unchanged
+ui_lines	0	unchanged
+small_app	yes	unchanged
+component_specs	0	the banner's decisions live in assets/banner/README.md
+git_uncommitted	0	clean after the commit
