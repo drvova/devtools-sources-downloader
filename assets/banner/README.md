@@ -1,7 +1,13 @@
 # The README banner
 
-`../banner.png` is rendered from `banner.json`, authored in `banner.ts` with
-[Clayzo](https://clayzo.dev).
+Two renders of one document: **`../banner.svg`** (what the README embeds) and
+`../banner.png` (a raster twin for places that need one). Both come from
+`banner.json`, authored in `banner.ts` with [Clayzo](https://clayzo.dev).
+
+The SVG is **true vector**: the Bayer screen is `<pattern>` fills of 2 px cells
+(densities measured from the PNG: outer 0.94, middle 0.20, core 0.04) and the
+type is **outlined glyph paths**, so the file carries no font dependency and
+renders identically everywhere, GitHub's sanitiser included.
 
 ## The design language
 
@@ -40,6 +46,9 @@ npm install --global clayzo        # once
 clayzo init --yes                  # in a scratch project, installs @clayzo/animation
 bun banner.ts                      # writes banner.json
 clayzo render-frame banner.json ../banner.png --tick 600 --full-resolution
+
+npm i opentype.js                  # once, for the vector twin
+node render-svg.mjs                # writes ../banner.svg
 ```
 
 `--tick 600` is the settled frame (the plate prints over the first 1.2 s and
