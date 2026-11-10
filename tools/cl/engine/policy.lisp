@@ -84,10 +84,10 @@ kebab form; `capture-policy` renders the camelCase wire names.")
 ;;; ---------------------------------------------------------------------------
 ;;; default-strategy
 ;;;
-;;; Owned by panel/stackprofile.rs, which is not ported yet. It lives here for now
-;;; because `capture-policy` cannot be built without it, and the alternative -
-;;; leaving the key out - would ship a policy object the page world reads as a
-;;; missing strategy. When stackprofile lands, this moves and policy calls it.
+;;; Owned by panel/stackprofile.rs, which IS ported - `default-strategy` below
+;;; delegates to `panel.stackprofile:default-strategy`, which owns the function
+;;; in the Rust. It was inlined here when policy was the only ported user; the
+;;; delegation is the move the old note promised.
 ;;; ---------------------------------------------------------------------------
 
 (defun default-strategy ()

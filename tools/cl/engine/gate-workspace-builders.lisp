@@ -189,10 +189,10 @@ adds beyond what boundary/flow already produce."
 ;;; framework-state workspace appended as the 9th, and the four journeys.
 ;;;
 ;;; This runs against the SAME reconstructed analysis as the sections above. The
-;;; Rust test drives it through build_semantic_analysis, which is not yet ported -
-;;; so a failure here is evidence about the workspace code against a fixture
-;;; shape, not against the capstone. It gets re-run through the real capstone
-;;; once build-semantic-analysis lands.
+;;; Rust test drives it through build_semantic_analysis, which IS ported
+;;; (`analysis.lisp`, gated 14/14) - so this gate and the capstone gate exercise
+;;; the same workspace builders through both the reconstructed and the real
+;;; analysis, and a failure here names the builder rather than the pipeline.
 ;;; ---------------------------------------------------------------------------
 
 (defun run-investigation-workspace-gate (&key (verbose t))
