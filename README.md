@@ -21,7 +21,10 @@ unpacked, site-aware `sources.zip`:
 - for each cached-bytecode blob, the strings and structure inside it
 
 The unpacking engine is Rust compiled to WebAssembly. The extension is a thin JavaScript platform
-layer around it.
+layer around it. The same engine exists as a **Common Lisp port** (`tools/cl/engine/`), held to
+oracles captured from the shipped wasm build — the native path for re-running one unpack pass and
+diffing it in a sentence, instead of `cargo test` → wasm build → reload the extension. Its export
+is byte-identical to the shipped engine's.
 
 <p align="center">
   <img src="assets/pipeline.svg" alt="The pipeline: the page world records into window.__CAPTURE__, the panel polls it, the Rust engine compiled to WebAssembly unpacks it, and the panel writes one sources.zip." width="100%">
@@ -75,7 +78,17 @@ sbcl --script tools/cl/run.lisp pack           # dist/ -> dist-<version>.zip
 sbcl --script tools/cl/run.lisp smoke          # end-to-end DevTools Protocol selftest
 sbcl --script tools/cl/run.lisp panel          # the extension's DevTools panel registers
 sbcl --script tools/cl/run.lisp download --fixture   # the product path, against a local page
+sbcl --script tools/cl/run.lisp engine         # list the 49 callable engine functions
+sbcl --script tools/cl/run.lisp engine sha256Hex '["abc"]'
+sbcl --script tools/cl/run.lisp unpack capture.json --out unpacked   # the export, natively
 sbcl --load   tools/cl/run.lisp                # REPL: (vcdp:launch) (vcdp:tabs) (vcdp:eval* "...")
+```
+
+The engine port has its own gate: 48 gates, 2,729 assertions, every one against an oracle captured
+from the shipped engine.
+
+```bash
+sbcl --script tools/cl/run-engine.lisp         # 48 gates, exit 0 when green
 ```
 
 ## Layout
@@ -89,6 +102,7 @@ unpack-rs/          the whole project, flat: the devtools-unpack crate and the C
   test/             the 68-case node baseline
   tests/            the Rust twins, plus the oracles
 tools/cl/           the SBCL toolchain and the DevTools Protocol client
+tools/cl/engine/    the Common Lisp port of the unpack engine (48 oracle gates)
 .wiki/              how the whole thing works
 assets/             the banner and the diagram
 ```
