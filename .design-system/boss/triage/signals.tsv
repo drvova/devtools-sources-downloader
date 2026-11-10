@@ -1,0 +1,37 @@
+signal	value	note
+token_files	0	no CSS/SCSS/TSX/JSX in the tree
+custom_property_defs	0	the same
+token_refs	0	the same
+raw_color_lines	0	no style files; the banner's hexes live in assets/banner/banner.ts (a render source, not product UI)
+raw_color_occurrences	0	the same
+tw_semantic	0	no Tailwind
+tw_arbitrary	0	no Tailwind
+tw_palette	0	no Tailwind
+adoption_pct	0	no token use to measure
+palette_pct	0	the same
+component_defs	0	no exported UI components
+product_component_defs	0	the same
+families_with_2plus	0	the same
+raw_family_copies	0	the same
+foundation	raw	no UI library, no components.json, no package.json
+ui_library	none	
+own_package	none	
+framework	none	no app framework
+tailwind	no	
+inline_styles	0	
+storybook	no	
+routes	0	no router, no route files
+ui_lines	0	no markup or style files
+small_app	yes	0 routes, 0 ui_lines
+shared_ui_dirs	0	no component layer
+harden_dirs	0	the same
+stray_dirs	0	the same
+system_docs_routes	0	
+llms_txt	no	
+registry_json	no	
+installed_system	none	
+system_repo	no	
+component_specs	0	
+git_uncommitted	0	clean before the run folder
+git_branch	main	
+scaffold_files_skipped	0	triage ran the documented grep fallback: rg is a shell builtin here, not a binary

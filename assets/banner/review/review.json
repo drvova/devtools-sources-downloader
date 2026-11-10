@@ -1,0 +1,731 @@
+{
+  "documentId": "devtools-unpack-banner",
+  "revision": "sha256:b345a21783e6288dc796c847754914e319ecf89ed8b342e1bce59362bf430531",
+  "contractVersions": {
+    "critique": "semantic-critique.v1",
+    "corpus": "lottie-fidelity-corpus.v1",
+    "gate": "animation-quality-gate.v2"
+  },
+  "measured": {
+    "firstChangeTick": 8,
+    "stillSeconds": 0.03,
+    "lastChangeTick": 304,
+    "endHoldSeconds": 1.73,
+    "loop": {
+      "declared": false
+    }
+  },
+  "samples": [
+    {
+      "tick": 0,
+      "score": 10800,
+      "reasons": [
+        "first-visible",
+        "hold",
+        "keyframe-landing",
+        "keyframe-start",
+        "loop-seam"
+      ],
+      "sampledFor": "first"
+    },
+    {
+      "tick": 16,
+      "score": 0,
+      "reasons": [
+        "motion-peak"
+      ],
+      "sampledFor": "motion"
+    },
+    {
+      "tick": 56,
+      "score": 0,
+      "reasons": [
+        "motion-peak"
+      ],
+      "sampledFor": "motion"
+    },
+    {
+      "tick": 96,
+      "score": 1900,
+      "reasons": [
+        "hold",
+        "keyframe-landing"
+      ],
+      "sampledFor": "keyframe"
+    },
+    {
+      "tick": 160,
+      "score": 1200,
+      "reasons": [
+        "keyframe-landing"
+      ],
+      "sampledFor": "keyframe"
+    },
+    {
+      "tick": 176,
+      "score": 0,
+      "reasons": [
+        "motion-peak"
+      ],
+      "sampledFor": "motion"
+    },
+    {
+      "tick": 216,
+      "score": 1890,
+      "reasons": [
+        "hold",
+        "keyframe-landing"
+      ],
+      "sampledFor": "keyframe"
+    },
+    {
+      "tick": 256,
+      "score": 1900,
+      "reasons": [
+        "hold",
+        "keyframe-landing"
+      ],
+      "sampledFor": "keyframe"
+    },
+    {
+      "tick": 312,
+      "score": 1900,
+      "reasons": [
+        "hold",
+        "keyframe-landing"
+      ],
+      "sampledFor": "keyframe"
+    },
+    {
+      "tick": 712,
+      "score": 12620,
+      "reasons": [
+        "hold",
+        "keyframe-landing",
+        "last-visible",
+        "loop-seam"
+      ],
+      "sampledFor": "last"
+    }
+  ],
+  "omittedMarkers": [],
+  "frames": [
+    {
+      "tick": 0,
+      "frame": 0,
+      "timeSeconds": 0,
+      "label": "tick 0 · frame 0.000 · 0.000s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 16,
+      "frame": 2,
+      "timeSeconds": 0.06666666666666667,
+      "label": "tick 16 · frame 2.000 · 0.067s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 56,
+      "frame": 7,
+      "timeSeconds": 0.23333333333333334,
+      "label": "tick 56 · frame 7.000 · 0.233s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 96,
+      "frame": 12,
+      "timeSeconds": 0.4,
+      "label": "tick 96 · frame 12.000 · 0.400s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 160,
+      "frame": 20,
+      "timeSeconds": 0.6666666666666666,
+      "label": "tick 160 · frame 20.000 · 0.667s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 176,
+      "frame": 22,
+      "timeSeconds": 0.7333333333333333,
+      "label": "tick 176 · frame 22.000 · 0.733s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 216,
+      "frame": 27,
+      "timeSeconds": 0.9,
+      "label": "tick 216 · frame 27.000 · 0.900s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 256,
+      "frame": 32,
+      "timeSeconds": 1.0666666666666667,
+      "label": "tick 256 · frame 32.000 · 1.067s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 312,
+      "frame": 39,
+      "timeSeconds": 1.3,
+      "label": "tick 312 · frame 39.000 · 1.300s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
+      "tick": 712,
+      "frame": 89,
+      "timeSeconds": 2.966666666666667,
+      "label": "tick 712 · frame 89.000 · 2.967s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    }
+  ],
+  "rendererCounts": {
+    "render.duration": 10,
+    "render.temporary_surface_estimate": 10,
+    "render.graph": 10,
+    "render.static_picture_hit": 18,
+    "text.shaping_fallback": 10
+  },
+  "contactSheet": {
+    "width": 1056,
+    "height": 892,
+    "columns": 2,
+    "rows": 5,
+    "header": "opaque: the same on every background"
+  },
+  "analysis": {
+    "metrics": {
+      "frames": [
+        {
+          "tick": 0,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.10368,
+          "contrastRange": 0.05042980392156863,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 16,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.5384078431372549,
+          "contrastRange": 0.4851576470588235,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 56,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.8790337254901961,
+          "contrastRange": 0.8257835294117647,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 96,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9140447058823529,
+          "contrastRange": 0.8607945098039215,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 160,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9140447058823529,
+          "contrastRange": 0.8607945098039215,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 176,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9140447058823529,
+          "contrastRange": 0.8607945098039215,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 216,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9140447058823529,
+          "contrastRange": 0.8607945098039215,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 256,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9218878431372548,
+          "contrastRange": 0.8686376470588234,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 312,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9218878431372548,
+          "contrastRange": 0.8686376470588234,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 712,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0.053250196078431365,
+          "maximumLuminance": 0.9218878431372548,
+          "contrastRange": 0.8686376470588234,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        }
+      ],
+      "motion": [
+        {
+          "fromTick": 0,
+          "toTick": 16,
+          "energy": 0.011006478702320773,
+          "luminanceDelta": 0.014705387788713067,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 16,
+          "toTick": 56,
+          "energy": 0.010227233288334865,
+          "luminanceDelta": 0.01213874438723564,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 56,
+          "toTick": 96,
+          "energy": 0.001157678342333027,
+          "luminanceDelta": 0.0013917380179664512,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 96,
+          "toTick": 160,
+          "energy": 0.0025745915431602327,
+          "luminanceDelta": 0.0034364690922918106,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 160,
+          "toTick": 176,
+          "energy": 0.010867713479434743,
+          "luminanceDelta": 0.011626198108198357,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 176,
+          "toTick": 216,
+          "energy": 0.011898384842218137,
+          "luminanceDelta": 0.00720155511596722,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 216,
+          "toTick": 256,
+          "energy": 0.0024179346421185663,
+          "luminanceDelta": 0.0018622744212424824,
+          "frozen": false,
+          "flash": false
+        },
+        {
+          "fromTick": 256,
+          "toTick": 312,
+          "energy": 0.0008592942181755514,
+          "luminanceDelta": 0.00013827557732126738,
+          "frozen": true,
+          "flash": false
+        },
+        {
+          "fromTick": 312,
+          "toTick": 712,
+          "energy": 0,
+          "luminanceDelta": 0,
+          "frozen": true,
+          "flash": false
+        }
+      ],
+      "loopSeamDifference": 0.039297111361634496,
+      "renderTimingP50Ms": 19.41039999999998,
+      "renderTimingP95Ms": 223.85300000000007,
+      "temporarySurfaceMaxBytes": 1048576,
+      "rendererWarningCount": 0,
+      "rendererErrorCount": 0,
+      "geometry": {
+        "frames": 90,
+        "frameStepTicks": 8,
+        "nodes": 9,
+        "uncheckedNodes": 0
+      },
+      "timeline": {
+        "firstChangeTick": 8,
+        "stillSeconds": 0.03,
+        "lastChangeTick": 304,
+        "endHoldSeconds": 1.73
+      }
+    },
+    "diagnostics": [
+      {
+        "code": "motion.frozen_interval",
+        "severity": "info",
+        "message": "Frames 312 and 712 are visually frozen",
+        "ticks": [
+          312,
+          712
+        ],
+        "evidence": {
+          "energy": 0
+        }
+      }
+    ]
+  },
+  "critique": {
+    "version": "semantic-critique.v1",
+    "corpusVersion": "lottie-fidelity-corpus.v1",
+    "gateVersion": "animation-quality-gate.v2",
+    "diagnostics": [
+      {
+        "id": "motion.frozen_interval:0",
+        "category": "motion-continuity",
+        "severity": "info",
+        "confidence": 0.95,
+        "summary": "Frames 312 and 712 are visually frozen",
+        "evidence": {
+          "ticks": [
+            312,
+            712
+          ],
+          "regions": [],
+          "facts": {
+            "energy": 0
+          }
+        },
+        "source": "deterministic"
+      }
+    ],
+    "truncated": false
+  },
+  "performance": {
+    "assumes": {
+      "displayWidth": 720,
+      "interactive": null
+    },
+    "download": {
+      "documentBytes": 10229,
+      "documentGzipBytes": 1694,
+      "assets": [
+        {
+          "id": "display",
+          "type": "font",
+          "bytes": 136676
+        },
+        {
+          "id": "mono",
+          "type": "font",
+          "bytes": 135580
+        }
+      ],
+      "totalBytes": 273950
+    },
+    "counted": {
+      "frames": 89,
+      "of": 90,
+      "sizes": [
+        "1440x360",
+        "824x206",
+        "780x195"
+      ]
+    },
+    "devices": [
+      {
+        "id": "mac",
+        "label": "M-series Mac",
+        "estimate": true,
+        "scaled": true,
+        "size": "1440x360",
+        "fps": 30,
+        "frameMs": {
+          "p50": 2.5,
+          "p95": 2.5,
+          "max": 3.9
+        },
+        "cpuMs": {
+          "p50": 2.3,
+          "p95": 2.4
+        },
+        "gpuMs": {
+          "p50": 1.4,
+          "p95": 1.4
+        },
+        "drawn": 1,
+        "resolution": 1,
+        "drawnAtFullResolution": 1,
+        "gpuBound": false,
+        "verdict": "holds",
+        "slowTicks": [],
+        "gpuTime": {
+          "composite": 0.14,
+          "samples": 0.26,
+          "clear": 0.34,
+          "copy": 0.24
+        },
+        "hotspots": []
+      },
+      {
+        "id": "windows-laptop",
+        "label": "Mid Windows laptop",
+        "estimate": true,
+        "scaled": true,
+        "size": "1440x360",
+        "fps": 30,
+        "frameMs": {
+          "p50": 5.5,
+          "p95": 5.6,
+          "max": 7.9
+        },
+        "cpuMs": {
+          "p50": 5.3,
+          "p95": 5.4
+        },
+        "gpuMs": {
+          "p50": 2.1,
+          "p95": 2.1
+        },
+        "drawn": 1,
+        "resolution": 1,
+        "drawnAtFullResolution": 1,
+        "gpuBound": false,
+        "verdict": "holds",
+        "slowTicks": [],
+        "gpuTime": {
+          "fill": 0.05,
+          "composite": 0.24,
+          "samples": 0.09,
+          "clear": 0.15,
+          "copy": 0.45,
+          "draws": 0.02
+        },
+        "hotspots": []
+      },
+      {
+        "id": "old-laptop",
+        "label": "Old Intel laptop / Chromebook",
+        "estimate": false,
+        "scaled": false,
+        "size": "1440x360",
+        "fps": 30,
+        "frameMs": {
+          "p50": 6.2,
+          "p95": 6.2,
+          "max": 8.7
+        },
+        "cpuMs": {
+          "p50": 5.7,
+          "p95": 5.8
+        },
+        "gpuMs": {
+          "p50": 5.2,
+          "p95": 5.2
+        },
+        "drawn": 1,
+        "resolution": 1,
+        "drawnAtFullResolution": 1,
+        "gpuBound": false,
+        "verdict": "holds",
+        "slowTicks": [],
+        "gpuTime": {
+          "fill": 0.05,
+          "composite": 0.24,
+          "samples": 0.09,
+          "clear": 0.15,
+          "copy": 0.45,
+          "draws": 0.02
+        },
+        "hotspots": []
+      },
+      {
+        "id": "android",
+        "label": "Mid Android phone",
+        "estimate": true,
+        "scaled": false,
+        "size": "824x206",
+        "fps": 30,
+        "frameMs": {
+          "p50": 8.9,
+          "p95": 9,
+          "max": 13.4
+        },
+        "cpuMs": {
+          "p50": 8.7,
+          "p95": 8.8
+        },
+        "gpuMs": {
+          "p50": 1.6,
+          "p95": 1.6
+        },
+        "drawn": 1,
+        "resolution": 1,
+        "drawnAtFullResolution": 1,
+        "gpuBound": false,
+        "verdict": "holds",
+        "slowTicks": [],
+        "gpuTime": {
+          "fill": 0.06,
+          "composite": 0.24,
+          "samples": 0.14,
+          "clear": 0.11,
+          "copy": 0.38,
+          "allocate": 0.01,
+          "draws": 0.06
+        },
+        "hotspots": []
+      },
+      {
+        "id": "iphone",
+        "label": "iPhone",
+        "estimate": true,
+        "scaled": true,
+        "size": "780x195",
+        "fps": 30,
+        "frameMs": {
+          "p50": 2.4,
+          "p95": 2.4,
+          "max": 3.9
+        },
+        "cpuMs": {
+          "p50": 2.3,
+          "p95": 2.4
+        },
+        "gpuMs": {
+          "p50": 0.7,
+          "p95": 0.7
+        },
+        "drawn": 1,
+        "resolution": 1,
+        "drawnAtFullResolution": 1,
+        "gpuBound": false,
+        "verdict": "holds",
+        "slowTicks": [],
+        "gpuTime": {
+          "composite": 0.14,
+          "samples": 0.26,
+          "clear": 0.34,
+          "copy": 0.24,
+          "draws": 0.03
+        },
+        "hotspots": []
+      }
+    ],
+    "gpuMemoryBytes": 21523456,
+    "notDrawn": {},
+    "calibration": "2026-10-20, 125 runs of 25 documents"
+  }
+}
