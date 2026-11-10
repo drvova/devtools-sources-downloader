@@ -1,6 +1,6 @@
 {
   "documentId": "devtools-unpack-banner",
-  "revision": "sha256:b345a21783e6288dc796c847754914e319ecf89ed8b342e1bce59362bf430531",
+  "revision": "sha256:3771c5afa1f5710cfd4f7372e7fc157726cc9b8dcde86f2f036ef63a7c0517e1",
   "contractVersions": {
     "critique": "semantic-critique.v1",
     "corpus": "lottie-fidelity-corpus.v1",
@@ -30,14 +30,6 @@
     },
     {
       "tick": 16,
-      "score": 0,
-      "reasons": [
-        "motion-peak"
-      ],
-      "sampledFor": "motion"
-    },
-    {
-      "tick": 56,
       "score": 0,
       "reasons": [
         "motion-peak"
@@ -77,6 +69,14 @@
         "keyframe-landing"
       ],
       "sampledFor": "keyframe"
+    },
+    {
+      "tick": 232,
+      "score": 0,
+      "reasons": [
+        "motion-peak"
+      ],
+      "sampledFor": "motion"
     },
     {
       "tick": 256,
@@ -127,14 +127,6 @@
       "rendererDiagnostics": []
     },
     {
-      "tick": 56,
-      "frame": 7,
-      "timeSeconds": 0.23333333333333334,
-      "label": "tick 56 · frame 7.000 · 0.233s",
-      "backgroundId": "checker",
-      "rendererDiagnostics": []
-    },
-    {
       "tick": 96,
       "frame": 12,
       "timeSeconds": 0.4,
@@ -167,6 +159,14 @@
       "rendererDiagnostics": []
     },
     {
+      "tick": 232,
+      "frame": 29,
+      "timeSeconds": 0.9666666666666667,
+      "label": "tick 232 · frame 29.000 · 0.967s",
+      "backgroundId": "checker",
+      "rendererDiagnostics": []
+    },
+    {
       "tick": 256,
       "frame": 32,
       "timeSeconds": 1.0666666666666667,
@@ -195,8 +195,8 @@
     "render.duration": 10,
     "render.temporary_surface_estimate": 10,
     "render.graph": 10,
-    "render.static_picture_hit": 18,
-    "text.shaping_fallback": 10
+    "render.static_picture_hit": 9,
+    "text.shaping_fallback": 12
   },
   "contactSheet": {
     "width": 1056,
@@ -219,9 +219,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.10368,
-          "contrastRange": 0.05042980392156863,
+          "minimumLuminance": 0.0694870588235294,
+          "maximumLuminance": 0.0694870588235294,
+          "contrastRange": 0,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -236,26 +236,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.5384078431372549,
-          "contrastRange": 0.4851576470588235,
-          "semiTransparentEdgeRatio": 0,
-          "transparentRgbLeakPixels": 0
-        },
-        {
-          "tick": 56,
-          "blank": false,
-          "coverage": 1,
-          "alphaBounds": {
-            "left": 0,
-            "top": 0,
-            "right": 511,
-            "bottom": 127
-          },
-          "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.8790337254901961,
-          "contrastRange": 0.8257835294117647,
+          "minimumLuminance": 0.030821960784313724,
+          "maximumLuminance": 0.5565952941176471,
+          "contrastRange": 0.5257733333333333,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -270,9 +253,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9140447058823529,
-          "contrastRange": 0.8607945098039215,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -287,9 +270,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9140447058823529,
-          "contrastRange": 0.8607945098039215,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -304,9 +287,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9140447058823529,
-          "contrastRange": 0.8607945098039215,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -321,9 +304,26 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9140447058823529,
-          "contrastRange": 0.8607945098039215,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
+          "semiTransparentEdgeRatio": 0,
+          "transparentRgbLeakPixels": 0
+        },
+        {
+          "tick": 232,
+          "blank": false,
+          "coverage": 1,
+          "alphaBounds": {
+            "left": 0,
+            "top": 0,
+            "right": 511,
+            "bottom": 127
+          },
+          "edgeClipped": true,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -338,9 +338,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9218878431372548,
-          "contrastRange": 0.8686376470588234,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -355,9 +355,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9218878431372548,
-          "contrastRange": 0.8686376470588234,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         },
@@ -372,9 +372,9 @@
             "bottom": 127
           },
           "edgeClipped": true,
-          "minimumLuminance": 0.053250196078431365,
-          "maximumLuminance": 0.9218878431372548,
-          "contrastRange": 0.8686376470588234,
+          "minimumLuminance": 0,
+          "maximumLuminance": 0.9999999999999999,
+          "contrastRange": 0.9999999999999999,
           "semiTransparentEdgeRatio": 0,
           "transparentRgbLeakPixels": 0
         }
@@ -383,64 +383,64 @@
         {
           "fromTick": 0,
           "toTick": 16,
-          "energy": 0.011006478702320773,
-          "luminanceDelta": 0.014705387788713067,
+          "energy": 0.008540045046338847,
+          "luminanceDelta": 0.00854343876851954,
           "frozen": false,
           "flash": false
         },
         {
           "fromTick": 16,
-          "toTick": 56,
-          "energy": 0.010227233288334865,
-          "luminanceDelta": 0.01213874438723564,
-          "frozen": false,
-          "flash": false
-        },
-        {
-          "fromTick": 56,
           "toTick": 96,
-          "energy": 0.001157678342333027,
-          "luminanceDelta": 0.0013917380179664512,
+          "energy": 0.009291585286458333,
+          "luminanceDelta": 0.00966591861494455,
           "frozen": false,
           "flash": false
         },
         {
           "fromTick": 96,
           "toTick": 160,
-          "energy": 0.0025745915431602327,
-          "luminanceDelta": 0.0034364690922918106,
+          "energy": 0.001676342534083946,
+          "luminanceDelta": 0.002250565185546241,
           "frozen": false,
           "flash": false
         },
         {
           "fromTick": 160,
           "toTick": 176,
-          "energy": 0.010867713479434743,
-          "luminanceDelta": 0.011626198108198357,
+          "energy": 0.006502787272135417,
+          "luminanceDelta": 0.007685948235003348,
           "frozen": false,
           "flash": false
         },
         {
           "fromTick": 176,
           "toTick": 216,
-          "energy": 0.011898384842218137,
-          "luminanceDelta": 0.00720155511596722,
+          "energy": 0.0074126000497855395,
+          "luminanceDelta": 0.00478382662903698,
           "frozen": false,
           "flash": false
         },
         {
           "fromTick": 216,
+          "toTick": 232,
+          "energy": 0.000827490114698223,
+          "luminanceDelta": 0.00112199065563727,
+          "frozen": true,
+          "flash": false
+        },
+        {
+          "fromTick": 232,
           "toTick": 256,
-          "energy": 0.0024179346421185663,
-          "luminanceDelta": 0.0018622744212424824,
-          "frozen": false,
+          "energy": 0.0004371792662377451,
+          "luminanceDelta": 0.0005930980248547435,
+          "frozen": true,
           "flash": false
         },
         {
           "fromTick": 256,
           "toTick": 312,
-          "energy": 0.0008592942181755514,
-          "luminanceDelta": 0.00013827557732126738,
+          "energy": 0.0009889789656096814,
+          "luminanceDelta": 0.00015466969209576575,
           "frozen": true,
           "flash": false
         },
@@ -453,10 +453,10 @@
           "flash": false
         }
       ],
-      "loopSeamDifference": 0.039297111361634496,
-      "renderTimingP50Ms": 19.41039999999998,
-      "renderTimingP95Ms": 223.85300000000007,
-      "temporarySurfaceMaxBytes": 1048576,
+      "loopSeamDifference": 0.02924955779430913,
+      "renderTimingP50Ms": 35.099999994039536,
+      "renderTimingP95Ms": 206.40000000596046,
+      "temporarySurfaceMaxBytes": 1835008,
       "rendererWarningCount": 0,
       "rendererErrorCount": 0,
       "geometry": {
@@ -519,13 +519,13 @@
       "interactive": null
     },
     "download": {
-      "documentBytes": 10229,
-      "documentGzipBytes": 1694,
+      "documentBytes": 9552,
+      "documentGzipBytes": 1671,
       "assets": [
         {
           "id": "display",
           "type": "font",
-          "bytes": 136676
+          "bytes": 64344
         },
         {
           "id": "mono",
@@ -533,7 +533,7 @@
           "bytes": 135580
         }
       ],
-      "totalBytes": 273950
+      "totalBytes": 201595
     },
     "counted": {
       "frames": 89,
@@ -555,15 +555,15 @@
         "frameMs": {
           "p50": 2.5,
           "p95": 2.5,
-          "max": 3.9
+          "max": 4
         },
         "cpuMs": {
-          "p50": 2.3,
+          "p50": 2.4,
           "p95": 2.4
         },
         "gpuMs": {
           "p50": 1.4,
-          "p95": 1.4
+          "p95": 1.5
         },
         "drawn": 1,
         "resolution": 1,
@@ -572,10 +572,11 @@
         "verdict": "holds",
         "slowTicks": [],
         "gpuTime": {
-          "composite": 0.14,
-          "samples": 0.26,
-          "clear": 0.34,
-          "copy": 0.24
+          "composite": 0.18,
+          "dithering": 0.03,
+          "samples": 0.23,
+          "clear": 0.33,
+          "copy": 0.23
         },
         "hotspots": []
       },
@@ -587,17 +588,17 @@
         "size": "1440x360",
         "fps": 30,
         "frameMs": {
-          "p50": 5.5,
-          "p95": 5.6,
-          "max": 7.9
+          "p50": 5.8,
+          "p95": 5.8,
+          "max": 8.2
         },
         "cpuMs": {
-          "p50": 5.3,
-          "p95": 5.4
+          "p50": 5.6,
+          "p95": 5.6
         },
         "gpuMs": {
           "p50": 2.1,
-          "p95": 2.1
+          "p95": 2.8
         },
         "drawn": 1,
         "resolution": 1,
@@ -606,12 +607,14 @@
         "verdict": "holds",
         "slowTicks": [],
         "gpuTime": {
-          "fill": 0.05,
-          "composite": 0.24,
-          "samples": 0.09,
-          "clear": 0.15,
-          "copy": 0.45,
-          "draws": 0.02
+          "fill": 0.02,
+          "composite": 0.27,
+          "dithering": 0.09,
+          "samples": 0.07,
+          "clear": 0.13,
+          "copy": 0.4,
+          "allocate": 0.01,
+          "draws": 0.01
         },
         "hotspots": []
       },
@@ -623,17 +626,17 @@
         "size": "1440x360",
         "fps": 30,
         "frameMs": {
-          "p50": 6.2,
-          "p95": 6.2,
-          "max": 8.7
+          "p50": 6.4,
+          "p95": 7.7,
+          "max": 9.5
         },
         "cpuMs": {
-          "p50": 5.7,
-          "p95": 5.8
+          "p50": 5.9,
+          "p95": 5.9
         },
         "gpuMs": {
           "p50": 5.2,
-          "p95": 5.2
+          "p95": 7.1
         },
         "drawn": 1,
         "resolution": 1,
@@ -642,12 +645,14 @@
         "verdict": "holds",
         "slowTicks": [],
         "gpuTime": {
-          "fill": 0.05,
-          "composite": 0.24,
-          "samples": 0.09,
-          "clear": 0.15,
-          "copy": 0.45,
-          "draws": 0.02
+          "fill": 0.02,
+          "composite": 0.27,
+          "dithering": 0.09,
+          "samples": 0.07,
+          "clear": 0.13,
+          "copy": 0.4,
+          "allocate": 0.01,
+          "draws": 0.01
         },
         "hotspots": []
       },
@@ -659,17 +664,17 @@
         "size": "824x206",
         "fps": 30,
         "frameMs": {
-          "p50": 8.9,
-          "p95": 9,
-          "max": 13.4
+          "p50": 9.3,
+          "p95": 9.3,
+          "max": 13.7
         },
         "cpuMs": {
-          "p50": 8.7,
-          "p95": 8.8
+          "p50": 9.1,
+          "p95": 9.1
         },
         "gpuMs": {
           "p50": 1.6,
-          "p95": 1.6
+          "p95": 2.1
         },
         "drawn": 1,
         "resolution": 1,
@@ -678,13 +683,14 @@
         "verdict": "holds",
         "slowTicks": [],
         "gpuTime": {
-          "fill": 0.06,
-          "composite": 0.24,
-          "samples": 0.14,
-          "clear": 0.11,
-          "copy": 0.38,
-          "allocate": 0.01,
-          "draws": 0.06
+          "fill": 0.02,
+          "composite": 0.29,
+          "dithering": 0.08,
+          "samples": 0.12,
+          "clear": 0.1,
+          "copy": 0.34,
+          "allocate": 0.02,
+          "draws": 0.04
         },
         "hotspots": []
       },
@@ -696,12 +702,12 @@
         "size": "780x195",
         "fps": 30,
         "frameMs": {
-          "p50": 2.4,
-          "p95": 2.4,
+          "p50": 2.5,
+          "p95": 2.5,
           "max": 3.9
         },
         "cpuMs": {
-          "p50": 2.3,
+          "p50": 2.4,
           "p95": 2.4
         },
         "gpuMs": {
@@ -715,16 +721,17 @@
         "verdict": "holds",
         "slowTicks": [],
         "gpuTime": {
-          "composite": 0.14,
-          "samples": 0.26,
-          "clear": 0.34,
-          "copy": 0.24,
-          "draws": 0.03
+          "composite": 0.17,
+          "dithering": 0.03,
+          "samples": 0.23,
+          "clear": 0.33,
+          "copy": 0.22,
+          "draws": 0.02
         },
         "hotspots": []
       }
     ],
-    "gpuMemoryBytes": 21523456,
+    "gpuMemoryBytes": 30173184,
     "notDrawn": {},
     "calibration": "2026-10-20, 125 runs of 25 documents"
   }

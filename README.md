@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="devtools-unpack — a machined elliptical aperture with concentric titanium rings and one cyan optical slit, on a carbon field." width="100%">
+  <img src="assets/banner.png" alt="devtools-unpack — a printed plate: an elliptical aperture rendered in Bayer dither cells, bone on obsidian, with one ember optical slit." width="100%">
 </p>
 
 # devtools-unpack — the Common Lisp engine

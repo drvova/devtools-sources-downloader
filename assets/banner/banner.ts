@@ -1,38 +1,40 @@
 // banner.ts — the README header for devtools-unpack, authored with Clayzo.
 //
-// DESIGN LANGUAGE: Sculptural Industrial Futurism (docs/design/sculptural-
-// industrial-futurism.md) — the early-2000s industrial design language, not the
-// eyewear. §12 is the brief:
+// DESIGN LANGUAGE: dither-ui (docs/design/dither-ui.md), fused with the
+// Sculptural Industrial Futurism form language. dither-ui's identity line is
+// the brief:
 //
-//   "a past era's optimistic prediction of future hardware: silver materials,
-//    elliptical geometry, flowing forms, visible mechanisms ... Retain: alien
-//    but useful silhouettes; graphite/silver material contrast; aerodynamic
-//    ellipses and molded structures; purposeful machinery-like identity.
-//    Discard: arbitrary pixel grids, fake CRT artifacts, chrome text
-//    everywhere; noisy RGB gradients, meaningless technical labels."
+//   "A printed thing in the dark: one bone ink on obsidian, a fine grain, the
+//    kit's Bayer dither as the only art, a monospace voice, and an extended
+//    display face for the few words that lead. Engineered, never decorated."
+//
+// So the plate is PRINTED, not lit:
+//   - obsidian #101214 ground, bone #E4E1D8 ink, muted #9C998F second ink;
+//   - the aperture is drawn as flat rings and then run through the kit's
+//     ordered dither — the dither IS the art, so there are no gradients on it;
+//   - one signal, the ember #FF9632, as the optical slit (the one live thing);
+//   - Michroma, the extended display face, for the wordmark only;
+//   - IBM Plex Mono for the spec line, the print's voice;
+//   - the grain covers the page, because the dither samples the drawn surface.
+//
+// Bans held (dither-ui, Bans): no neon, no cyberpunk HUD, no arbitrary pixel
+// grids, no fake CRT artifacts, no chrome text everywhere, no noisy RGB
+// gradients, no red, no meaningless technical labels.
 //
 // ART DIRECTION (written before authoring, per the skill):
-//   verb      assemble — the aperture's concentric rings settle into place,
-//             then the type lands. Decisive travel, soft settling (§8).
-//   geometry  the era's AERODYNAMIC ELLIPSE as the one memorable silhouette:
-//             a machined aperture built from three concentric rings and a
-//             recessed core, with one optical slit. Object left, type right,
-//             one thin alignment rule between them (§7 "planes", §14 poster).
-//   palette   tokens.json, at the 75/20/5 ratio: carbon ground, graphite and
-//             gunmetal structure, alloy and titanium metal, mist ink, and ONE
-//             accent — optic-cyan — as the slit, ~3% of the frame.
-//   scale     the aperture is 300 x 280 (a third of the height's short edge);
-//             the wordmark spans the right 55% of the width; one dramatic
-//             scale shift between them (§14).
-//   words     two: the name, and one measured spec line. The spec line is REAL
-//             (26 modules, 49 dispatch arms, 48 gates, 2,729 assertions)
-//             because "meaningless technical labels" are banned.
-//   punch     the aperture settles inside 0.4 s; the wordmark lands at 0.5 s;
-//             the spec line at 0.75 s. Settled by 1.2 s.
+//   verb      print — the plate is struck: the aperture's dither resolves, then
+//             the type sets. One moving layer at a time.
+//   geometry  the era's ellipse, printed: three concentric rings and a recessed
+//             core, one ember slit. Mark above, name below, spec at the foot.
+//   palette   two inks on one ground plus the one signal, per dither-ui.
+//   scale     the aperture is 300 x 210; the wordmark spans ~57% of the width;
+//             the spec line sits at the foot. One scale shift.
+//   words     two: the name, and one measured spec line.
+//   punch     the plate settles inside 0.4 s, the name at 0.55 s, the spec at
+//             0.8 s. Settled by 1.2 s.
 //
-// EVERY colour, face, tracking and duration comes from ../../tokens.json. No
-// hex is restated here: the token file is the single source, and the check
-// greps this file for a stray hex.
+// EVERY colour, face, tracking and duration comes from ../tokens.json. No hex
+// is restated here.
 
 import { writeFileSync } from "node:fs";
 import {
@@ -76,13 +78,12 @@ function tokenEase(entry: unknown): [number, number, number, number] {
 }
 
 const C = {
-  carbon: tokenValue(tokens.color.carbon),
-  graphite: tokenValue(tokens.color.graphite),
+  obsidian: tokenValue(tokens.color.obsidian),
+  bone: tokenValue(tokens.color.bone),
+  muted: tokenValue(tokens.color.muted),
+  ember: tokenValue(tokens.color.ember),
+  graphite2: tokenValue(tokens.color.graphite2),
   gunmetal: tokenValue(tokens.color.gunmetal),
-  alloy: tokenValue(tokens.color.alloy),
-  titanium: tokenValue(tokens.color.titanium),
-  mist: tokenValue(tokens.color.mist),
-  optic: tokenValue(tokens.color.optic),
 };
 const F = tokens.font;
 const T = tokens.tracking;
@@ -122,54 +123,43 @@ const base = (id: string, position: Transform25D["position"]) => ({
   blendMode: "normal" as const,
 });
 
-// --- the aperture -----------------------------------------------------------
-// Three concentric rings and a recessed core, centred at (360, 200). Each ring
-// is a filled ellipse; the ring below shows as a rim. This is the era's
-// ellipse and a believable machined part: bezel, inner bezel, well.
-const AX = 360, AY = 200;
+// --- the plate --------------------------------------------------------------
+// Three concentric rings, FLAT fills: the dither quantises them to cells, so a
+// gradient would only band. Centred at (800, 132).
+const PX = 800, PY = 100;
 
-const ring = (id: string, w: number, h: number, stops: Array<[number, string]>) => ({
-  ...base(id, constant({ x: AX, y: AY, z: 0 })),
+const ring = (id: string, w: number, h: number, hex: string) => ({
+  ...base(id, constant({ x: PX, y: PY, z: 0 })),
   type: "ellipse" as const,
   size: constant({ width: w, height: h }),
-  style: {
-    gradientFill: {
-      kind: "linear" as const,
-      stops: constant(stops.map(([position, hex]) => ({ position, color: rgba(hex) }))),
-      start: constant({ x: 0, y: -h / 2 }),
-      end: constant({ x: 0, y: h / 2 }),
-      opacity: constant(1),
-    },
-  },
+  style: { fill: { color: constant(rgba(hex)), opacity: constant(1) } },
 });
 
-const apertureNodes: Record<string, unknown> = {
-  "ap-outer": ring("ap-outer", 366, 254, [[0, C.mist], [0.38, C.titanium], [1, C.gunmetal]]),
-  "ap-ring":  ring("ap-ring", 302, 202, [[0, C.gunmetal], [1, C.graphite]]),
-  "ap-core":  ring("ap-core", 238, 152, [[0, C.graphite], [1, C.carbon]]),
-  // the optical slit: the one accent, ~3% of the frame
-  "ap-optic": {
-    ...base("ap-optic", constant({ x: AX, y: AY, z: 0 })),
+const plateNodes: Record<string, unknown> = {
+  "plate-outer": ring("plate-outer", 272, 180, C.bone),
+  "plate-ring":  ring("plate-ring", 222, 140, C.graphite2),
+  "plate-core":  ring("plate-core", 172, 100, C.obsidian),
+  // the one signal: the ember slit
+  "plate-slit": {
+    ...base("plate-slit", constant({ x: PX, y: PY, z: 0 })),
     type: "rect" as const,
-    size: constant({ width: 116, height: 6 }),
+    size: constant({ width: 92, height: 6 }),
     cornerRadius: constant(3),
-    style: { fill: { color: constant(rgba(C.optic)), opacity: constant(1) } },
+    style: { fill: { color: constant(rgba(C.ember)), opacity: constant(1) } },
   },
 };
 
-// The aperture group: settles from 0.92 scale with a fade, anchored at its own
-// centre so it grows about the part, not about the canvas.
-const apertureGroup = {
-  ...base("aperture", constant({ x: AX, y: AY, z: 0 })),
+const plateGroup = {
+  ...base("plate", constant({ x: PX, y: PY, z: 0 })),
   transform: {
     // position == anchor: the children are in canvas space, so the transform
     // must be identity at rest, and the scale then grows about the part.
-    position: constant({ x: AX, y: AY, z: 0 }),
-    anchor: constant({ x: AX, y: AY, z: 0 }),
+    position: constant({ x: PX, y: PY, z: 0 }),
+    anchor: constant({ x: PX, y: PY, z: 0 }),
     scale: {
       kind: "keyframed",
       keyframes: [
-        kf(0, { x: 0.92, y: 0.92, z: 1 }),
+        kf(0, { x: 0.94, y: 0.94, z: 1 }),
         kf(ms(heroMs), { x: 1, y: 1, z: 1 }),
         kf(DURATION, { x: 1, y: 1, z: 1 }, "hold"),
       ],
@@ -187,34 +177,41 @@ const apertureGroup = {
   },
   type: "group" as const,
   isolation: true,
-  children: Object.keys(apertureNodes),
+  children: Object.keys(plateNodes),
 };
 
-// --- the alignment rule -----------------------------------------------------
-// §7: "thin rules, short alignment marks ... can reinforce the engineering
-// character when they communicate something." This one separates the object
-// plane from the type plane.
-const ruleNode = {
-  ...base("rule", constant({ x: 640, y: 200, z: 0 })),
-  type: "rect" as const,
-  size: constant({ width: 1, height: 240 }),
-  cornerRadius: constant(0),
-  style: { fill: { color: constant(rgba(C.alloy)), opacity: constant(0.35) } },
+// The print: the plate through the kit's ordered screen. This is the only art.
+const ditherNode = {
+  ...base("print", constant({ x: 0, y: 0, z: 0 })),
+  type: "effect" as const,
+  inputId: "plate",
+  effect: "dithering" as const,
+  parameters: [
+    { id: "p-amount", name: "amount", valueType: "number" as const,
+      value: constant(0.35), minimum: 0, maximum: 1 },
+    { id: "p-levels", name: "levels", valueType: "number" as const,
+      value: constant(3), minimum: 2, maximum: 256 },
+    { id: "p-scale", name: "scale", valueType: "number" as const,
+      value: constant(2), minimum: 1, maximum: 8 },
+  ],
+  capability: { requires: ["image-filter" as const], fallback: "passthrough" as const,
+                maxTemporarySurfaces: 1 },
 };
 
 // --- the wordmark -----------------------------------------------------------
+// Michroma, the extended display face, bone. 15 glyphs at 64 px span ~910 px,
+// centred, which is ~57% of the width.
 const TITLE = "DEVTOOLS-UNPACK";
-const TITLE_SIZE = 76;
-const TYPE_X = 700;
+const TITLE_SIZE = 60;
 
 const titleNode = {
   ...base("title", {
     kind: "keyframed",
     keyframes: [
-      kf(0, { x: TYPE_X - 16, y: 104, z: 0 }),
-      kf(ms(heroMs + panelMs), { x: TYPE_X - 16, y: 104, z: 0 }),
-      kf(ms(heroMs + panelMs) + ms(heroMs), { x: TYPE_X, y: 104, z: 0 }),
-      kf(DURATION, { x: TYPE_X, y: 104, z: 0 }, "hold"),
+      kf(0, { x: 0, y: 294, z: 0 }),
+      kf(ms(heroMs + panelMs), { x: 0, y: 294, z: 0 }),
+      kf(ms(heroMs + panelMs) + ms(heroMs), { x: 0, y: 286, z: 0 }),
+      kf(DURATION, { x: 0, y: 286, z: 0 }, "hold"),
     ],
   }),
   opacity: {
@@ -231,14 +228,14 @@ const titleNode = {
     text: TITLE,
     fontAssetId: "display",
     fontSize: TITLE_SIZE,
-    fontWeight: F.display.weight,
+    fontWeight: F.extended.weight,
     letterSpacing: tokenNumber(T.display),
     lineHeight: 1.15,
-    color: rgba(C.mist),
+    color: rgba(C.bone),
   }]),
-  box: { width: 840, height: 100 },
+  box: { width: W, height: 90 },
   wrap: "none" as const,
-  align: "left" as const,
+  align: "center" as const,
   verticalAlign: "top" as const,
 };
 
@@ -249,10 +246,10 @@ const specNode = {
   ...base("spec", {
     kind: "keyframed",
     keyframes: [
-      kf(0, { x: TYPE_X, y: 236, z: 0 }),
-      kf(ms(heroMs + panelMs * 2), { x: TYPE_X, y: 236, z: 0 }),
-      kf(ms(heroMs + panelMs * 2) + ms(heroMs), { x: TYPE_X, y: 228, z: 0 }),
-      kf(DURATION, { x: TYPE_X, y: 228, z: 0 }, "hold"),
+      kf(0, { x: 0, y: 356, z: 0 }),
+      kf(ms(heroMs + panelMs * 2), { x: 0, y: 356, z: 0 }),
+      kf(ms(heroMs + panelMs * 2) + ms(heroMs), { x: 0, y: 350, z: 0 }),
+      kf(DURATION, { x: 0, y: 350, z: 0 }, "hold"),
     ],
   }),
   opacity: {
@@ -272,11 +269,11 @@ const specNode = {
     fontWeight: F.mono.weight,
     letterSpacing: tokenNumber(T.mono),
     lineHeight: 1.5,
-    color: rgba(C.alloy),
+    color: rgba(C.muted),
   }]),
-  box: { width: 840, height: 30 },
+  box: { width: W, height: 30 },
   wrap: "none" as const,
-  align: "left" as const,
+  align: "center" as const,
   verticalAlign: "top" as const,
 };
 
@@ -287,11 +284,11 @@ const nodes: Record<string, unknown> = {
     type: "rect" as const,
     size: constant({ width: W, height: H }),
     cornerRadius: constant(0),
-    style: { fill: { color: constant(rgba(C.carbon)), opacity: constant(1) } },
+    style: { fill: { color: constant(rgba(C.obsidian)), opacity: constant(1) } },
   },
-  aperture: apertureGroup,
-  ...apertureNodes,
-  rule: ruleNode,
+  plate: plateGroup,
+  ...plateNodes,
+  print: ditherNode,
   title: titleNode,
   spec: specNode,
 };
@@ -300,7 +297,7 @@ const composition = {
   id: "main", name: "banner",
   width: W, height: H, durationTicks: DURATION,
   nodes,
-  rootNodeIds: ["field", "aperture", "rule", "title", "spec"],
+  rootNodeIds: ["field", "print", "title", "spec"],
 };
 
 const document = withComputedRevision({
@@ -308,11 +305,11 @@ const document = withComputedRevision({
   id: "devtools-unpack-banner",
   revision: "",
   name: "devtools-unpack README banner",
-  canvas: { width: W, height: H, pixelAspectRatio: 1, backgroundColor: rgba(C.carbon) },
+  canvas: { width: W, height: H, pixelAspectRatio: 1, backgroundColor: rgba(C.obsidian) },
   timing: { ticksPerSecond: TPS, frameRate: { numerator: 30, denominator: 1 },
             durationTicks: DURATION, displayStartTick: 0 },
   assets: {
-    display: { id: "display", type: "font", uri: `fonts/${F.display.file}`,
+    display: { id: "display", type: "font", uri: `fonts/${F.extended.file}`,
                mimeType: "font/ttf" },
     mono: { id: "mono", type: "font", uri: `fonts/${F.mono.file}`,
             mimeType: "font/ttf" },
