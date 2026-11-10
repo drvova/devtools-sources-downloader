@@ -36,9 +36,10 @@
 ;;;;    second copy free to disagree the moment the table is regenerated. This
 ;;;;    port does the same: `jsc-enter-opcode` reads the table and the gate
 ;;;;    asserts the row it finds really is named `enter`. The table is parsed
-;;;;    from `unpack-rs/src/jsc_opcodes.txt` at first use (not embedded), which
-;;;;    means this port cannot drift from the Rust's `include_str!` copy: both
-;;;;    read the same bytes.
+;;;;    from `tools/cl/fixtures/oracles/jsc_opcodes.txt` at first use (not
+;;;;    embedded). The table was originally read from the Rust tree's
+;;;;    `unpack-rs/src/jsc_opcodes.txt`; the tree is gone and the file lives with
+;;;;    the fixtures, byte-identical.
 ;;;;
 ;;;; 2. THE HEADER GUARD IS AN `OR`, NOT AN `AND`. `parse_jsc_header` rejects a
 ;;;;    buffer only when the format word is not 1 AND the declared length is not
@@ -430,7 +431,9 @@ begin at any alignment."
 ;;; a lazy load lets the gate name the exact paths it tried.
 ;;; ---------------------------------------------------------------------------
 
-(defparameter *jsc-opcode-relative-path* "unpack-rs/src/jsc_opcodes.txt")
+(defparameter *jsc-opcode-relative-path* "tools/cl/fixtures/oracles/jsc_opcodes.txt"
+  "The opcode table, recovered from the Rust tree the day it was deleted. It
+was extracted from WebKit's BytecodeList.rb and lives with the fixtures now.")
 
 (defparameter *jsc-opcode-path* nil
   "Resolved path to `jsc_opcodes.txt`, cached after the first successful search.")

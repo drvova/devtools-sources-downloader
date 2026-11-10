@@ -28,55 +28,25 @@
 ;;; ---------------------------------------------------------------------------
 
 (defun rust-arm-names ()
-  "The arm names in `wasm_api.rs`, split by table.
+  "The arm names the shipped engine dispatched, from the frozen record.
 
-Parsed with a regex over the two dispatch functions rather than a literal list:
-the point of the assertion is to notice when the Rust CHANGES, and a copy kept
-in this file would be the thing that stops noticing."
-  (let* ((source (uiop:read-file-string
-                  (merge-pathnames "unpack-rs/src/wasm_api.rs"
-                                   (repo-root))))
-         (bytes-start (search "fn dispatch_bytes" source))
-         (json-start (search "fn dispatch(name: &str" source)))
-    (unless (and bytes-start json-start)
-      (error "wasm_api.rs no longer has both dispatch functions"))
-    (values (let ((names '()))
-              (with-input-from-string (stream (subseq source bytes-start json-start))
-                (loop for line = (read-line stream nil nil)
-                      while line
-                      for name = (arm-name-in-line line 8)
-                      when name do (push name names)))
-              (nreverse names))
-            (let ((names '()))
-              (with-input-from-string (stream (subseq source json-start))
-                (loop for line = (read-line stream nil nil)
-                      while line
-                      for name = (arm-name-in-line line 8)
-                      when name do (push name names)))
-              (nreverse names)))))
-
-(defun arm-name-in-line (line indent)
-  "The arm name on LINE when it is a match arm, else NIL.
-
-An arm is a quoted name as the FIRST thing on a line indented exactly INDENT
-spaces, followed by `=>`. That is narrower than \"any quoted string\" on
-purpose: the match arms' BODIES are full of quoted strings, and a looser test
-would collect `\"all\"` and `\"bundle\"` from the bodies as if they were names."
-  (when (> (length line) indent)
-    (let ((body (subseq line indent)))
-      (when (and (string= line (make-string indent :initial-element #\Space)
-                          :end1 indent :end2 indent)
-                 (char= (char body 0) #\"))
-        (let* ((close (position #\" body :start 1))
-               (name (and close (subseq body 1 close)))
-               (rest (and close (subseq body (1+ close)))))
-          (when (and name
-                     (plusp (length name))
-                     ;; a name is an identifier, never a sentence
-                     (every (lambda (c) (or (alphanumericp c) (char= c #\_))) name)
-                     rest
-                     (search "=>" rest))
-            name))))))
+The Rust source used to be parsed live - the point was to notice when it
+changed. The Rust tree is gone, so the surface is FROZEN instead:
+`tools/cl/fixtures/oracles/dispatch-arms.json` holds the 49 names captured from
+`wasm_api.rs` the day the tree was deleted. A renamed or lost arm still fails;
+the difference is that the record can no longer drift because nothing generates
+it any more."
+  (let* ((path (fixture-path "dispatch-arms.json"))
+         (text (uiop:read-file-string path)))
+    (unless (char= (char text 0) #\[)
+      (error "dispatch-arms.json is not a JSON array"))
+    ;; The JSON parser, not `read`: a bracket is not a Lisp macro character the
+    ;; reader agrees on, and the file IS JSON.
+    (with-input-from-string (stream text)
+      (let ((parsed (com.inuoe.jzon:parse text)))
+        ;; The caller binds (rust-bytes rust-json): bytes first.
+        (values (list "buildZip")
+                (remove "buildZip" (coerce parsed 'list) :test #'string=))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; The gate

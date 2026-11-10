@@ -38,7 +38,7 @@
 ;;; ---------------------------------------------------------------------------
 
 (defun v8-fixture-path (name)
-  (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name) (repo-root)))
+  (merge-pathnames (format nil "tools/cl/fixtures/oracles/~a" name) (repo-root)))
 
 (defun read-octets (path)
   "The file at PATH as a `(simple-array (unsigned-byte 8) (*))`.

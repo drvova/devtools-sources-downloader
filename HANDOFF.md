@@ -1,5 +1,11 @@
 # Handoff
 
+> **2026-11-09: the Rust tree and the Chrome extension were removed.** The SBCL
+> port (`tools/cl/engine/`) is the engine now; its oracle fixtures are frozen in
+> `tools/cl/fixtures/oracles/`. Everything below describes the Rust-and-extension
+> era and is kept as session history — the build gate, the extension checks and
+> the wiki's build pages no longer apply.
+
 Written 2026-11-06. Everything below was verified against the tree at `a9aeaa9`, not
 recalled. Where something is *unverified*, it says so.
 

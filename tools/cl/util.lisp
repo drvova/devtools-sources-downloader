@@ -24,9 +24,12 @@ the cwd (standalone-image runs)."
                                        (uiop:getcwd))
                       for dir = start then (uiop:pathname-parent-directory-pathname dir)
                       while dir
-                      when (probe-file (uiop:merge-pathnames* "unpack-rs/package.json" dir))
+                      ;; The marker used to be `unpack-rs/package.json`; the
+                      ;; Rust tree is gone, so the toolchain's own entry point
+                      ;; is the marker now.
+                      when (probe-file (uiop:merge-pathnames* "tools/cl/run.lisp" dir))
                         return dir)
-                (error "cannot locate the repository root (no unpack-rs/package.json above the cwd)")))))
+                (error "cannot locate the repository root (no tools/cl/run.lisp above the cwd)")))))
 
 (defun unpack-rs-dir ()
   "The crate and extension directory."

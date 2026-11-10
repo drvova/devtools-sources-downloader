@@ -42,49 +42,42 @@
 directories. Counting was wrong on the first attempt (a file pathname's
 directory-pathname already includes a level), and a miscount silently resolves
 to the wrong directory - the gate then fails with \"fixture does not exist\",
-which reads like a missing fixture instead of a wrong root."
+which reads like a missing fixture instead of a wrong root.
+
+The marker is `tools/` alone. It used to be `unpack-rs/ AND tools/`, but the
+Rust tree is gone - the repo is Lisp-only and the fixtures live under
+`tools/cl/fixtures/oracles/`."
   (let ((start (uiop:pathname-directory-pathname
                 (or *load-truename* *compile-file-truename*
                     *default-pathname-defaults*))))
     (loop with dir = start
           for parent = (uiop:pathname-parent-directory-pathname dir)
-          when (and (probe-file (merge-pathnames "unpack-rs/" dir))
-                    (probe-file (merge-pathnames "tools/" dir)))
+          when (probe-file (merge-pathnames "tools/" dir))
             return dir
           when (or (null parent) (equal parent dir))
-            return (error "no checkout root above ~a (expected unpack-rs/ and tools/)"
-                          start)
+            return (error "no checkout root above ~a (expected tools/)" start)
           do (setf dir parent))))
 
 (defun fixture-path (name)
-  "Absolute path to a JSON fixture.
+  "Absolute path to a JSON fixture under `tools/cl/fixtures/oracles/`.
 
-The crate keeps TWO fixture directories and they are not interchangeable:
-`tests/fixtures/` (plural) holds the JSON oracles and a `panel/` subdirectory,
-while `test/fixtures/` (singular) holds the binary blobs (.jsc, .wasm, .bin)
-that unpack_test.rs reads. They are DISJOINT - 13 files versus 6, zero filename
-overlap, verified - so trying one then the other cannot serve the wrong file and
-needs no preference rule. Subpaths such as `panel/parity-oracle.json` work
-because the name is appended verbatim."
-  (let ((in-tests (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name)
-                                   (repo-root))))
-    (if (probe-file in-tests)
-        in-tests
-        (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name)
-                         (repo-root)))))
+The fixtures used to live in the Rust tree's two test directories - `tests/`
+for the JSON oracles, `test/` for the binary blobs - and this function probed
+both with a fallback. The Rust tree is gone; the port OWNS its oracles now, so
+both sets merged into one directory (the names were verified disjoint) and the
+fallback died with the reason for it. Subpaths such as `panel/parity-oracle.json`
+work because the name is appended verbatim."
+  (merge-pathnames (format nil "tools/cl/fixtures/oracles/~a" name)
+                   (repo-root)))
 
 (defun binary-fixture-path (name)
-  "Absolute path to a BINARY fixture, checking `test/fixtures/` first.
+  "Absolute path to a BINARY fixture under `tools/cl/fixtures/oracles/`.
 
 Kept separate from `fixture-path` on purpose: a reader that opened a .jsc with a
 character external-format and decoded it would corrupt the bytes, and no JSON
 oracle would notice. Callers of this function then use `binary-fixture-bytes`."
-  (let ((in-test (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name)
-                                  (repo-root))))
-    (if (probe-file in-test)
-        in-test
-        (merge-pathnames (format nil "unpack-rs/tests/fixtures/~a" name)
-                         (repo-root)))))
+  (merge-pathnames (format nil "tools/cl/fixtures/oracles/~a" name)
+                   (repo-root)))
 
 (defun binary-fixture-bytes (name)
   "A binary fixture as an (unsigned-byte 8) vector, read with no decoding."

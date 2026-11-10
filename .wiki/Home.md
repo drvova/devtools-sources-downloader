@@ -1,8 +1,10 @@
-<p align="center">
-  <img src="../assets/banner.svg" alt="devtools-unpack — capture everything a page loads and runs, then peel every layer off it." width="100%">
-</p>
-
 # devtools-unpack — project wiki
+
+> **2026-11-09: the Rust engine and the Chrome extension were removed.** The
+> unpacking engine is the SBCL port in `tools/cl/engine/` now, held to the same
+> oracles (frozen in `tools/cl/fixtures/oracles/`). The pages below describe the
+> architecture the port implements; the build, extension and wasm-specific
+> details are historical.
 
 A Chrome DevTools extension that captures everything an inspected page loads and runs, then
 exports it as one unpacked, site-aware `sources.zip`. The unpacking engine is Rust compiled to
@@ -25,10 +27,6 @@ collects:
 console.
 
 ## The short version of how it works
-
-<p align="center">
-  <img src="../assets/pipeline.svg" alt="The pipeline: the page world records into window.__CAPTURE__, the panel polls it, the Rust engine unpacks it, and the panel writes one sources.zip." width="100%">
-</p>
 
 ```
 page world (JS)  →  window.__CAPTURE__  {policy, tracker, trackerReady, recon, status, profile, snapshot, signals, …}

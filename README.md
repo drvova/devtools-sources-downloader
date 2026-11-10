@@ -1,121 +1,77 @@
-<p align="center">
-  <img src="assets/banner.svg" alt="devtools-unpack — a Chrome DevTools extension with a Rust engine compiled to WebAssembly. Capture everything a page loads and runs, then peel every layer off it." width="100%">
-</p>
+# devtools-unpack — the Common Lisp engine
 
-<p align="center">
-  <b>Capture everything a page loads and runs. Then peel every layer off it.</b>
-</p>
+An unpack engine in SBCL Common Lisp: capture everything a web page loads and
+runs, then peel every obfuscation layer off it — base64, hex escapes, `eval`
+wrappers, packers, JSFuck — and write one unpacked, site-aware archive.
 
----
-
-Open DevTools on any page, switch to the **Sources Downloader** panel, press **Download All**. The
-extension reloads the page with capture hooks injected, waits for it to settle, and writes one
-unpacked, site-aware `sources.zip`:
-
-- every network resource the page loaded
-- runtime payloads — `eval`, `Function`, workers, shared workers, service workers, blobs, wasm,
-  injected scripts
-- network, storage and cookie state, timings, a DOM snapshot, framework state
-- for each script, **every obfuscation layer peeled off it** — base64, hex escapes, `eval`
-  wrappers, packers, JSFuck
-- for each cached-bytecode blob, the strings and structure inside it
-
-The unpacking engine is Rust compiled to WebAssembly. The extension is a thin JavaScript platform
-layer around it. The same engine exists as a **Common Lisp port** (`tools/cl/engine/`), held to
-oracles captured from the shipped wasm build — the native path for re-running one unpack pass and
-diffing it in a sentence, instead of `cargo test` → wasm build → reload the extension. Its export
-is byte-identical to the shipped engine's.
-
-<p align="center">
-  <img src="assets/pipeline.svg" alt="The pipeline: the page world records into window.__CAPTURE__, the panel polls it, the Rust engine compiled to WebAssembly unpacks it, and the panel writes one sources.zip." width="100%">
-</p>
+This was previously a Rust engine compiled to WebAssembly, powering a Chrome
+DevTools extension. The Rust tree and the extension were removed: the SBCL port
+is the engine now, held to the same oracles the wasm build was held to. The
+oracles are frozen fixtures — captured from the shipped wasm engine before the
+tree was deleted — and the port's export is byte-identical to that engine's.
 
 ## Quick start
 
 ```bash
-cd unpack-rs
-npm run build          # wasm engine + extension bundle into dist/ (generated, not committed)
-```
+# the whole gate: 48 gates, 2,729 assertions, exit 0 when green
+sbcl --script tools/cl/run-engine.lisp
 
-Then load `unpack-rs/dist/` as an unpacked extension in `chrome://extensions`.
-
-```bash
-cd unpack-rs
-npm run verify         # the whole gate — run this before committing
-```
-
-## The gate
-
-Eight steps, stopping at the first failure. `vovas check` runs all of them with a verdict and a
-timing per step; `npm run verify` runs the first seven.
-
-| step | what it proves |
-| --- | --- |
-| `rs check` | lint **and** formatting, Rust and JavaScript |
-| `cargo test` | 157 tests — 68 unit, 89 integration |
-| `clippy -D warnings` | no lint debt, warnings are errors |
-| `npm test` | the 68-case node baseline against the wasm bridge |
-| `npm run build` | the extension bundles and `dist/` verifies |
-| `npm run test:e2e` | the export path end to end, with `inspectedWindow` mocked |
-| `npm run test:e2e:ext` | the extension loads in Chrome and the panel boots |
-| `vovas download --fixture` | **the product**: the real DevTools panel against a real page, 22 assertions on the archive it produces |
-
-The last step exists because the browser suite above mocks `chrome.devtools.inspectedWindow`. A
-broken panel-to-archive path would have been green without it.
-
-`vovas check` also refuses to run if its first seven steps drift from the `npm run verify` chain.
-
-### Driving it from SBCL
-
-`tools/cl/` is a from-scratch WebSocket + HTTP client for the DevTools Protocol, so the extension's
-panel can be driven and screenshotted directly. It gives per-step verdicts and a live browser REPL.
-
-```bash
-sbcl --script tools/cl/run.lisp check          # the whole gate, one verdict per step
-sbcl --script tools/cl/run.lisp check --fast   # lint + cargo test + clippy only
-sbcl --script tools/cl/run.lisp build          # wasm + bundle, then verify dist/
-sbcl --script tools/cl/run.lisp pack           # dist/ -> dist-<version>.zip
-sbcl --script tools/cl/run.lisp smoke          # end-to-end DevTools Protocol selftest
-sbcl --script tools/cl/run.lisp panel          # the extension's DevTools panel registers
-sbcl --script tools/cl/run.lisp download --fixture   # the product path, against a local page
-sbcl --script tools/cl/run.lisp engine         # list the 49 callable engine functions
+# the native CLI
+sbcl --script tools/cl/run.lisp engine           # list the 49 callable functions
 sbcl --script tools/cl/run.lisp engine sha256Hex '["abc"]'
-sbcl --script tools/cl/run.lisp unpack capture.json --out unpacked   # the export, natively
-sbcl --load   tools/cl/run.lisp                # REPL: (vcdp:launch) (vcdp:tabs) (vcdp:eval* "...")
+sbcl --script tools/cl/run.lisp unpack capture.json --out unpacked
 ```
 
-The engine port has its own gate: 48 gates, 2,729 assertions, every one against an oracle captured
-from the shipped engine.
+First run pulls `cl-ppcre`, `jzon`, `ironclad`, `babel`, `chipz`, `salza2`,
+`cl-unicode` through Quicklisp; after that it is instant.
 
-```bash
-sbcl --script tools/cl/run-engine.lisp         # 48 gates, exit 0 when green
-```
-
-## Layout
+## What is here
 
 ```
-unpack-rs/          the whole project, flat: the devtools-unpack crate and the Chrome
-                    DevTools extension in one folder, sharing src/
-  src/              the Rust engine
-  src/js/           the extension's platform layer
-  src/panel/        the analysis and the archive
-  test/             the 68-case node baseline
-  tests/            the Rust twins, plus the oracles
-tools/cl/           the SBCL toolchain and the DevTools Protocol client
-tools/cl/engine/    the Common Lisp port of the unpack engine (48 oracle gates)
-.wiki/              how the whole thing works
-assets/             the banner and the diagram
+tools/cl/engine/             the engine port: 26 modules, every public function
+                             gated against an oracle
+tools/cl/engine/gate-*.lisp  the 48 gates
+tools/cl/fixtures/oracles/   the frozen oracle fixtures (13 JSON oracles, the
+                             binary blobs, the dispatch-surface record)
+tools/cl/                    the SBCL toolchain: paths, subprocesses, JSON,
+                             a WebSocket + HTTP client for the DevTools Protocol
+agent/ledger.md              the engineering ledger: what failed, what fixed it
 ```
 
-`dist/` is generated and not committed — `npm run build` before loading the extension. The engine's
-`Cargo.lock` is committed, so the wasm is built from a pinned dependency set.
+## The parity claim
+
+`finalize parity` replays the shipped engine's whole answer — 53 artifacts — and
+compares every file's bytes after normalising the clock. That is the strongest
+assertion in the suite: not "the port is plausible" but "the port writes the
+same bytes the engine wrote."
+
+The dispatch surface (49 arms) is frozen in `tools/cl/fixtures/oracles/dispatch-arms.json`,
+captured from `wasm_api.rs` the day the Rust tree was deleted. The gate compares
+the live table against that record, so a renamed or lost arm still fails.
+
+## What was removed, and what that cost
+
+- **The Chrome extension** — it ran the engine as WebAssembly in a browser tab;
+  SBCL cannot run there. The extension's platform layer (`page.js`, the panel,
+  `unpack-bridge.js`) died with its engine.
+- **The oracle regeneration path** — the capture scripts imported the wasm
+  bridge. The fixtures remain (that is what the gates run against), but a
+  changed engine can no longer be re-verified against a freshly captured one.
+  The frozen fixtures are the specification now.
+- **The Rust tests and the node baseline** — 157 Rust tests and a 68-case node
+  baseline. Their assertions live on in the Lisp gates, which pin the same
+  behaviour against the same fixtures.
+- **The extension-facing toolchain commands** — `vovas build` / `check` /
+  `pack` / `smoke` / `panel` / `download` drove npm and cargo for the extension
+  and are retired with it. `vovas engine` and `vovas unpack` are the live path.
 
 ## Docs
 
-- **[`.wiki/Home.md`](.wiki/Home.md)** — start here. Architecture, the unpack engine, the panel, the
-  export package, the build gate, the toolchain.
-- **[`unpack-rs/PORTING.md`](unpack-rs/PORTING.md)** — the porting record: which JavaScript oddities
-  are load-bearing, and where the Rust deliberately diverges. Read it before changing a module.
-- **[`tools/cl/README.md`](tools/cl/README.md)** — the toolchain and the protocol client.
-- **[`tools/cl/engine/README.md`](tools/cl/engine/README.md)** — the Common Lisp engine port: state, the oracle gates, and the host semantics that are not JavaScript's.
-- **[`HANDOFF.md`](HANDOFF.md)** — current state, the traps that cost time, what is still unverified.
+- **[`tools/cl/engine/README.md`](tools/cl/engine/README.md)** — the engine port:
+  state, the gate table, the host semantics that are not JavaScript's.
+- **[`tools/cl/README.md`](tools/cl/README.md)** — the toolchain and the
+  DevTools Protocol client.
+- **[`.wiki/`](.wiki/Home.md)** — the architecture record. Written for the
+  Rust-and-extension era; the engine's semantics still describe what the SBCL
+  port implements, the build and extension pages do not.
+- **[`HANDOFF.md`](HANDOFF.md)** — session history and the traps that cost time.

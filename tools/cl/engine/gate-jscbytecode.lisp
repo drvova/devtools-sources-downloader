@@ -54,7 +54,7 @@
 ;;; ---------------------------------------------------------------------------
 
 (defun jsc-fixture-path (name)
-  (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name) (repo-root)))
+  (merge-pathnames (format nil "tools/cl/fixtures/oracles/~a" name) (repo-root)))
 
 (defun jsc-fixture-bytes (name)
   "A fixture as an `(unsigned-byte 8)` vector.

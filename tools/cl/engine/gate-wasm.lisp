@@ -60,10 +60,11 @@
 ;;; ---------------------------------------------------------------------------
 
 (defun wasm-fixture-path (name)
-  "Absolute path to a BINARY fixture under the Rust crate's `test/fixtures/`.
-Not `fixture-path`, which resolves the `tests/fixtures/` JSON directory — the
-two are off by one `s` and mixing them up reads as a missing fixture."
-  (merge-pathnames (format nil "unpack-rs/test/fixtures/~a" name) (repo-root)))
+  "Absolute path to a BINARY fixture under `tools/cl/fixtures/oracles/`.
+
+The Rust tree's `test/fixtures/` and `tests/fixtures/` split is gone - the
+port owns its fixtures now, all in one directory."
+  (merge-pathnames (format nil "tools/cl/fixtures/oracles/~a" name) (repo-root)))
 
 (defun wasm-read-fixture-bytes (name)
   "The fixture's bytes as an octet vector. Read in `:element-type

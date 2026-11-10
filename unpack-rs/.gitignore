@@ -1,5 +1,0 @@
-# cargo
-/target/
-
-# rsbuild output (generated; `npm run build`)
-/dist/
