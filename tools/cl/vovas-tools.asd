@@ -1,7 +1,7 @@
-;;;; vovas-tools.asd — SBCL toolchain + CDP client for devtools-sources-downloader.
+;;;; vovas-tools.asd — the native CLI over the engine, plus a CDP client.
 
 (asdf:defsystem "vovas-tools"
-  :description "Build/check/pack toolchain and a Chrome DevTools Protocol client"
+  :description "Native CLI over the unpack engine and a Chrome DevTools Protocol client"
   :author "sashathelambo"
   ;; The engine is a dependency, not an optional extra: `vovas engine` and
   ;; `vovas unpack` are the native path over it, and before this line existed
@@ -11,13 +11,9 @@
   :serial t
   :components ((:file "package")
                (:file "util")
-               (:file "sexp")
                (:file "ws")
                (:file "http")
                (:file "chrome")
                (:file "cdp")
-               (:file "panel")
-               (:file "download")
-               (:file "tasks")
                (:file "cli")
                (:file "main")))

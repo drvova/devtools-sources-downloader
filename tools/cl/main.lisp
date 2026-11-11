@@ -4,14 +4,7 @@
 
 (defun print-usage ()
   (format t "usage: vovas <command>~@
-  build           wasm engine + bundle, then verify dist/~@
-  check [--fast]  the gate (lint, cargo test, clippy; --fast skips js/build/e2e)~@
-  pack            zip dist/ into dist-<version>.zip~@
   smoke           end-to-end selftest of the CDP client~@
-  panel           verify the extension's DevTools panel registers~@
-  download [url] [--fixture]~@
-                  press Download All in the real panel and verify the archive;~@
-                  --fixture serves a local page with eval/Function/worker~@
   engine [name] [args]~@
                   list every callable engine function, or call one with a~@
                   JSON argument array and print its answer~@
@@ -31,19 +24,8 @@ REPL use: sbcl --load tools/cl/run.lisp, then (vcdp:launch) (vcdp:tabs)~@
           ((null cmd)
            (print-usage)
            2)
-          ((string= cmd "build")
-           (build))
-          ((string= cmd "check")
-           (check :fast (member "--fast" (rest args) :test #'string=)))
-          ((string= cmd "pack")
-           (pack))
           ((string= cmd "smoke")
            (if (smoke-test) 0 1))
-          ((string= cmd "panel")
-           (panel-check))
-          ((string= cmd "download")
-           (download-check :url (second args)
-                           :fixture (and (member "--fixture" args :test #'string=) t)))
           ((string= cmd "engine")
            (engine-command (rest args)))
           ((string= cmd "unpack")

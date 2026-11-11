@@ -65,9 +65,9 @@
 ;;;; field not halved, a zlib-wrapped stream posing as raw deflate, a writer
 ;;;; that always deflates (or always stores), a name length counted in
 ;;;; characters, and an EOCD search that runs forwards into a decoy signature
-;;;; inside a stored entry. `wip/mutation-zip.lisp` proves the whole gate is
+;;;; inside a stored entry. A mutation sweep proved the whole gate is
 ;;;; non-vacuous by breaking the port thirteen ways and requiring a failure for
-;;;; each; all thirteen are caught. The sweep earned its keep by finding SIX
+;;;; each; all thirteen were caught. The sweep earned its keep by finding SIX
 ;;;; gaps in an earlier draft of this file, each now closed by the assertion
 ;;;; that names it:
 ;;;;
