@@ -17,7 +17,7 @@ tree was deleted — and the port's export is byte-identical to that engine's.
 ## Quick start
 
 ```bash
-# the whole gate: 48 gates, 2,729 assertions, exit 0 when green
+# the whole gate: 48 gates, 2,730 assertions, exit 0 when green
 sbcl --script tools/cl/run-engine.lisp
 
 # the native CLI
@@ -66,8 +66,9 @@ the live table against that record, so a renamed or lost arm still fails.
   baseline. Their assertions live on in the Lisp gates, which pin the same
   behaviour against the same fixtures.
 - **The extension-facing toolchain commands** — `vovas build` / `check` /
-  `pack` / `smoke` / `panel` / `download` drove npm and cargo for the extension
-  and are retired with it. `vovas engine` and `vovas unpack` are the live path.
+  `pack` / `panel` / `download` drove npm and cargo for the extension and were
+  deleted with it. `vovas engine` and `vovas unpack` are the live path; `vovas
+  smoke` remains as the selftest of the DevTools Protocol client.
 
 ## Design language
 

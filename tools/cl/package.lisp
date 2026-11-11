@@ -1,54 +1,30 @@
 ;;;; package.lisp — all packages up front so every file's symbols resolve at read time.
 
-;; Data files are read in this package: it USEs CL, so `t` and `nil` are the
-;; real booleans, and bare symbols intern here instead of polluting a real
-;; package. Keywords keep their colon, exactly as in an .asd file.
-(defpackage :vovas.sexp
-  (:use :cl)
-  (:documentation "Home package for sexp data files."))
-
 (defpackage :vovas.tools.util
   (:nicknames :vtu)
   (:use :cl)
   (:export
    ;; paths
    #:repo-root
-   #:unpack-rs-dir
-   #:dist-dir
    #:cache-dir
-   #:find-on-path
-   #:node-exe
-   #:cargo-exe
    #:powershell-exe
-   #:npm-argv
-   #:cargo-argv
    ;; processes
    #:run-program
-   #:run-step
    ;; logging
    #:log-line
    ;; io helpers
    #:crlf-join
    #:split-on
-   #:split-lines
    #:read-headers
    #:read-exactly
    #:read-until-eof
    #:file-size
    ;; text
    #:url-encode
-   ;; sexp data files (the toolchain's own format)
-   #:read-sexp
-   #:read-sexp-file
-   #:write-sexp-file
-   #:sexp-selftest
-   #:sexp-error
-   ;; json: the wire boundary only (DevTools Protocol, Chrome's manifest.json).
+   ;; json: the wire boundary only (the DevTools Protocol).
    ;; Objects decode to plists and encode from plists, so call sites read as data.
    #:json-decode
-   #:json-encode
-   #:json-selftest
-   #:keyword->json-key))
+   #:json-encode))
 
 (defpackage :vovas.cdp.ws
   (:use :cl)
@@ -72,8 +48,7 @@
   (:nicknames :vcdp)
   (:use :cl)
   (:import-from :vovas.tools.util
-   #:repo-root #:unpack-rs-dir #:dist-dir #:cache-dir #:find-on-path #:log-line
-   #:json-decode #:json-encode #:url-encode)
+   #:cache-dir #:log-line #:url-encode)
   (:import-from :vovas.cdp.ws
    #:ws-connect #:ws-send-text #:ws-read-message #:ws-close #:ws-conn-open-p)
   (:import-from :vovas.cdp.http #:http-request)
@@ -96,16 +71,10 @@
    ;; state
    #:*browser*
    ;; selftest
-   #:smoke-test
-   ;; panel verification
-   #:panel-check
-   ;; the product path: a real page, the real panel, a real archive
-   #:download-check))
+   #:smoke-test))
 
 (defpackage :vovas.tools
   (:nicknames :vt)
   (:use :cl)
-  (:import-from :vovas.tools.util
-   #:repo-root #:unpack-rs-dir #:dist-dir #:cache-dir #:log-line #:json-decode #:npm-argv)
-  (:import-from :vovas.cdp #:smoke-test #:panel-check #:download-check)
-  (:export #:main #:build #:check #:pack))
+  (:import-from :vovas.cdp #:smoke-test)
+  (:export #:main))
