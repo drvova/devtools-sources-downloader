@@ -154,10 +154,10 @@ for data that was never captured."
                                   (h (make-hash-table :test #'equal)))
                               (setf (gethash "title" h)
                                     (if (plusp (length title)) title "page"))
-                              h))))))
+                              h)))))
             (funcall writer "_recon/dom-snapshot.html"
                      (vovas.engine.panel.artifacts:generate-dom-snapshot-html
-                      html page))))))
+                      html page)))))))
     runtime-entries))
 
 ;;; ---------------------------------------------------------------------------

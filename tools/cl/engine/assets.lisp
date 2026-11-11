@@ -314,8 +314,8 @@ Rust's `if let Some(...)` pattern."
 (defun field-str (entry key)
   "`fieldStr`: a STRING for a string or number field, empty otherwise.
 
-A number renders through the JS number formatting, so `5` becomes "5" and not
-"5.0" - and an object or array becomes EMPTY, not "[object Object]", because
+A number renders through the JS number formatting, so `5` becomes \"5\" and not
+\"5.0\" - and an object or array becomes EMPTY, not \"[object Object]\", because
 this is the accessor used where a reference must be text."
   (let ((value (field entry key)))
     (cond

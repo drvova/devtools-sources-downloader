@@ -27,7 +27,7 @@ Three properties, and nothing else:
 | --- | --- |
 | Rust engine + panel | 17,959 LOC |
 | **Ported** | **20,137 LOC** across 26 files (gates add another 12,768) |
-| Gate | 48 gates, **2,729 assertions**, `sbcl --script tools/cl/run-engine.lisp` → exit 0 |
+| Gate | 48 gates, **2,730 assertions**, `sbcl --script tools/cl/run-engine.lisp` → exit 0 |
 | Public surface | **49 dispatch arms** (`wasm_api.rs`), key set asserted against the Rust source |
 | Native path | `vovas engine <name> '<json>'` and `vovas unpack <capture.json>` |
 | Product parity | the CLI's export is **byte-identical** to the shipped engine's, all 53 artifacts |

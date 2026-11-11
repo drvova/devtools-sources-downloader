@@ -182,10 +182,16 @@ the right reason but the wrong cause. This is the input the export test uses."
       (let* ((recon (gate-full-recon))
              (options (vovas.engine.pipeline:make-unpack-options
                        :path-prefix "_gate-script"))
+             ;; A real snapshot, not NIL: with NIL the DOM-snapshot branch never
+             ;; ran, and it shipped referencing a variable outside its binding.
+             (snapshot (let ((h (make-hash-table :test #'equal)))
+                         (setf (gethash "html" h) "<html><body>gate</body></html>"
+                               (gethash "title" h) "gate")
+                         h))
              (merged
                (vovas.engine.panel.export:finalize-zip-with-recon
                 (lambda (path content) (push (cons path content) files))
-                scripts recon nil entries options)))
+                scripts recon snapshot entries options)))
         (setf files (nreverse files))
         (let* ((written (mapcar #'car files))
                (recon-prefix "_recon/")
@@ -205,8 +211,10 @@ the right reason but the wrong cause. This is the input the export test uses."
           ;;
           ;; The fixture's recon payload has ls, ss, cookies, page,
           ;; stackProfile, captureStatus and recon{xhr,fetch} non-empty, so these
-          ;; are the files that must appear.
-          (dolist (path '("_recon/localStorage.json"
+          ;; are the files that must appear - plus the DOM snapshot, because
+          ;; the gate hands the export a page snapshot with html.
+          (dolist (path '("_recon/dom-snapshot.html"
+                          "_recon/localStorage.json"
                           "_recon/sessionStorage.json"
                           "_recon/cookies.json"
                           "_recon/page.json"

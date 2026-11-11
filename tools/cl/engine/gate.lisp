@@ -150,7 +150,7 @@ Two ordering traps live here, both measured rather than reasoned about:
    not a failed comparison.
 
 2. The sequence branch requires BOTH sides to be sequences. Written as
-   "either side is a sequence", a scalar against a list reaches `coerce` and
+   \"either side is a sequence\", a scalar against a list reaches `coerce` and
    signals instead of answering NIL, and a shape mismatch is a legitimate
    comparison result rather than an error.
 

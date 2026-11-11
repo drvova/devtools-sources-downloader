@@ -262,7 +262,7 @@ decimal or exponent form."
   "Whether C is an ASCII `0`-`9`.
 
 NOT `digit-char-p`: that is implementation-defined above ASCII and SBCL answers
-10 for U+FF11 FULLWIDTH DIGIT ONE, so `to-number` accepted "\uFF11" as 1 where
+10 for U+FF11 FULLWIDTH DIGIT ONE, so `to-number` accepted \"\\uFF11\" as 1 where
 the Rust's `is_ascii_digit` rejects it and answers NaN. Measured: that one
 character was the last non-hex divergence in the differential probe."
   (and (char>= c #\0) (char<= c #\9)))
