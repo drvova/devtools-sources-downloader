@@ -1,6 +1,0 @@
-(require :asdf)
-(load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))
-(load "tools/cl/engine/wf-consts.lisp")
-(format t "~&WFC ~a ~a ~a~%" (length *wf-0*) (length *wf-8*) (length *wf-37*))
-(format t "~&WFS ~s~%" (subseq *wf-0* 0 40))
-(format t "~&WFE ~s~%" (subseq *wf-37* (- (length *wf-37*) 40)))

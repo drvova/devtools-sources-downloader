@@ -65,7 +65,7 @@
   ;; CIRCLED LATIN CAPITAL LETTER A that the regex crate counts as `\\w` and
   ;; SBCL's general categories do not expose. Imported as a symbol so the module
   ;; compiles without the package being read via a qualified name at load time,
-  ;; and declared as a dependency in beautify.asd so it is present first.
+  ;; and declared as a dependency in vovas-engine.asd so it is present first.
   (:import-from :cl-unicode
                 #:has-property)
   (:export

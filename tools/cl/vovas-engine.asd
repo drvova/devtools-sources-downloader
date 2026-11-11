@@ -1,12 +1,6 @@
 ;;;; vovas-engine.asd — the engine port.
 ;;;;
-;;;; ONE system. The per-module .asd files beside it (packers.asd, wasm.asd, …)
-;;;; exist so a single slice can be loaded and its gate run while the rest is
-;;;; still in progress, and ASDF prints a naming warning for each because a file
-;;;; `engine/wasm.asd` is expected to define `wasm`, not `vovas-engine.wasm`.
-;;;; That warning is noise on a gate run and it can interleave with a runner's
-;;;; stdout; folding every module into this one system removes it without
-;;;; renaming anything, which would break every caller.
+;;;; ONE system: every module and every gate, in one serial order.
 ;;;;
 ;;;; ORDER. Modules are serial, in dependency order:
 ;;;;   package   all defpackages, because :import-from needs its source package
@@ -73,6 +67,9 @@
                              (:file "policy")
                              (:file "model")
                              (:file "assets")
+                             ;; paths right after assets: it needs only model and
+                             ;; assets, and report reads its artifact tables.
+                             (:file "paths")
                              ;; boundary sits beside assets: it imports the
                              ;; field accessors, and assets is its only
                              ;; panel-tier dependency.
@@ -85,7 +82,6 @@
                              (:file "inv-consts")
                              (:file "report")
                              (:file "export")
-                             (:file "paths")
                              (:file "graph")
                              ;; view BEFORE artifacts: artifacts escapes XML and
                              ;; attributes with view's `escape-html`, so the order
